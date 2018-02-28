@@ -2,5 +2,12 @@
 name = "weak-table"
 version = "0.1.0"
 authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
+description = "Weak hash maps and sets"
+repository = "https://github.com/tov/weak-table-rs"
+homepage = "https://github.com/tov/weak-table-rs"
+documentation = "http://tov.github.io/weak-table-rs/"
+readme = "README.md"
+license = "MIT"
+keywords = ["containers", "weak pointers"]
 
 [dependencies]
