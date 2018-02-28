@@ -1,0 +1,21 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+
+dist: trusty
+sudo: false
+
+matrix:
+  allow_failures:
+    - rust: nightly
+
+notifications:
+  email:
+    on_success: never
+
+addons:
+  apt:
+    packages:
+      - texinfo
