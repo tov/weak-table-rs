@@ -8,6 +8,7 @@ use super::traits::*;
 use super::util::*;
 
 const DEFAULT_INITIAL_CAPACITY: usize = 8;
+const MAX_LOAD_FACTOR: f32 = 0.8;
 
 type FullBucket<K, V> = (K, V, HashCode);
 type Bucket<K, V> = Option<FullBucket<K, V>>;
@@ -19,6 +20,11 @@ type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 #[derive(Clone)]
 pub struct WeakKeyHashMap<K, V, S = RandomState> {
     hash_builder: S,
+    inner: MapInner<K, V>,
+}
+
+#[derive(Clone)]
+struct MapInner<K, V> {
     buckets: TablePtr<K, V>,
     len: usize,
 }
@@ -42,8 +48,7 @@ pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 pub struct VacantEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 
 struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
-    buckets:    &'a mut TablePtr<K, V>,
-    len:        &'a mut usize,
+    map:        &'a mut MapInner<K, V>,
     pos:        usize,
     key:        K::Strong,
     hash_code:  HashCode,
@@ -236,9 +241,11 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     /// Creates an empty `WeakHashMap` with the given capacity and hasher.
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
         WeakKeyHashMap {
-            hash_builder: hash_builder,
-            buckets: new_boxed_option_slice(capacity),
-            len: 0,
+            hash_builder,
+            inner: MapInner {
+                buckets: new_boxed_option_slice(capacity),
+                len: 0,
+            }
         }
     }
 
@@ -249,37 +256,54 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
     /// Returns the number of elements the map can hold without reallocating.
     pub fn capacity(&self) -> usize {
-        self.buckets.len()
+        self.inner.capacity()
     }
 
     /// This has some preconditions.
     fn resize(&mut self, capacity: usize) {
         let mut old_buckets = new_boxed_option_slice(capacity);
-        mem::swap(&mut self.buckets, &mut old_buckets);
+        mem::swap(&mut self.inner.buckets, &mut old_buckets);
 
         let iter = IntoIter {
             base: old_buckets.into_vec().into_iter(),
-            size: self.len,
+            size: self.inner.len,
         };
 
         for (key, value) in iter {
-            self.insert(key, value);
+            self.entry_no_grow(key).or_insert(value);
+        }
+    }
+
+    pub fn remove_expired(&mut self) {
+        for i in 0 .. self.capacity() {
+            let expired = if let Some(ref bucket) = self.inner.buckets[i] {
+                bucket.0.expired()
+            } else {
+                false
+            };
+
+            if expired {
+                self.inner.remove_index(i);
+            }
         }
     }
 
     /// Returns an over-approximation of the number of elements.
     pub fn len(&self) -> usize {
-        self.len
+        self.inner.len
     }
 
     /// Gets the requested entry.
     pub fn entry(&mut self, key: K::Strong) -> Entry<K, V> {
+        self.entry_no_grow(key)
+    }
+
+    pub fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
         let mut inner = {
             let hash_code = self.hash(K::view_key(&key));
             InnerEntry {
                 pos:        self.which_bucket(hash_code),
-                buckets:    &mut self.buckets,
-                len:        &mut self.len,
+                map:        &mut self.inner,
                 hash_code,
                 key,
             }
@@ -318,7 +342,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         let mut dist = 0;
 
         loop {
-            if let Some((ref weak_key, _, bucket_hash_code)) = self.buckets[pos] {
+            if let Some((ref weak_key, _, bucket_hash_code)) = self.inner.buckets[pos] {
                 if bucket_hash_code == hash_code {
                     if let Some(bucket_key) = weak_key.view() {
                         if *K::view_key(&bucket_key).borrow() == *key {
@@ -347,7 +371,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
               K::Key: Borrow<Q>
     {
         self.find_bucket(key).and_then(move |tup|
-            self.buckets[tup.0].as_ref().map(|bucket| &bucket.1))
+            self.inner.buckets[tup.0].as_ref().map(|bucket| &bucket.1))
     }
 
     /// Returns true if the map contains the specified key.
@@ -364,7 +388,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
               K::Key: Borrow<Q>
     {
         self.find_bucket(key).and_then(move |tup|
-            self.buckets[tup.0].as_mut().map(|bucket| &mut bucket.1))
+            self.inner.buckets[tup.0].as_mut().map(|bucket| &mut bucket.1))
     }
 
     /// Unconditionally inserts the value, returning the old value if already present. Does not
@@ -386,8 +410,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     {
         self.find_bucket(key).map(|(pos, strong_key, hash_code)| {
             OccupiedEntry(InnerEntry {
-                buckets:    &mut self.buckets,
-                len:        &mut self.len,
+                map:        &mut self.inner,
                 pos,
                 key:        strong_key,
                 hash_code,
@@ -414,7 +437,7 @@ enum BucketStatus {
 impl<'a, K: WeakKey, V> InnerEntry<'a, K, V> {
     // Gets the status of the current bucket.
     fn bucket_status(&self) -> BucketStatus {
-        match self.buckets[self.pos] {
+        match self.map.buckets[self.pos] {
             Some((ref weak_key, _, hash_code)) => {
                 if hash_code == self.hash_code {
                     if let Some(key) = weak_key.view() {
@@ -466,69 +489,26 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
         &self.0.key
     }
 
-    fn erase_index(&mut self, index: usize) {
-        self.0.buckets[index] = None;
-        *self.0.len -= 1;
-    }
-
-    fn erase_range(&mut self, mut start: usize, limit: usize)
-    {
-        while start != limit {
-            self.erase_index(start);
-            start = self.0.next_bucket(start);
-        }
-    }
-
     /// Takes ownership of the key and value from the map.
-    pub fn remove_entry(mut self) -> (K::Strong, V) {
-        let mut dst = self.0.pos;
-        let mut src = self.0.next_bucket(dst);
-
-        let (_, value, _) = self.0.buckets[dst].take().unwrap();
-
-        loop {
-            let hash_code_option = self.0.buckets[src].as_ref().map(|tup| tup.2);
-
-            if let Some(hash_code) = hash_code_option {
-                let goal_pos = self.0.which_bucket(hash_code);
-                let dist = self.0.probe_distance(src, goal_pos);
-                if dist == 0 { break; }
-
-                if !self.0.buckets[src].as_ref().unwrap().0.expired() {
-                    if in_interval(dst, goal_pos, src) {
-                        self.erase_range(dst, goal_pos);
-                        self.0.buckets[goal_pos] = self.0.buckets[src].take();
-                        dst = self.0.next_bucket(goal_pos);
-                    } else {
-                        self.0.buckets[dst] = self.0.buckets[src].take();
-                        dst = self.0.next_bucket(dst);
-                    }
-                }
-            } else {
-                break;
-            }
-
-            src = self.0.next_bucket(src);
-        }
-
-        self.erase_range(dst, src);
-
+    pub fn remove_entry(self) -> (K::Strong, V) {
+        let (_, value, _) = self.0.map.buckets[self.0.pos].take().unwrap();
+        self.0.map.remove_index(self.0.pos);
         (self.0.key, value)
     }
 
     /// Gets a reference to the value in the entry.
     pub fn get(&self) -> &V {
-        &self.0.buckets[self.0.pos].as_ref().unwrap().1
+        &self.0.map.buckets[self.0.pos].as_ref().unwrap().1
     }
 
     /// Gets a mutable reference to the value in the entry.
     pub fn get_mut(&mut self) -> &mut V {
-        &mut self.0.buckets[self.0.pos].as_mut().unwrap().1
+        &mut self.0.map.buckets[self.0.pos].as_mut().unwrap().1
     }
 
     /// Turns the entry into a mutable reference to the value borrowed from the map.
     pub fn into_mut(self) -> &'a mut V {
-        &mut self.0.buckets[self.0.pos].as_mut().unwrap().1
+        &mut self.0.map.buckets[self.0.pos].as_mut().unwrap().1
     }
 
     /// Replaces the value in the entry with the given value.
@@ -565,47 +545,94 @@ impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
         self.0.key
     }
 
+    /// Inserts the key and value into the map and return a mutable
+    /// reference to the value.
+    pub fn insert(self, value: V) -> &'a mut V {
+        let old_bucket = mem::replace(
+            &mut self.0.map.buckets[self.0.pos],
+            Some((K::new(&self.0.key), value, self.0.hash_code)));
+
+        if let Some(full_bucket) = old_bucket {
+            let next_bucket = self.next_bucket(self.0.pos);
+            self.0.map.steal(next_bucket, full_bucket);
+        }
+
+        self.0.map.len += 1;
+
+        &mut self.0.map.buckets[self.0.pos].as_mut().unwrap().1
+    }
+}
+
+impl<K: WeakKey, V> MapInner<K, V> {
+    // Steals buckets starting at `pos`, replacing them with `bucket`.
     fn steal(&mut self, mut pos: usize, mut bucket: FullBucket<K, V>) {
-        let mut dist = self.0.probe_distance(pos, self.0.which_bucket(bucket.2));
+        let mut dist = self.probe_distance(pos, self.which_bucket(bucket.2));
 
         loop {
             let hash_code_option =
-                self.0.buckets[pos].as_ref().and_then(
+                self.buckets[pos].as_ref().and_then(
                     |bucket| bucket.0.view().map(|_| bucket.2));
 
             if let Some(hash_code) = hash_code_option {
                 let bucket_dist =
-                    self.0.probe_distance(pos, self.0.which_bucket(hash_code));
+                    self.probe_distance(pos, self.which_bucket(hash_code));
                 if dist > bucket_dist {
-                    mem::swap(self.0.buckets[pos].as_mut().unwrap(), &mut bucket);
+                    mem::swap(self.buckets[pos].as_mut().unwrap(), &mut bucket);
                     dist = bucket_dist;
                 }
             } else {
                 break;
             }
 
-            pos = self.0.next_bucket(pos);
+            pos = self.next_bucket(pos);
             dist += 1;
         }
 
-        self.0.buckets[pos] = Some(bucket);
+        self.buckets[pos] = Some(bucket);
     }
 
-    /// Inserts the key and value into the map and return a mutable
-    /// reference to the value.
-    pub fn insert(mut self, value: V) -> &'a mut V {
-        let old_bucket = mem::replace(
-            &mut self.0.buckets[self.0.pos],
-            Some((K::new(&self.0.key), value, self.0.hash_code)));
+    /// Removes the element at `dst`, shifting if necessary to preserve invariants.
+    fn remove_index(&mut self, mut dst: usize) {
+        let mut src = self.next_bucket(dst);
 
-        if let Some(full_bucket) = old_bucket {
-            let next_bucket = self.0.next_bucket(self.0.pos);
-            self.steal(next_bucket, full_bucket);
+        // We are going to remove the buckets in the range [dst, src)
+
+        loop {
+            let hash_code_option = self.buckets[src].as_ref().map(|tup| tup.2);
+
+            if let Some(hash_code) = hash_code_option {
+                let goal_pos = self.which_bucket(hash_code);
+                let dist = self.probe_distance(src, goal_pos);
+                if dist == 0 { break; }
+
+                if !self.buckets[src].as_ref().unwrap().0.expired() {
+                    if in_interval(dst, goal_pos, src) {
+                        self.erase_range(dst, goal_pos);
+                        self.buckets[goal_pos] = self.buckets[src].take();
+                        dst = self.next_bucket(goal_pos);
+                    } else {
+                        self.buckets[dst] = self.buckets[src].take();
+                        dst = self.next_bucket(dst);
+                    }
+                }
+            } else {
+                break;
+            }
+
+            src = self.next_bucket(src);
         }
 
-        *self.0.len += 1;
+        self.erase_range(dst, src);
+    }
 
-        &mut self.0.buckets[self.0.pos].as_mut().unwrap().1
+    /// Erases the (presumably expired, but not empty) elements in [start, limit).
+    fn erase_range(&mut self, mut start: usize, limit: usize)
+    {
+        while start != limit {
+            self.buckets[start] = None;
+            self.len -= 1;
+            start = self.next_bucket(start);
+        }
     }
 }
 
@@ -630,15 +657,33 @@ trait ModuloCapacity {
     }
 }
 
-impl<K, V, S> ModuloCapacity for WeakKeyHashMap<K, V, S> {
+impl<K, V> ModuloCapacity for MapInner<K, V> {
     fn capacity(&self) -> usize {
         self.buckets.len()
     }
 }
 
+impl<K, V, S> ModuloCapacity for WeakKeyHashMap<K, V, S> {
+    fn capacity(&self) -> usize {
+        self.inner.capacity()
+    }
+}
+
 impl<'a, K: WeakKey, V> ModuloCapacity for InnerEntry<'a, K, V> {
     fn capacity(&self) -> usize {
-        self.buckets.len()
+        self.map.capacity()
+    }
+}
+
+impl<'a, K: WeakKey, V> ModuloCapacity for OccupiedEntry<'a, K, V> {
+    fn capacity(&self) -> usize {
+        self.0.capacity()
+    }
+}
+
+impl<'a, K: WeakKey, V> ModuloCapacity for VacantEntry<'a, K, V> {
+    fn capacity(&self) -> usize {
+        self.0.capacity()
     }
 }
 
@@ -654,14 +699,14 @@ fn debug_table<K: Debug, V: Debug>(buckets: &TablePtr<K, V>, f: &mut Formatter) 
 
 impl<K: Debug, V: Debug, S> Debug for WeakKeyHashMap<K, V, S> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        debug_table(&self.buckets, f)
+        debug_table(&self.inner.buckets, f)
     }
 }
 
 impl<'a, K: WeakKey + Debug, V: Debug> Debug for InnerEntry<'a, K, V> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "InnerEntry {{ pos = {}, buckets = ", self.pos)?;
-        debug_table(&self.buckets, f)?;
+        debug_table(&self.map.buckets, f)?;
         write!(f, " }}")
     }
 }
@@ -672,8 +717,8 @@ impl<K: WeakKey, V, S> IntoIterator for WeakKeyHashMap<K, V, S> {
 
     fn into_iter(self) -> Self::IntoIter {
         IntoIter {
-            size: self.len,
-            base: self.buckets.into_vec().into_iter(),
+            size: self.inner.len,
+            base: self.inner.buckets.into_vec().into_iter(),
         }
     }
 }
@@ -684,8 +729,8 @@ impl<'a, K: WeakKey, V, S> IntoIterator for &'a WeakKeyHashMap<K, V, S> {
 
     fn into_iter(self) -> Self::IntoIter {
         Iter {
-            base: self.buckets.iter(),
-            size: self.len,
+            base: self.inner.buckets.iter(),
+            size: self.inner.len,
         }
     }
 }
@@ -696,8 +741,8 @@ impl<'a, K: WeakKey, V, S> IntoIterator for &'a mut WeakKeyHashMap<K, V, S> {
 
     fn into_iter(self) -> Self::IntoIter {
         IterMut {
-            base: self.buckets.iter_mut(),
-            size: self.len,
+            base: self.inner.buckets.iter_mut(),
+            size: self.inner.len,
         }
     }
 }
@@ -730,10 +775,10 @@ impl<K: WeakKey, V, S> WeakKeyHashMap<K, V, S> {
 
     /// Gets a draining iterator, which removes all the values but retains the storage.
     pub fn drain(&mut self) -> Drain<K, V> {
-        let old_len = self.len;
-        self.len = 0;
+        let old_len = self.inner.len;
+        self.inner.len = 0;
         Drain {
-            base: self.buckets.iter_mut(),
+            base: self.inner.buckets.iter_mut(),
             size: old_len,
         }
     }
