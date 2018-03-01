@@ -38,11 +38,12 @@ pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 pub struct VacantEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 
 struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
-    buckets: &'a mut TablePtr<K, V>,
-    len: &'a mut usize,
-    pos: usize,
-    key: K::Strong,
-    hash_code: u64,
+    buckets:    &'a mut TablePtr<K, V>,
+    len:        &'a mut usize,
+    pos:        usize,
+    dist:       usize,
+    key:        K::Strong,
+    hash_code:  u64,
 }
 
 /// An iterator over the keys and values of the weak hash map.
@@ -253,7 +254,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         let mut old_buckets = new_boxed_option_slice(capacity);
         mem::swap(&mut self.buckets, &mut old_buckets);
 
-        let mut iter = IntoIter {
+        let iter = IntoIter {
             base: old_buckets.into_vec().into_iter(),
             size: self.len,
         };
@@ -270,49 +271,29 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
     /// Gets the requested entry.
     pub fn entry(&mut self, key: K::Strong) -> Entry<K, V> {
-        enum BucketStatus {
-            Unoccupied,
-            MatchesKey,
-            ProbeDistance(usize),
-        }
-
         let mut inner = {
             let hash_code = self.hash(K::view_key(&key));
             InnerEntry {
                 pos:        self.which_bucket(hash_code),
+                dist:       0,
                 buckets:    &mut self.buckets,
                 len:        &mut self.len,
                 hash_code,
                 key,
             }
         };
-        let mut dist = 0usize;
 
         loop {
-            let status = match inner.buckets[inner.pos] {
-                Some((ref weak_key, _, hash_code)) => match weak_key.view() {
-                    Some(key) => if K::view_key(&inner.key) == K::view_key(&key) {
-                        BucketStatus::MatchesKey
-                    } else {
-                        let dist = inner.probe_distance(inner.pos,
-                                                       inner.which_bucket(hash_code));
-                        BucketStatus::ProbeDistance(dist)
-                    },
-                    None => BucketStatus::Unoccupied,
-                },
-                None => BucketStatus::Unoccupied,
-            };
-
-            match status {
+            match inner.bucket_status() {
                 BucketStatus::Unoccupied =>
                     return Entry::Vacant(VacantEntry(inner)),
                 BucketStatus::MatchesKey =>
                     return Entry::Occupied(OccupiedEntry(inner)),
                 BucketStatus::ProbeDistance(bucket_distance) => {
-                    if bucket_distance > dist {
+                    if bucket_distance > inner.dist {
                         return Entry::Vacant(VacantEntry(inner))
                     } else {
-                        dist += 1;
+                        inner.dist += 1;
                         inner.pos = inner.next_bucket(inner.pos);
                     }
                 }
@@ -322,13 +303,72 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
     /// Removes all associations from the map.
     pub fn clear(&mut self) {
-        for _ in self.drain() { }
+        self.drain();
     }
 
-    pub fn get<Q: ?Sized + Hash + Eq>(&self, key: &Q) -> Option<&V>
-        where K::Key: Borrow<Q>
+    fn find_index<Q>(&self, key: &Q) -> Option<usize>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
     {
-        unimplemented!();
+        self.find_bucket(key).map(|tup| tup.0)
+    }
+
+    fn find_bucket<Q>(&self, key: &Q) -> Option<(usize, K::Strong, u64)>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        let hash_code = self.hash(key);
+        let mut pos = self.which_bucket(hash_code);
+        let mut dist = 0;
+
+        loop {
+            if let Some((ref weak_key, _, bucket_hash_code)) = self.buckets[pos] {
+                if bucket_hash_code == hash_code {
+                    if let Some(bucket_key) = weak_key.view() {
+                        if *K::view_key(&bucket_key).borrow() == *key {
+                            return Some((pos, bucket_key, bucket_hash_code));
+                        }
+                    }
+                }
+
+                let bucket_dist =
+                    self.probe_distance(pos, self.which_bucket(hash_code));
+                if bucket_dist > dist {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+
+            pos = self.next_bucket(pos);
+            dist += 1;
+        }
+    }
+
+    /// Returns a reference to the value corresponding to the key.
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).and_then(move |tup|
+            self.buckets[tup.0].as_ref().map(|bucket| &bucket.1))
+    }
+
+    /// Returns true if the map contains the specified key.
+    pub fn contains_key<Q>(&self, key: &Q) -> bool
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).is_some()
+    }
+
+    /// Returns a mutable reference to the value corresponding to the key.
+    pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).and_then(move |tup|
+            self.buckets[tup.0].as_mut().map(|bucket| &mut bucket.1))
     }
 
     /// Unconditionally inserts the value, returning the old value if already present. Does not
@@ -336,17 +376,65 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     pub fn insert(&mut self, key: K::Strong, value: V) -> Option<V> {
         match self.entry(key) {
             Entry::Occupied(mut occupied) => Some(occupied.insert(value)),
-            Entry::Vacant(mut vacant) => {
+            Entry::Vacant(vacant) => {
                 vacant.insert(value);
                 None
             }
         }
     }
 
-    fn hash(&self, key: &K::Key) -> u64 {
+    /// Returns a mutable reference to the value corresponding to the key.
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).map(|(pos, strong_key, hash_code)| {
+            OccupiedEntry(InnerEntry {
+                dist:       self.probe_distance(pos, self.which_bucket(hash_code)),
+                buckets:    &mut self.buckets,
+                len:        &mut self.len,
+                pos,
+                key:        strong_key,
+                hash_code,
+            }).remove()
+        })
+    }
+
+    fn hash<Q>(&self, key: &Q) -> u64
+        where Q: ?Sized + Hash,
+              K::Key: Borrow<Q>
+    {
         let mut hasher = self.hash_builder.build_hasher();
         key.hash(&mut hasher);
         hasher.finish()
+    }
+}
+
+enum BucketStatus {
+    Unoccupied,
+    MatchesKey,
+    ProbeDistance(usize),
+}
+
+impl<'a, K: WeakKey, V> InnerEntry<'a, K, V> {
+    // Gets the status of the current bucket.
+    fn bucket_status(&self) -> BucketStatus {
+        match self.buckets[self.pos] {
+            Some((ref weak_key, _, hash_code)) => {
+                if hash_code == self.hash_code {
+                    if let Some(key) = weak_key.view() {
+                        if K::view_key(&self.key) == K::view_key(&key) {
+                            return BucketStatus::MatchesKey;
+                        }
+                    }
+                }
+
+                let dist = self.probe_distance(self.pos,
+                                               self.which_bucket(hash_code));
+                return BucketStatus::ProbeDistance(dist);
+            },
+            None => return BucketStatus::Unoccupied,
+        }
     }
 }
 
