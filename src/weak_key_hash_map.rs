@@ -9,7 +9,8 @@ use super::util::*;
 
 const DEFAULT_INITIAL_CAPACITY: usize = 8;
 
-type Bucket<K, V> = Option<(K, V, HashCode)>;
+type FullBucket<K, V> = (K, V, HashCode);
+type Bucket<K, V> = Option<FullBucket<K, V>>;
 type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 
 /// A mapping from weak pointers to values.
@@ -44,7 +45,6 @@ struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
     buckets:    &'a mut TablePtr<K, V>,
     len:        &'a mut usize,
     pos:        usize,
-    dist:       usize,
     key:        K::Strong,
     hash_code:  HashCode,
 }
@@ -278,13 +278,13 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
             let hash_code = self.hash(K::view_key(&key));
             InnerEntry {
                 pos:        self.which_bucket(hash_code),
-                dist:       0,
                 buckets:    &mut self.buckets,
                 len:        &mut self.len,
                 hash_code,
                 key,
             }
         };
+        let mut dist = 0;
 
         loop {
             match inner.bucket_status() {
@@ -293,11 +293,11 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
                 BucketStatus::MatchesKey =>
                     return Entry::Occupied(OccupiedEntry(inner)),
                 BucketStatus::ProbeDistance(bucket_distance) => {
-                    if bucket_distance > inner.dist {
+                    if bucket_distance > dist {
                         return Entry::Vacant(VacantEntry(inner))
                     } else {
-                        inner.dist += 1;
                         inner.pos = inner.next_bucket(inner.pos);
+                        dist += 1;
                     }
                 }
             }
@@ -393,7 +393,6 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     {
         self.find_bucket(key).map(|(pos, strong_key, hash_code)| {
             OccupiedEntry(InnerEntry {
-                dist:       self.probe_distance(pos, self.which_bucket(hash_code)),
                 buckets:    &mut self.buckets,
                 len:        &mut self.len,
                 pos,
@@ -523,10 +522,47 @@ impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
         self.0.key
     }
 
+    fn steal(&mut self, mut pos: usize, mut bucket: FullBucket<K, V>) {
+        let mut dist = self.0.probe_distance(pos, self.0.which_bucket(bucket.2));
+
+        loop {
+            let hash_code_option =
+                self.0.buckets[pos].as_ref().and_then(
+                    |bucket| bucket.0.view().map(|_| bucket.2));
+
+            if let Some(hash_code) = hash_code_option {
+                let bucket_dist =
+                    self.0.probe_distance(pos, self.0.which_bucket(hash_code));
+                if dist > bucket_dist {
+                    mem::swap(self.0.buckets[pos].as_mut().unwrap(), &mut bucket);
+                    dist = bucket_dist;
+                }
+            } else {
+                break;
+            }
+
+            pos = self.0.next_bucket(pos);
+            dist += 1;
+        }
+
+        self.0.buckets[pos] = Some(bucket);
+    }
+
     /// Inserts the key and value into the map and return a mutable
     /// reference to the value.
-    pub fn insert(self, value: V) -> &'a mut V {
-        unimplemented!()
+    pub fn insert(mut self, value: V) -> &'a mut V {
+        let mut old_bucket = mem::replace(
+            &mut self.0.buckets[self.0.pos],
+            Some((K::new(&self.0.key), value, self.0.hash_code)));
+
+        if let Some(full_bucket) = old_bucket {
+            let next_bucket = self.0.next_bucket(self.0.pos);
+            self.steal(next_bucket, full_bucket);
+        }
+
+        *self.0.len += 1;
+
+        &mut self.0.buckets[self.0.pos].as_mut().unwrap().1
     }
 }
 
