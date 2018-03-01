@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
@@ -147,7 +148,7 @@ impl<'a, K: WeakKey, V> Iterator for ValuesMut<'a, K, V> {
 }
 
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
-pub struct Drain<'a, K: 'a, V: 'a> {
+pub struct Drain<'a, K: 'a + WeakKey, V: 'a> {
     base: ::std::slice::IterMut<'a, Bucket<K, V>>,
     size: usize,
 }
@@ -170,6 +171,12 @@ impl<'a, K: WeakKey, V> Iterator for Drain<'a, K, V> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, Some(self.size))
+    }
+}
+
+impl<'a, K: WeakKey, V> Drop for Drain<'a, K, V> {
+    fn drop(&mut self) {
+        while let Some(_) = self.next() { }
     }
 }
 
@@ -239,6 +246,21 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.buckets.len()
     }
 
+    /// This has some preconditions.
+    fn resize(&mut self, capacity: usize) {
+        let mut old_buckets = new_boxed_option_slice(capacity);
+        mem::swap(&mut self.buckets, &mut old_buckets);
+
+        let mut iter = IntoIter {
+            base: old_buckets.into_vec().into_iter(),
+            size: self.len,
+        };
+
+        for (key, value) in iter {
+            self.entry(key).or_insert(value);
+        }
+    }
+
     /// Returns an over-approximation of the number of elements.
     pub fn len(&self) -> usize {
         self.len
@@ -292,6 +314,29 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
                         inner.pos = inner.next_bucket(inner.pos);
                     }
                 }
+            }
+        }
+    }
+
+    /// Removes all associations from the map.
+    pub fn clear(&mut self) {
+        for _ in self.drain() { }
+    }
+
+    pub fn get<Q: ?Sized + Hash + Eq>(&self, key: &Q) -> Option<&V>
+        where K::Key: Borrow<Q>
+    {
+        unimplemented!();
+    }
+
+    /// Unconditionally inserts the value, returning the old value if already present. Does not
+    /// replace the key.
+    pub fn insert(&mut self, key: K::Strong, value: V) -> Option<V> {
+        match self.entry(key) {
+            Entry::Occupied(mut occupied) => Some(occupied.insert(value)),
+            Entry::Vacant(mut vacant) => {
+                vacant.insert(value);
+                None
             }
         }
     }
@@ -513,9 +558,11 @@ impl<K: WeakKey, V, S> WeakKeyHashMap<K, V, S> {
 
     /// Gets a draining iterator, which removes all the values but retains the storage.
     pub fn drain(&mut self) -> Drain<K, V> {
+        let old_len = self.len;
+        self.len = 0;
         Drain {
-            size: self.len,
             base: self.buckets.iter_mut(),
+            size: old_len,
         }
     }
 }
