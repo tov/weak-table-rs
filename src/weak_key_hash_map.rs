@@ -181,7 +181,7 @@ impl<'a, K: WeakKey, V> Iterator for Drain<'a, K, V> {
 impl<'a, K, V> Drop for Drain<'a, K, V> {
     fn drop(&mut self) {
         while let Some(option) = self.base.next() {
-            option.take();
+            *option = None;
         }
     }
 }
