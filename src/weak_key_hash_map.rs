@@ -9,7 +9,7 @@ use super::util::*;
 
 const DEFAULT_INITIAL_CAPACITY: usize = 8;
 
-type Bucket<K, V> = Option<(K, V, u64)>;
+type Bucket<K, V> = Option<(K, V, HashCode)>;
 type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 
 /// A mapping from weak pointers to values.
@@ -21,6 +21,9 @@ pub struct WeakKeyHashMap<K, V, S = RandomState> {
     buckets: TablePtr<K, V>,
     len: usize,
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+struct HashCode(u64);
 
 /// Represents an entry in the table which may be occupied or vacant.
 #[derive(Debug)]
@@ -43,7 +46,7 @@ struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
     pos:        usize,
     dist:       usize,
     key:        K::Strong,
-    hash_code:  u64,
+    hash_code:  HashCode,
 }
 
 /// An iterator over the keys and values of the weak hash map.
@@ -313,7 +316,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.find_bucket(key).map(|tup| tup.0)
     }
 
-    fn find_bucket<Q>(&self, key: &Q) -> Option<(usize, K::Strong, u64)>
+    fn find_bucket<Q>(&self, key: &Q) -> Option<(usize, K::Strong, HashCode)>
         where Q: ?Sized + Hash + Eq,
               K::Key: Borrow<Q>
     {
@@ -400,13 +403,13 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         })
     }
 
-    fn hash<Q>(&self, key: &Q) -> u64
+    fn hash<Q>(&self, key: &Q) -> HashCode
         where Q: ?Sized + Hash,
               K::Key: Borrow<Q>
     {
         let mut hasher = self.hash_builder.build_hasher();
         key.hash(&mut hasher);
-        hasher.finish()
+        HashCode(hasher.finish())
     }
 }
 
@@ -543,8 +546,8 @@ trait ModuloCapacity {
         (pos + 1) % self.capacity()
     }
 
-    fn which_bucket(&self, hash_code: u64) -> usize {
-        hash_code as usize % self.capacity()
+    fn which_bucket(&self, hash_code: HashCode) -> usize {
+        hash_code.0 as usize % self.capacity()
     }
 }
 
@@ -564,7 +567,7 @@ fn debug_table<K: Debug, V: Debug>(buckets: &TablePtr<K, V>, f: &mut Formatter) 
     write!(f, "{{ ")?;
     for (i, bucket) in buckets.iter().enumerate() {
         if let &Some((ref k, ref v, hc)) = bucket {
-            write!(f, "[{}] {:?} => {:?} ({:x}), ", i, *k, *v, hc)?;
+            write!(f, "[{}] {:?} => {:?} ({:x}), ", i, *k, *v, hc.0)?;
         }
     }
     write!(f, "}}")
