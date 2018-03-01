@@ -263,7 +263,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         };
 
         for (key, value) in iter {
-            self.entry(key).or_insert(value);
+            self.insert(key, value);
         }
     }
 
@@ -307,13 +307,6 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     /// Removes all associations from the map.
     pub fn clear(&mut self) {
         self.drain();
-    }
-
-    fn find_index<Q>(&self, key: &Q) -> Option<usize>
-        where Q: ?Sized + Hash + Eq,
-              K::Key: Borrow<Q>
-    {
-        self.find_bucket(key).map(|tup| tup.0)
     }
 
     fn find_bucket<Q>(&self, key: &Q) -> Option<(usize, K::Strong, HashCode)>
@@ -478,9 +471,49 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
         *self.0.len -= 1;
     }
 
+    fn erase_range(&mut self, mut start: usize, limit: usize)
+    {
+        while start != limit {
+            self.erase_index(start);
+            start = self.0.next_bucket(start);
+        }
+    }
+
     /// Takes ownership of the key and value from the map.
-    pub fn remove_entry(self) -> (K, V) {
-        unimplemented!();
+    pub fn remove_entry(mut self) -> (K::Strong, V) {
+        let mut dst = self.0.pos;
+        let mut src = self.0.next_bucket(dst);
+
+        let (_, value, _) = self.0.buckets[dst].take().unwrap();
+
+        loop {
+            let hash_code_option = self.0.buckets[src].as_ref().map(|tup| tup.2);
+
+            if let Some(hash_code) = hash_code_option {
+                let goal_pos = self.0.which_bucket(hash_code);
+                let dist = self.0.probe_distance(src, goal_pos);
+                if dist == 0 { break; }
+
+                if !self.0.buckets[src].as_ref().unwrap().0.expired() {
+                    if in_interval(dst, goal_pos, src) {
+                        self.erase_range(dst, goal_pos);
+                        self.0.buckets[goal_pos] = self.0.buckets[src].take();
+                        dst = self.0.next_bucket(goal_pos);
+                    } else {
+                        self.0.buckets[dst] = self.0.buckets[src].take();
+                        dst = self.0.next_bucket(dst);
+                    }
+                }
+            } else {
+                break;
+            }
+
+            src = self.0.next_bucket(src);
+        }
+
+        self.erase_range(dst, src);
+
+        (self.0.key, value)
     }
 
     /// Gets a reference to the value in the entry.
@@ -507,6 +540,16 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     /// Removes the entry, returning the value.
     pub fn remove(self) -> V {
         self.remove_entry().1
+    }
+}
+
+// Is value in [start, limit) modulo capacity?
+fn in_interval(start: usize, value: usize, limit: usize) -> bool
+{
+    if start <= limit {
+        start <= value && value < limit
+    } else {
+        start <= value || value < limit
     }
 }
 
@@ -551,7 +594,7 @@ impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
     /// Inserts the key and value into the map and return a mutable
     /// reference to the value.
     pub fn insert(mut self, value: V) -> &'a mut V {
-        let mut old_bucket = mem::replace(
+        let old_bucket = mem::replace(
             &mut self.0.buckets[self.0.pos],
             Some((K::new(&self.0.key), value, self.0.hash_code)));
 
