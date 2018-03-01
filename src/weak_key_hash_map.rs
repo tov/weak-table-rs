@@ -11,6 +11,9 @@ const DEFAULT_INITIAL_CAPACITY: usize = 8;
 type Bucket<K, V> = Option<(K, V, u64)>;
 type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 
+/// A mapping from weak pointers to values.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
 pub struct WeakKeyHashMap<K, V, S = RandomState> {
     hash_builder: S,
@@ -18,15 +21,18 @@ pub struct WeakKeyHashMap<K, V, S = RandomState> {
     len: usize,
 }
 
+/// Represents an entry in the table which may be occupied or vacant.
 #[derive(Debug)]
 pub enum Entry<'a, K: 'a + WeakKey, V: 'a> {
     Occupied(OccupiedEntry<'a, K, V>),
     Vacant(VacantEntry<'a, K, V>),
 }
 
+/// An occupied entry, which can be removed or viewed.
 #[derive(Debug)]
 pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 
+/// A vacant entry, which can be inserted in or viewed.
 #[derive(Debug)]
 pub struct VacantEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 
@@ -142,7 +148,7 @@ impl<'a, K: WeakKey, V> Iterator for ValuesMut<'a, K, V> {
 
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct Drain<'a, K: 'a, V: 'a> {
-    base: ::std::vec::Drain<'a, Bucket<K, V>>,
+    base: ::std::slice::IterMut<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -151,7 +157,7 @@ impl<'a, K: WeakKey, V> Iterator for Drain<'a, K, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(bucket) = self.base.next() {
-            if let Some((weak_ptr, value, _)) = bucket {
+            if let Some((weak_ptr, value, _)) = bucket.take() {
                 self.size -= 1;
                 if let Some(strong_ptr) = weak_ptr.view() {
                     return Some((strong_ptr, value));
@@ -440,5 +446,76 @@ impl<'a, K: WeakKey + Debug, V: Debug> Debug for InnerEntry<'a, K, V> {
         write!(f, "InnerEntry {{ pos = {}, buckets = ", self.pos)?;
         debug_table(&self.buckets, f)?;
         write!(f, " }}")
+    }
+}
+
+impl<K: WeakKey, V, S> IntoIterator for WeakKeyHashMap<K, V, S> {
+    type Item = (K::Strong, V);
+    type IntoIter = IntoIter<K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {
+            size: self.len,
+            base: self.buckets.into_vec().into_iter(),
+        }
+    }
+}
+
+impl<'a, K: WeakKey, V, S> IntoIterator for &'a WeakKeyHashMap<K, V, S> {
+    type Item = (K::Strong, &'a V);
+    type IntoIter = Iter<'a, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter {
+            base: self.buckets.iter(),
+            size: self.len,
+        }
+    }
+}
+
+impl<'a, K: WeakKey, V, S> IntoIterator for &'a mut WeakKeyHashMap<K, V, S> {
+    type Item = (K::Strong, &'a mut V);
+    type IntoIter = IterMut<'a, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IterMut {
+            base: self.buckets.iter_mut(),
+            size: self.len,
+        }
+    }
+}
+
+impl<K: WeakKey, V, S> WeakKeyHashMap<K, V, S> {
+    /// Gets an iterator over the keys and values.
+    pub fn iter(&self) -> Iter<K, V> {
+        self.into_iter()
+    }
+
+    /// Gets an iterator over the keys.
+    pub fn keys(&self) -> Keys<K, V> {
+        Keys(self.iter())
+    }
+
+    /// Gets an iterator over the values.
+    pub fn values(&self) -> Values<K, V> {
+        Values(self.iter())
+    }
+
+    // Gets an iterator over the keys and mutable values.
+    pub fn iter_mut(&mut self) -> IterMut<K, V> {
+        self.into_iter()
+    }
+
+    /// Gets an iterator over the mutable values.
+    pub fn values_mut(&mut self) -> ValuesMut<K, V> {
+        ValuesMut(self.iter_mut())
+    }
+
+    /// Gets a draining iterator, which removes all the values but retains the storage.
+    pub fn drain(&mut self) -> Drain<K, V> {
+        Drain {
+            size: self.len,
+            base: self.buckets.iter_mut(),
+        }
     }
 }
