@@ -148,7 +148,7 @@ impl<'a, K: WeakKey, V> Iterator for ValuesMut<'a, K, V> {
 }
 
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
-pub struct Drain<'a, K: 'a + WeakKey, V: 'a> {
+pub struct Drain<'a, K: 'a, V: 'a> {
     base: ::std::slice::IterMut<'a, Bucket<K, V>>,
     size: usize,
 }
@@ -174,9 +174,11 @@ impl<'a, K: WeakKey, V> Iterator for Drain<'a, K, V> {
     }
 }
 
-impl<'a, K: WeakKey, V> Drop for Drain<'a, K, V> {
+impl<'a, K, V> Drop for Drain<'a, K, V> {
     fn drop(&mut self) {
-        while let Some(_) = self.next() { }
+        while let Some(option) = self.base.next() {
+            option.take();
+        }
     }
 }
 
