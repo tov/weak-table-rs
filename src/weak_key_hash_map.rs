@@ -38,6 +38,162 @@ struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
     hash_code: u64,
 }
 
+/// An iterator over the keys and values of the weak hash map.
+#[derive(Clone)]
+pub struct Iter<'a, K: 'a, V: 'a> {
+    base: ::std::slice::Iter<'a, Bucket<K, V>>,
+    size: usize,
+}
+
+impl<'a, K: WeakKey, V> Iterator for Iter<'a, K, V> {
+    type Item = (K::Strong, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(bucket) = self.base.next() {
+            if let Some((ref weak_ptr, ref value, _)) = *bucket {
+                self.size -= 1;
+                if let Some(strong_ptr) = weak_ptr.view() {
+                    return Some((strong_ptr, value));
+                }
+            }
+        }
+
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.size))
+    }
+}
+
+/// An iterator over the keys and mutable values of the weak hash map.
+pub struct IterMut<'a, K: 'a, V: 'a> {
+    base: ::std::slice::IterMut<'a, Bucket<K, V>>,
+    size: usize,
+}
+
+impl<'a, K: WeakKey, V> Iterator for IterMut<'a, K, V> {
+    type Item = (K::Strong, &'a mut V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(bucket) = self.base.next() {
+            if let Some((ref weak_ptr, ref mut value, _)) = *bucket {
+                self.size -= 1;
+                if let Some(strong_ptr) = weak_ptr.view() {
+                    return Some((strong_ptr, value));
+                }
+            }
+        }
+
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.size))
+    }
+}
+
+/// An iterator over the keys of the weak hash map.
+#[derive(Clone)]
+pub struct Keys<'a, K: 'a, V: 'a>(Iter<'a, K, V>);
+
+impl<'a, K: WeakKey, V> Iterator for Keys<'a, K, V> {
+    type Item = K::Strong;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|(k, _)| k)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+/// An iterator over the values of the weak hash map.
+#[derive(Clone)]
+pub struct Values<'a, K: 'a, V: 'a>(Iter<'a, K, V>);
+
+impl<'a, K: WeakKey, V> Iterator for Values<'a, K, V> {
+    type Item = &'a V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|(_, v)| v)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+/// An iterator over the mutable values of the weak hash map.
+pub struct ValuesMut<'a, K: 'a, V: 'a>(IterMut<'a, K, V>);
+
+impl<'a, K: WeakKey, V> Iterator for ValuesMut<'a, K, V> {
+    type Item = &'a mut V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|(_, v)| v)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+/// An iterator that consumes the values of a weak hash map, leaving it empty.
+pub struct Drain<'a, K: 'a, V: 'a> {
+    base: ::std::vec::Drain<'a, Bucket<K, V>>,
+    size: usize,
+}
+
+impl<'a, K: WeakKey, V> Iterator for Drain<'a, K, V> {
+    type Item = (K::Strong, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(bucket) = self.base.next() {
+            if let Some((weak_ptr, value, _)) = bucket {
+                self.size -= 1;
+                if let Some(strong_ptr) = weak_ptr.view() {
+                    return Some((strong_ptr, value));
+                }
+            }
+        }
+
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.size))
+    }
+}
+
+/// An iterator that consumes the values of a weak hash map, leaving it empty.
+pub struct IntoIter<K, V> {
+    base: ::std::vec::IntoIter<Bucket<K, V>>,
+    size: usize,
+}
+
+impl<K: WeakKey, V> Iterator for IntoIter<K, V> {
+    type Item = (K::Strong, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(bucket) = self.base.next() {
+            if let Some((weak_ptr, value, _)) = bucket {
+                self.size -= 1;
+                if let Some(strong_ptr) = weak_ptr.view() {
+                    return Some((strong_ptr, value));
+                }
+            }
+        }
+
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.size))
+    }
+}
+
 impl<K: WeakKey, V> WeakKeyHashMap<K, V, RandomState>
 {
     /// Creates an empty `WeakHashmap`.
@@ -141,6 +297,33 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     }
 }
 
+impl<'a, K: WeakKey, V> Entry<'a, K, V> {
+    /// Ensures a value is in the entry by inserting a default value
+    /// if empty, and returns a mutable reference to the value in the
+    /// entry.
+    pub fn or_insert(self, default: V) -> &'a mut V {
+        self.or_insert_with(|| default)
+    }
+
+    /// Ensures a value is in the entry by inserting the result of the
+    /// default function if empty, and returns a mutable reference to
+    /// the value in the entry.
+    pub fn or_insert_with<F: FnOnce() -> V>(self, default: F) -> &'a mut V {
+        match self {
+            Entry::Occupied(occupied) => occupied.into_mut(),
+            Entry::Vacant(vacant) => vacant.insert(default()),
+        }
+    }
+
+    /// Returns a reference to this entry's key.
+    pub fn key(&self) -> &K::Strong {
+        match *self {
+            Entry::Occupied(ref occupied) => occupied.key(),
+            Entry::Vacant(ref vacant) => vacant.key(),
+        }
+    }
+}
+
 impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     /// Gets a reference to the key held by the entry.
     pub fn key(&self) -> &K::Strong {
@@ -181,6 +364,25 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     /// Removes the entry, returning the value.
     pub fn remove(self) -> V {
         self.remove_entry().1
+    }
+}
+
+impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
+    /// Gets a reference to the key that would be used when inserting a
+    /// value through the `VacantEntry`.
+    pub fn key(&self) -> &K::Strong {
+        &self.0.key
+    }
+
+    /// Returns ownership of the key.
+    pub fn into_key(self) -> K::Strong {
+        self.0.key
+    }
+
+    /// Inserts the key and value into the map and return a mutable
+    /// reference to the value.
+    pub fn insert(self, value: V) -> &'a mut V {
+        unimplemented!()
     }
 }
 
