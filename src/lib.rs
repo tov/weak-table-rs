@@ -1,5 +1,6 @@
-use std::rc;
-use std::sync;
+#![allow(unused_imports)]
+use std::{rc, sync};
+use std::hash::{Hash, Hasher};
 
 /// Interface for elements that can be stored in a weak hash table.
 pub trait WeakElement {
@@ -20,6 +21,9 @@ pub trait WeakElement {
     }
 }
 
+pub trait WeakKey<T: Eq + Hash> : WeakElement {
+}
+
 impl<T> WeakElement for rc::Weak<T> {
     type Strong = rc::Rc<T>;
 
@@ -32,55 +36,57 @@ impl<T> WeakElement for rc::Weak<T> {
     }
 }
 
-impl<T> WeakElement for rc::Rc<T> {
-    type Strong = rc::Rc<T>;
+//impl<T> WeakElement for rc::Rc<T> {
+//    type Strong = rc::Rc<T>;
+//    type Value = T;
+//
+//    fn new(view: &Self::Strong) -> Self {
+//        view.clone()
+//    }
+//
+//    fn view(&self) -> Option<Self::Strong> {
+//        Some(self.clone())
+//    }
+//
+//    fn expired(&self) -> bool {
+//        false
+//    }
+//}
 
-    fn new(view: &Self::Strong) -> Self {
-        view.clone()
-    }
-
-    fn view(&self) -> Option<Self::Strong> {
-        Some(self.clone())
-    }
-
-    fn expired(&self) -> bool {
-        false
-    }
-}
-
-impl<T> WeakElement for sync::Weak<T> {
-    type Strong = sync::Arc<T>;
-
-    fn new(view: &Self::Strong) -> Self {
-        sync::Arc::<T>::downgrade(view)
-    }
-
-    fn view(&self) -> Option<Self::Strong> {
-        self.upgrade()
-    }
-}
-
-impl<T> WeakElement for sync::Arc<T> {
-    type Strong = sync::Arc<T>;
-
-    fn new(view: &Self::Strong) -> Self {
-        view.clone()
-    }
-
-    fn view(&self) -> Option<Self::Strong> {
-        Some(self.clone())
-    }
-
-    fn expired(&self) -> bool {
-        false
-    }
-}
+//impl<T> WeakElement for sync::Weak<T> {
+//    type Strong = sync::Arc<T>;
+//
+//    fn new(view: &Self::Strong) -> Self {
+//        sync::Arc::<T>::downgrade(view)
+//    }
+//
+//    fn view(&self) -> Option<Self::Strong> {
+//        self.upgrade()
+//    }
+//}
+//
+//impl<T> WeakElement for sync::Arc<T> {
+//    type Strong = sync::Arc<T>;
+//
+//    fn new(view: &Self::Strong) -> Self {
+//        view.clone()
+//    }
+//
+//    fn view(&self) -> Option<Self::Strong> {
+//        Some(self.clone())
+//    }
+//
+//    fn expired(&self) -> bool {
+//        false
+//    }
+//}
 
 impl<T0, T1> WeakElement for (T0, T1)
     where T0: WeakElement,
           T1: WeakElement
 {
     type Strong = (T0::Strong, T1::Strong);
+//    type Value = (T0::Value, T1::Value);
 
     fn new(view: &Self::Strong) -> Self {
         (T0::new(&view.0), T1::new(&view.1))
@@ -92,63 +98,79 @@ impl<T0, T1> WeakElement for (T0, T1)
                 Some((view0, view1))))
     }
 }
+//
+//impl<T0, T1> WeakKey for (T0, T1)
+//    where T0: WeakKey,
+//          T1: WeakKey
+//{
+//    type Key = (T0::Key, T1::Key);
+//
+//    fn hash_value<H: Hasher>(view: &Self::Strong, state: &mut H) {
+//        T0::hash_value(&view.0, state);
+//        T1::hash_value(&view.1, state);
+//    }
+//
+//    fn equals(view: &Self::Strong, key: &Self::Key) -> bool {
+//        T0::equals(&view.0, &key.0) && T1::equals(&view.1, &key.1)
+//    }
+//}
 
-impl<T0, T1, T2> WeakElement for (T0, T1, T2)
-    where T0: WeakElement,
-          T1: WeakElement,
-          T2: WeakElement
-{
-    type Strong = (T0::Strong, T1::Strong, T2::Strong);
+//impl<T0, T1, T2> WeakElement for (T0, T1, T2)
+//    where T0: WeakElement,
+//          T1: WeakElement,
+//          T2: WeakElement
+//{
+//    type Strong = (T0::Strong, T1::Strong, T2::Strong);
+//
+//    fn new(view: &Self::Strong) -> Self {
+//        (T0::new(&view.0), T1::new(&view.1), T2::new(&view.2))
+//    }
+//
+//    fn view(&self) -> Option<Self::Strong> {
+//        self.0.view().and_then(|view0|
+//            self.1.view().and_then(|view1|
+//                self.2.view().and_then(|view2|
+//                    Some((view0, view1, view2)))))
+//    }
+//}
+//
+//impl<T0, T1, T2, T3> WeakElement for (T0, T1, T2, T3)
+//    where T0: WeakElement,
 
-    fn new(view: &Self::Strong) -> Self {
-        (T0::new(&view.0), T1::new(&view.1), T2::new(&view.2))
-    }
-
-    fn view(&self) -> Option<Self::Strong> {
-        self.0.view().and_then(|view0|
-            self.1.view().and_then(|view1|
-                self.2.view().and_then(|view2|
-                    Some((view0, view1, view2)))))
-    }
-}
-
-impl<T0, T1, T2, T3> WeakElement for (T0, T1, T2, T3)
-    where T0: WeakElement,
-          T1: WeakElement,
-          T2: WeakElement,
-          T3: WeakElement
-{
-    type Strong = (T0::Strong, T1::Strong, T2::Strong, T3::Strong);
-
-    fn new(view: &Self::Strong) -> Self {
-        (T0::new(&view.0), T1::new(&view.1), T2::new(&view.2), T3::new(&view.3))
-    }
-
-    fn view(&self) -> Option<Self::Strong> {
-        self.0.view().and_then(|view0|
-            self.1.view().and_then(|view1|
-                self.2.view().and_then(|view2|
-                    self.3.view().and_then(|view3|
-                        Some((view0, view1, view2, view3))))))
-    }
-}
-
-/// We can own a value as part of a `WeakElement`, provided it's `Clone`.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Strong<T: Clone>(T);
-
-impl<T: Clone> WeakElement for Strong<T> {
-    type Strong = T;
-
-    fn new(view: &Self::Strong) -> Self {
-        Strong(view.clone())
-    }
-
-    fn view(&self) -> Option<Self::Strong> {
-        Some(self.0.clone())
-    }
-
-    fn expired(&self) -> bool {
-        false
-    }
-}
+//          T2: WeakElement,
+//          T3: WeakElement
+//{
+//    type Strong = (T0::Strong, T1::Strong, T2::Strong, T3::Strong);
+//
+//    fn new(view: &Self::Strong) -> Self {
+//        (T0::new(&view.0), T1::new(&view.1), T2::new(&view.2), T3::new(&view.3))
+//    }
+//
+//    fn view(&self) -> Option<Self::Strong> {
+//        self.0.view().and_then(|view0|
+//            self.1.view().and_then(|view1|
+//                self.2.view().and_then(|view2|
+//                    self.3.view().and_then(|view3|
+//                        Some((view0, view1, view2, view3))))))
+//    }
+//}
+//
+///// We can own a value as part of a `WeakElement`, provided it's `Clone`.
+//#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+//pub struct Strong<T: Clone>(T);
+//
+//impl<T: Clone> WeakElement for Strong<T> {
+//    type Strong = T;
+//
+//    fn new(view: &Self::Strong) -> Self {
+//        Strong(view.clone())
+//    }
+//
+//    fn view(&self) -> Option<Self::Strong> {
+//        Some(self.0.clone())
+//    }
+//
+//    fn expired(&self) -> bool {
+//        false
+//    }
+//}
