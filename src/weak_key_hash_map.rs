@@ -20,11 +20,11 @@ type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 #[derive(Clone)]
 pub struct WeakKeyHashMap<K, V, S = RandomState> {
     hash_builder: S,
-    inner: MapInner<K, V>,
+    inner: InnerMap<K, V>,
 }
 
 #[derive(Clone)]
-struct MapInner<K, V> {
+struct InnerMap<K, V> {
     buckets: TablePtr<K, V>,
     len: usize,
 }
@@ -48,7 +48,7 @@ pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 pub struct VacantEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 
 struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
-    map:        &'a mut MapInner<K, V>,
+    map:        &'a mut InnerMap<K, V>,
     pos:        usize,
     key:        K::Strong,
     hash_code:  HashCode,
@@ -242,7 +242,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
         WeakKeyHashMap {
             hash_builder,
-            inner: MapInner {
+            inner: InnerMap {
                 buckets: new_boxed_option_slice(capacity),
                 len: 0,
             }
@@ -537,16 +537,6 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     }
 }
 
-// Is value in [start, limit) modulo capacity?
-fn in_interval(start: usize, value: usize, limit: usize) -> bool
-{
-    if start <= limit {
-        start <= value && value < limit
-    } else {
-        start <= value || value < limit
-    }
-}
-
 impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
     /// Gets a reference to the key that would be used when inserting a
     /// value through the `VacantEntry`.
@@ -577,7 +567,7 @@ impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
     }
 }
 
-impl<K: WeakKey, V> MapInner<K, V> {
+impl<K: WeakKey, V> InnerMap<K, V> {
     // Steals buckets starting at `pos`, replacing them with `bucket`.
     fn steal(&mut self, mut pos: usize, mut bucket: FullBucket<K, V>) {
         let mut dist = self.probe_distance(pos, self.which_bucket(bucket.2));
@@ -650,6 +640,16 @@ impl<K: WeakKey, V> MapInner<K, V> {
     }
 }
 
+// Is value in [start, limit) modulo capacity?
+fn in_interval(start: usize, value: usize, limit: usize) -> bool
+{
+    if start <= limit {
+        start <= value && value < limit
+    } else {
+        start <= value || value < limit
+    }
+}
+
 // Helper trait for computing with indices modulo capacity.
 trait ModuloCapacity {
     fn capacity(&self) -> usize;
@@ -671,7 +671,7 @@ trait ModuloCapacity {
     }
 }
 
-impl<K, V> ModuloCapacity for MapInner<K, V> {
+impl<K, V> ModuloCapacity for InnerMap<K, V> {
     fn capacity(&self) -> usize {
         self.buckets.len()
     }
