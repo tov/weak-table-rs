@@ -465,11 +465,12 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     /// In particular, all the keys of `self` must be in `other` and the values must compare
     /// `true` with `value_equal`.
     pub fn submap_with<F, S1, V1>(&self, other: &WeakKeyHashMap<K, V1, S1>,
-                                  mut value_equal: F)
-        where F: FnMut(&V, &V1) -> bool
+                                  mut value_equal: F) -> bool
+        where F: FnMut(&V, &V1) -> bool,
+              S1: BuildHasher
     {
         for (key, value1) in self {
-            if let Some(value2) = other.get(key) {
+            if let Some(value2) = other.get(K::view_key(&key)) {
                 if !value_equal(value1, value2) {
                     return false;
                 }
@@ -482,14 +483,16 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     }
 
     /// Is `self` a submap of `other`?
-    pub fn submap<V1, S1>(&self, other: &WeakKeyHashMap<K, V, S1>) -> bool
-        where V: PartialEq<V1>
+    pub fn submap<V1, S1>(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool
+        where V: PartialEq<V1>,
+              S1: BuildHasher
     {
         self.submap_with(other, PartialEq::eq)
     }
 
     /// Are the keys of `self` a subset of the keys of `other`?
     pub fn keys_subset<V1, S1>(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool
+        where S1: BuildHasher
     {
         self.submap_with(other, |_, _| true)
     }
@@ -506,18 +509,44 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
 impl<K, V, V1, S, S1> PartialEq<WeakKeyHashMap<K, V1, S1>> for WeakKeyHashMap<K, V, S>
     where K: WeakKey,
-          V: PartialEq<V1>
+          V: PartialEq<V1>,
+          S: BuildHasher,
+          S1: BuildHasher
 {
     fn eq(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool {
         self.submap(other) && other.keys_subset(self)
     }
 }
 
-impl<K: WeakKey, V: Eq, S> Eq for WeakKeyHashMap<K, V, S> { }
+impl<K: WeakKey, V: Eq, S: BuildHasher> Eq for WeakKeyHashMap<K, V, S> { }
 
 impl<K: WeakKey, V, S: BuildHasher + Default> Default for WeakKeyHashMap<K, V, S> {
     fn default() -> Self {
         WeakKeyHashMap::with_hasher(Default::default())
+    }
+}
+
+impl<'a, K, V, S, Q> ::std::ops::Index<&'a Q> for WeakKeyHashMap<K, V, S>
+    where K: WeakKey,
+          K::Key: Borrow<Q>,
+          S: BuildHasher,
+          Q: ?Sized + Eq + Hash
+{
+    type Output = V;
+
+    fn index(&self, index: &'a Q) -> &Self::Output {
+        self.get(index).expect("Index::index: key not found")
+    }
+}
+
+impl<'a, K, V, S, Q> ::std::ops::IndexMut<&'a Q> for WeakKeyHashMap<K, V, S>
+    where K: WeakKey,
+          K::Key: Borrow<Q>,
+          S: BuildHasher,
+          Q: ?Sized + Eq + Hash
+{
+    fn index_mut(&mut self, index: &'a Q) -> &mut Self::Output {
+        self.get_mut(index).expect("IndexMut::index_mut: key not found")
     }
 }
 
