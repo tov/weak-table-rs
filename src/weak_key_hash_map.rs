@@ -312,6 +312,14 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.inner.len
     }
 
+    /// Is the map empty?
+    ///
+    /// Note that this may return false even if all keys in the map have
+    /// expired, if they haven't been collected yet.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn load_factor(&self) -> f32 {
         (self.len() as f32 + 1.0) / self.capacity() as f32
     }
@@ -956,5 +964,34 @@ impl<K: WeakKey, V, S> WeakKeyHashMap<K, V, S> {
             base: self.inner.buckets.iter_mut(),
             size: old_len,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::{Rc, Weak};
+    use super::WeakKeyHashMap;
+
+    #[test]
+    fn simple() {
+        let mut map: WeakKeyHashMap<Weak<String>, usize> = WeakKeyHashMap::new();
+        assert_eq!( map.len(), 0 );
+        assert!( !map.contains_key("five") );
+
+        let five = Rc::new("five".to_string());
+        map.insert(five.clone(), 5);
+
+        assert_eq!( map.len(), 1 );
+        assert!( map.contains_key("five") );
+
+        drop(five);
+
+        assert_eq!( map.len(), 1 );
+        assert!( !map.contains_key("five") );
+
+        map.remove_expired();
+
+        assert_eq!( map.len(), 0 );
+        assert!( !map.contains_key("five") );
     }
 }
