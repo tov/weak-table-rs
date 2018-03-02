@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::cmp::max;
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
@@ -334,9 +335,9 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
             let load_factor = self.load_factor();
             let capacity = self.capacity();
             if load_factor > GROW_LOAD_FACTOR {
-                self.resize(capacity * 2);
-            } else if load_factor < SHRINK_LOAD_FACTOR {
-                self.resize(capacity / 2);
+                self.resize(max(1, capacity * 2));
+            } else if load_factor < SHRINK_LOAD_FACTOR && capacity > DEFAULT_INITIAL_CAPACITY {
+                self.resize(max(1, capacity / 2));
             }
         }
     }

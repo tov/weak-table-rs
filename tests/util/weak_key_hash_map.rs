@@ -13,7 +13,6 @@ use self::Cmd::*;
 #[derive(Clone, Debug)]
 pub enum Cmd<K, V>
 {
-    Check,
     Insert(K, V),
     RemoveInserted(usize),
     RemoveOther(K),
@@ -55,9 +54,6 @@ impl<K, V> Tester<K, V>
 
     pub fn execute_command(&mut self, cmd: &Cmd<K, V>) {
         match *cmd {
-            Check => {
-                self.check();
-            }
             Insert(ref k, ref v) => {
                 let kptr = Rc::new(k.clone());
                 self.strong.insert(RcKey(kptr.clone()), v.clone());
@@ -88,9 +84,9 @@ impl<K, V> Tester<K, V>
         }
     }
 
-    pub fn check(&self) {
+    pub fn check(&self) -> bool {
         let copy = self.weak.iter().map(|(k, v)| (RcKey(k), v.clone())).collect();
-        assert_eq!( self.strong, copy );
+        self.strong == copy
     }
 }
 
@@ -99,8 +95,7 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
         let choice = g.gen_range(0, 100);
 
         match choice {
-            00...39 => Insert(K::arbitrary(g), V::arbitrary(g)),
-            40...49 => Check,
+            00...49 => Insert(K::arbitrary(g), V::arbitrary(g)),
             50...69 => RemoveInserted(usize::arbitrary(g)),
             70...79 => RemoveOther(K::arbitrary(g)),
             80...99 => ForgetInserted(usize::arbitrary(g)),
