@@ -320,6 +320,9 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.len() == 0
     }
 
+    /// The proportion of buckets that are used.
+    ///
+    /// This is an over-approximation because of expired keys.
     pub fn load_factor(&self) -> f32 {
         (self.len() as f32 + 1.0) / self.capacity() as f32
     }
