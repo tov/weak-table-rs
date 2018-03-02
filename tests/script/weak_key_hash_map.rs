@@ -3,6 +3,8 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
+use quickcheck::{Arbitrary, Gen};
+
 use weak_table::WeakKeyHashMap;
 
 use super::rc_key::RcKey;
@@ -92,3 +94,32 @@ impl<K, V> Tester<K, V>
     }
 }
 
+impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let choice = g.gen::<usize>() % 10;
+
+        if choice < 4 {
+            Insert(K::arbitrary(g), V::arbitrary(g))
+        } else if choice < 5 {
+            Check
+        } else if choice < 7 {
+            RemoveInserted(usize::arbitrary(g))
+        } else if choice < 8 {
+            RemoveOther(K::arbitrary(g))
+        } else {
+            ForgetInserted(usize::arbitrary(g))
+        }
+    }
+}
+
+impl<K: Arbitrary, V: Arbitrary> Arbitrary for Script<K, V> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        Script {
+            cmds: Vec::<Cmd<K, V>>::arbitrary(g)
+        }
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+        Box::new(self.cmds.shrink().map(|v| Script { cmds: v }))
+    }
+}

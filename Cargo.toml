@@ -11,3 +11,7 @@ license = "MIT"
 keywords = ["containers", "weak pointers"]
 
 [dependencies]
+
+[dev-dependencies]
+quickcheck = "0.6"
+
