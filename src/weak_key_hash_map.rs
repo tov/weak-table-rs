@@ -515,6 +515,12 @@ impl<K, V, V1, S, S1> PartialEq<WeakKeyHashMap<K, V1, S1>> for WeakKeyHashMap<K,
 
 impl<K: WeakKey, V: Eq, S> Eq for WeakKeyHashMap<K, V, S> { }
 
+impl<K: WeakKey, V, S: BuildHasher + Default> Default for WeakKeyHashMap<K, V, S> {
+    fn default() -> Self {
+        WeakKeyHashMap::with_hasher(Default::default())
+    }
+}
+
 enum BucketStatus {
     Unoccupied,
     MatchesKey,
