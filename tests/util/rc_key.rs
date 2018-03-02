@@ -1,8 +1,9 @@
 use std::borrow::Borrow;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct RcKey<K>(pub Rc<K>);
 
 impl<K: PartialEq> PartialEq for RcKey<K> {
@@ -25,3 +26,8 @@ impl<K> Borrow<K> for RcKey<K> {
     }
 }
 
+impl<K: fmt::Debug> fmt::Debug for RcKey<K> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        (*self.0).fmt(f)
+    }
+}

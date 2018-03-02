@@ -44,18 +44,15 @@ struct InnerMap<K, V> {
 struct HashCode(u64);
 
 /// Represents an entry in the table which may be occupied or vacant.
-#[derive(Debug)]
 pub enum Entry<'a, K: 'a + WeakKey, V: 'a> {
     Occupied(OccupiedEntry<'a, K, V>),
     Vacant(VacantEntry<'a, K, V>),
 }
 
 /// An occupied entry, which can be removed or viewed.
-#[derive(Debug)]
 pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 
 /// A vacant entry, which can be inserted in or viewed.
-#[derive(Debug)]
 pub struct VacantEntry<'a, K: 'a + WeakKey, V: 'a>(InnerEntry<'a, K, V>);
 
 struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
@@ -441,11 +438,14 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
             self.inner.buckets[tup.0].as_mut().map(|bucket| &mut bucket.1))
     }
 
-    /// Unconditionally inserts the value, returning the old value if already present. Does not
-    /// replace the key.
+    /// Unconditionally inserts the value, returning the old value if already present.
+    ///
+    /// Unlike `std::collections::HashMap`, this replaced the key even if occupied.
     pub fn insert(&mut self, key: K::Strong, value: V) -> Option<V> {
         match self.entry(key) {
-            Entry::Occupied(mut occupied) => Some(occupied.insert(value)),
+            Entry::Occupied(mut occupied) => {
+                Some(occupied.insert(value))
+            },
             Entry::Vacant(vacant) => {
                 vacant.insert(value);
                 None
@@ -700,6 +700,7 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
 
     /// Replaces the value in the entry with the given value.
     pub fn insert(&mut self, mut value: V) -> V {
+        self.0.map.buckets[self.0.pos].as_mut().unwrap().0 = K::new(&self.0.key);
         mem::swap(self.get_mut(), &mut value);
         value
     }
@@ -874,23 +875,58 @@ impl<'a, K: WeakKey, V> ModuloCapacity for VacantEntry<'a, K, V> {
     }
 }
 
-fn debug_table<K: Debug, V: Debug>(buckets: &TablePtr<K, V>, f: &mut Formatter) -> fmt::Result {
+fn debug_table<K, V>(buckets: &TablePtr<K, V>, f: &mut Formatter) -> fmt::Result
+    where K: WeakKey,
+          K::Strong: Debug,
+          V: Debug
+{
     write!(f, "{{ ")?;
     for (i, bucket) in buckets.iter().enumerate() {
-        if let &Some((ref k, ref v, hc)) = bucket {
-            write!(f, "[{}] {:?} => {:?} ({:x}), ", i, *k, *v, hc.0)?;
+        if let &Some((ref k, ref v, _)) = bucket {
+            write!(f, "[{}] {:?} => {:?}, ", i, k.view(), *v)?;
         }
     }
     write!(f, "}}")
 }
 
-impl<K: Debug, V: Debug, S> Debug for WeakKeyHashMap<K, V, S> {
+impl<K: WeakKey, V: Debug, S> Debug for WeakKeyHashMap<K, V, S>
+    where K::Strong: Debug
+{
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         debug_table(&self.inner.buckets, f)
     }
 }
 
-impl<'a, K: WeakKey + Debug, V: Debug> Debug for InnerEntry<'a, K, V> {
+impl<'a, K: WeakKey, V: Debug> Debug for Entry<'a, K, V>
+    where K::Strong: Debug
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Entry::Occupied(ref e)  => e.fmt(f),
+            Entry::Vacant(ref e)    => e.fmt(f),
+        }
+    }
+}
+
+impl<'a, K: WeakKey, V: Debug> Debug for OccupiedEntry<'a, K, V>
+    where K::Strong: Debug
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<'a, K: WeakKey, V: Debug> Debug for VacantEntry<'a, K, V>
+    where K::Strong: Debug
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<'a, K: WeakKey, V: Debug> Debug for InnerEntry<'a, K, V>
+    where K::Strong: Debug
+{
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "InnerEntry {{ pos = {}, buckets = ", self.pos)?;
         debug_table(&self.map.buckets, f)?;
