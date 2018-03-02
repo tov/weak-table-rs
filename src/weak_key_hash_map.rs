@@ -65,7 +65,7 @@ struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
 }
 
 /// An iterator over the keys and values of the weak hash map.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Iter<'a, K: 'a, V: 'a> {
     base: ::std::slice::Iter<'a, Bucket<K, V>>,
     size: usize,
@@ -92,6 +92,7 @@ impl<'a, K: WeakKey, V> Iterator for Iter<'a, K, V> {
     }
 }
 
+#[derive(Debug)]
 /// An iterator over the keys and mutable values of the weak hash map.
 pub struct IterMut<'a, K: 'a, V: 'a> {
     base: ::std::slice::IterMut<'a, Bucket<K, V>>,
@@ -120,7 +121,7 @@ impl<'a, K: WeakKey, V> Iterator for IterMut<'a, K, V> {
 }
 
 /// An iterator over the keys of the weak hash map.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Keys<'a, K: 'a, V: 'a>(Iter<'a, K, V>);
 
 impl<'a, K: WeakKey, V> Iterator for Keys<'a, K, V> {
@@ -136,7 +137,7 @@ impl<'a, K: WeakKey, V> Iterator for Keys<'a, K, V> {
 }
 
 /// An iterator over the values of the weak hash map.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Values<'a, K: 'a, V: 'a>(Iter<'a, K, V>);
 
 impl<'a, K: WeakKey, V> Iterator for Values<'a, K, V> {
@@ -151,6 +152,7 @@ impl<'a, K: WeakKey, V> Iterator for Values<'a, K, V> {
     }
 }
 
+#[derive(Debug)]
 /// An iterator over the mutable values of the weak hash map.
 pub struct ValuesMut<'a, K: 'a, V: 'a>(IterMut<'a, K, V>);
 
@@ -166,6 +168,7 @@ impl<'a, K: WeakKey, V> Iterator for ValuesMut<'a, K, V> {
     }
 }
 
+#[derive(Debug)]
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct Drain<'a, K: 'a, V: 'a> {
     base: ::std::slice::IterMut<'a, Bucket<K, V>>,
