@@ -96,18 +96,15 @@ impl<K, V> Tester<K, V>
 
 impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let choice = g.gen::<usize>() % 10;
+        let choice = g.gen_range(0, 100);
 
-        if choice < 4 {
-            Insert(K::arbitrary(g), V::arbitrary(g))
-        } else if choice < 5 {
-            Check
-        } else if choice < 7 {
-            RemoveInserted(usize::arbitrary(g))
-        } else if choice < 8 {
-            RemoveOther(K::arbitrary(g))
-        } else {
-            ForgetInserted(usize::arbitrary(g))
+        match choice {
+            00...39 => Insert(K::arbitrary(g), V::arbitrary(g)),
+            40...49 => Check,
+            50...69 => RemoveInserted(usize::arbitrary(g)),
+            70...79 => RemoveOther(K::arbitrary(g)),
+            80...99 => ForgetInserted(usize::arbitrary(g)),
+            _       => unreachable!(),
         }
     }
 }
