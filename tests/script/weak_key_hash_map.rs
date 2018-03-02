@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
@@ -10,6 +11,7 @@ use self::Cmd::*;
 #[derive(Clone, Debug)]
 pub enum Cmd<K, V>
 {
+    Check,
     Insert(K, V),
     RemoveInserted(usize),
     RemoveOther(K),
@@ -28,7 +30,10 @@ pub struct Tester<K: Hash + Eq, V> {
     log:    Vec<K>,
 }
 
-impl<K: Hash + Eq + Clone, V: Clone> Tester<K, V> {
+impl<K, V> Tester<K, V>
+    where K: Hash + Eq + Clone + Debug,
+          V: Eq + Clone + Debug
+{
     pub fn new() -> Self {
         Tester {
             weak:   WeakKeyHashMap::new(),
@@ -48,6 +53,9 @@ impl<K: Hash + Eq + Clone, V: Clone> Tester<K, V> {
 
     pub fn execute_command(&mut self, cmd: &Cmd<K, V>) {
         match *cmd {
+            Check => {
+                self.check();
+            }
             Insert(ref k, ref v) => {
                 let kptr = Rc::new(k.clone());
                 self.strong.insert(RcKey(kptr.clone()), v.clone());
@@ -76,6 +84,11 @@ impl<K: Hash + Eq + Clone, V: Clone> Tester<K, V> {
         for cmd in &script.cmds {
             self.execute_command(cmd);
         }
+    }
+
+    pub fn check(&self) {
+        let copy = self.weak.iter().map(|(k, v)| (RcKey(k), v.clone())).collect();
+        assert_eq!( self.strong, copy );
     }
 }
 
