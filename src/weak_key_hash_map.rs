@@ -355,9 +355,8 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
                 key,
             }
         };
-        let mut dist = 0;
 
-        loop {
+        for dist in 0 .. inner.capacity() {
             match inner.bucket_status() {
                 BucketStatus::Unoccupied =>
                     return Entry::Vacant(VacantEntry(inner)),
@@ -368,11 +367,12 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
                         return Entry::Vacant(VacantEntry(inner))
                     } else {
                         inner.pos = inner.next_bucket(inner.pos);
-                        dist += 1;
                     }
                 }
             }
         }
+
+        panic!("WeakKeyHashTable::entry: out of space");
     }
 
     /// Removes all associations from the map.
@@ -384,11 +384,12 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         where Q: ?Sized + Hash + Eq,
               K::Key: Borrow<Q>
     {
+        if self.capacity() == 0 { return None; }
+
         let hash_code = self.hash(key);
         let mut pos = self.which_bucket(hash_code);
-        let mut dist = 0;
 
-        loop {
+        for dist in 0 .. self.capacity() {
             if let Some((ref weak_key, _, bucket_hash_code)) = self.inner.buckets[pos] {
                 if bucket_hash_code == hash_code {
                     if let Some(bucket_key) = weak_key.view() {
@@ -408,8 +409,9 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
             }
 
             pos = self.next_bucket(pos);
-            dist += 1;
         }
+
+        None
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -837,11 +839,13 @@ trait ModuloCapacity {
     }
 
     fn next_bucket(&self, pos: usize) -> usize {
+        assert_ne!( self.capacity(), 0 );
         (pos + 1) % self.capacity()
     }
 
     fn which_bucket(&self, hash_code: HashCode) -> usize {
-        hash_code.0 as usize % self.capacity()
+        assert_ne!( self.capacity(), 0 );
+        (hash_code.0 as usize) % self.capacity()
     }
 }
 

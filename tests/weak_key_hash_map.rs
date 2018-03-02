@@ -21,7 +21,7 @@ fn test_script<K, V>(script: &Script<K, V>) -> bool
     where K: Clone + Debug + Eq + Hash,
           V: Clone + Debug + Eq
 {
-    let mut tester = Tester::with_capacity(4);
+    let mut tester = Tester::with_capacity(0);
     tester.execute_script(script);
     tester.check()
 }
