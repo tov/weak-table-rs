@@ -7,8 +7,18 @@ use std::mem;
 use super::traits::*;
 use super::util::*;
 
+// No reason for this number as of now.
 const DEFAULT_INITIAL_CAPACITY: usize = 8;
-const MAX_LOAD_FACTOR: f32 = 0.8;
+
+// When the approximate load factor reaches `COLLECT_LOAD_FACTOR`, we remove
+// all the expired pointers and then consider resizing.
+const COLLECT_LOAD_FACTOR: f32 = 0.9;
+
+// If, after collection, the load factor is above `GROW_LOAD_FACTOR`, we grow.
+const GROW_LOAD_FACTOR: f32 = 0.75;
+
+// If, after collection, the load factor is below `SHRINK_LOAD_FACTOR`, we shrink.
+const SHRINK_LOAD_FACTOR: f32 = 0.25;
 
 type FullBucket<K, V> = (K, V, HashCode);
 type Bucket<K, V> = Option<FullBucket<K, V>>;
@@ -284,13 +294,31 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.inner.len
     }
 
+    pub fn load_factor(&self) -> f32 {
+        (self.len() as f32 + 1.0) / self.capacity() as f32
+    }
+
+    fn maybe_adjust_size(&mut self) {
+        if self.load_factor() > COLLECT_LOAD_FACTOR {
+            self.remove_expired();
+
+            let load_factor = self.load_factor();
+            let capacity = self.capacity();
+            if load_factor > GROW_LOAD_FACTOR {
+                self.resize(capacity * 2);
+            } else if load_factor < SHRINK_LOAD_FACTOR {
+                self.resize(capacity / 2);
+            }
+        }
+    }
+
     /// Gets the requested entry.
     pub fn entry(&mut self, key: K::Strong) -> Entry<K, V> {
-        // TODO: growing
+        self.maybe_adjust_size();
         self.entry_no_grow(key)
     }
 
-    pub fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
+    fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
         let mut inner = {
             let hash_code = self.hash(K::view_key(&key));
             InnerEntry {
@@ -432,6 +460,40 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         }
     }
 
+    /// Is this map a submap of the other, using the given value comparison.
+    ///
+    /// In particular, all the keys of `self` must be in `other` and the values must compare
+    /// `true` with `value_equal`.
+    pub fn submap_with<F, S1, V1>(&self, other: &WeakKeyHashMap<K, V1, S1>,
+                                  mut value_equal: F)
+        where F: FnMut(&V, &V1) -> bool
+    {
+        for (key, value1) in self {
+            if let Some(value2) = other.get(key) {
+                if !value_equal(value1, value2) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Is `self` a submap of `other`?
+    pub fn submap<V1, S1>(&self, other: &WeakKeyHashMap<K, V, S1>) -> bool
+        where V: PartialEq<V1>
+    {
+        self.submap_with(other, PartialEq::eq)
+    }
+
+    /// Are the keys of `self` a subset of the keys of `other`?
+    pub fn keys_subset<V1, S1>(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool
+    {
+        self.submap_with(other, |_, _| true)
+    }
+
     fn hash<Q>(&self, key: &Q) -> HashCode
         where Q: ?Sized + Hash,
               K::Key: Borrow<Q>
@@ -441,6 +503,17 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         HashCode(hasher.finish())
     }
 }
+
+impl<K, V, V1, S, S1> PartialEq<WeakKeyHashMap<K, V1, S1>> for WeakKeyHashMap<K, V, S>
+    where K: WeakKey,
+          V: PartialEq<V1>
+{
+    fn eq(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool {
+        self.submap(other) && other.keys_subset(self)
+    }
+}
+
+impl<K: WeakKey, V: Eq, S> Eq for WeakKeyHashMap<K, V, S> { }
 
 enum BucketStatus {
     Unoccupied,
