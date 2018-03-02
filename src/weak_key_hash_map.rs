@@ -274,13 +274,15 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
     /// This has some preconditions.
     fn resize(&mut self, capacity: usize) {
-        let mut old_buckets = new_boxed_option_slice(capacity);
-        mem::swap(&mut self.inner.buckets, &mut old_buckets);
+        let old_buckets = mem::replace(&mut self.inner.buckets,
+                                       new_boxed_option_slice(capacity));
 
         let iter = IntoIter {
             base: old_buckets.into_vec().into_iter(),
             size: self.inner.len,
         };
+
+        self.inner.len = 0;
 
         for (key, value) in iter {
             self.entry_no_grow(key).or_insert(value);
