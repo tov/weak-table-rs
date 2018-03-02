@@ -274,18 +274,9 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         }
     }
 
+    /// Removes all mappings whose keys have expired.
     pub fn remove_expired(&mut self) {
-        for i in 0 .. self.capacity() {
-            let expired = if let Some(ref bucket) = self.inner.buckets[i] {
-                bucket.0.expired()
-            } else {
-                false
-            };
-
-            if expired {
-                self.inner.remove_index(i);
-            }
-        }
+        self.retain(|_, _| true)
     }
 
     /// Returns an over-approximation of the number of elements.
@@ -295,6 +286,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
     /// Gets the requested entry.
     pub fn entry(&mut self, key: K::Strong) -> Entry<K, V> {
+        // TODO: growing
         self.entry_no_grow(key)
     }
 
@@ -416,6 +408,28 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
                 hash_code,
             }).remove()
         })
+    }
+
+    /// Removes all mappings not satisfying the given predicate.
+    ///
+    /// Also removes any expired mappings.
+    pub fn retain<F>(&mut self, mut f: F)
+        where F: FnMut(K::Strong, &mut V) -> bool
+    {
+        for i in 0 .. self.capacity() {
+            let remove = match self.inner.buckets[i] {
+                None => false,
+                Some(ref mut bucket) =>
+                    match bucket.0.view() {
+                        None => true,
+                        Some(key) => !f(key, &mut bucket.1),
+                    }
+            };
+
+            if remove {
+                self.inner.remove_index(i);
+            }
+        }
     }
 
     fn hash<Q>(&self, key: &Q) -> HashCode
