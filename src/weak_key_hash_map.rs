@@ -289,6 +289,19 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.retain(|_, _| true)
     }
 
+    /// Reserves room for additional elements.
+    pub fn reserve(&mut self, additional_capacity: usize) {
+        let new_capacity = additional_capacity + self.capacity();
+        self.resize(new_capacity);
+    }
+
+    /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
+    pub fn shrink_to_fit(&mut self) {
+        self.remove_expired();
+        let new_capacity = (self.len() as f32 / COLLECT_LOAD_FACTOR).ceil() as usize;
+        self.resize(new_capacity);
+    }
+
     /// Returns an over-approximation of the number of elements.
     pub fn len(&self) -> usize {
         self.inner.len
@@ -547,6 +560,41 @@ impl<'a, K, V, S, Q> ::std::ops::IndexMut<&'a Q> for WeakKeyHashMap<K, V, S>
 {
     fn index_mut(&mut self, index: &'a Q) -> &mut Self::Output {
         self.get_mut(index).expect("IndexMut::index_mut: key not found")
+    }
+}
+
+impl<K, V, S> ::std::iter::FromIterator<(K::Strong, V)> for WeakKeyHashMap<K, V, S>
+    where K: WeakKey,
+          S: BuildHasher + Default
+{
+    fn from_iter<T: IntoIterator<Item=(K::Strong, V)>>(iter: T) -> Self {
+        let mut result = WeakKeyHashMap::with_hasher(Default::default());
+        result.extend(iter);
+        result
+    }
+}
+
+impl<K, V, S> ::std::iter::Extend<(K::Strong, V)> for WeakKeyHashMap<K, V, S>
+    where K: WeakKey,
+          S: BuildHasher
+{
+    fn extend<T: IntoIterator<Item=(K::Strong, V)>>(&mut self, iter: T) {
+        for (key, value) in iter {
+            self.insert(key, value);
+        }
+    }
+}
+
+impl<'a, K, V, S> ::std::iter::Extend<(&'a K::Strong, &'a V)> for WeakKeyHashMap<K, V, S>
+    where K: 'a + WeakKey,
+          K::Strong: Clone,
+          V: 'a + Clone,
+          S: BuildHasher
+{
+    fn extend<T: IntoIterator<Item=(&'a K::Strong, &'a V)>>(&mut self, iter: T) {
+        for (key, value) in iter {
+            self.insert(key.clone(), value.clone());
+        }
     }
 }
 
