@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
-use quickcheck::{Arbitrary, Gen, QuickCheck};
+use quickcheck::{Arbitrary, Gen};
 
 use weak_table::WeakKeyHashMap;
 
@@ -24,19 +24,6 @@ fn test_script<K, V>(script: &Script<K, V>) -> bool
     let mut tester = Tester::with_capacity(4);
     tester.execute_script(script);
     tester.check()
-}
-
-#[test]
-fn infinite_loop() {
-    fn property(script: Script<i32, u8>) -> bool {
-        test_script(&script)
-    }
-
-    let mut qc = QuickCheck::new();
-
-    loop {
-        qc.quickcheck(property as fn(Script<i32, u8>) -> bool);
-    }
 }
 
 quickcheck! {
@@ -88,7 +75,7 @@ impl<K, V> Tester<K, V>
     pub fn check(&self) -> bool {
         let copy = self.weak.iter().map(|(k, v)| (RcKey(k), v.clone())).collect();
         if self.strong == copy {
-            eprintln!("Tester::check: succeeded: {:?}", self.weak);
+//            eprintln!("Tester::check: succeeded: {:?}", self.weak);
             true
         } else {
             eprintln!("Tester::check: failed: {:?} ≠ {:?}", self.strong, copy);
