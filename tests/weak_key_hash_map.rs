@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::{Arbitrary, Gen, QuickCheck};
 
 use weak_table::WeakKeyHashMap;
 
@@ -26,6 +26,19 @@ fn test_script<K, V>(script: &Script<K, V>) -> bool
     tester.check()
 }
 
+#[test]
+fn infinite_loop() {
+    fn property(script: Script<i32, u8>) -> bool {
+        test_script(&script)
+    }
+
+    let mut qc = QuickCheck::new();
+
+    loop {
+        qc.quickcheck(property as fn(Script<i32, u8>) -> bool);
+    }
+}
+
 quickcheck! {
     fn prop_u8_u8(script: Script<u8, u8>) -> bool {
         test_script(&script)
@@ -35,15 +48,6 @@ quickcheck! {
         test_script(&script)
     }
 }
-
-//#[test]
-//fn particular_script() {
-//    let script: Script<u8, u8> =
-//        Script(vec![Insert(0, 0), Insert(1, 1), Insert(11, 2), Insert(3, 3), Insert(11, 4)]);
-//    for _ in 0 .. 1000 {
-//        assert!(test_script(&script));
-//    }
-//}
 
 #[derive(Clone, Debug)]
 pub enum Cmd<K, V>
@@ -84,9 +88,10 @@ impl<K, V> Tester<K, V>
     pub fn check(&self) -> bool {
         let copy = self.weak.iter().map(|(k, v)| (RcKey(k), v.clone())).collect();
         if self.strong == copy {
+            eprintln!("Tester::check: succeeded: {:?}", self.weak);
             true
         } else {
-            eprintln!("Tester::check: failed: {:?} ≠ {:?}\n", self.strong, copy);
+            eprintln!("Tester::check: failed: {:?} ≠ {:?}", self.strong, copy);
             false
         }
     }
