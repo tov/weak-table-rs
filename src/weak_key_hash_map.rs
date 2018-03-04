@@ -347,7 +347,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
     fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
         let mut inner = {
-            let hash_code = self.hash(K::view_key(&key));
+            let hash_code = K::with_key(&key, |k| self.hash(k));
             InnerEntry {
                 pos:        self.which_bucket(hash_code),
                 map:        &mut self.inner,
@@ -393,7 +393,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
             if let Some((ref weak_key, _, bucket_hash_code)) = self.inner.buckets[pos] {
                 if bucket_hash_code == hash_code {
                     if let Some(bucket_key) = weak_key.view() {
-                        if *K::view_key(&bucket_key).borrow() == *key {
+                        if K::with_key(&bucket_key, |k| k.borrow() == key) {
                             return Some((pos, bucket_key, bucket_hash_code));
                         }
                     }
@@ -502,7 +502,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
               S1: BuildHasher
     {
         for (key, value1) in self {
-            if let Some(value2) = other.get(K::view_key(&key)) {
+            if let Some(value2) = K::with_key(&key, |k| other.get(k)) {
                 if !value_equal(value1, value2) {
                     return false;
                 }
@@ -630,7 +630,7 @@ impl<'a, K: WeakKey, V> InnerEntry<'a, K, V> {
             Some((ref weak_key, _, hash_code)) => {
                 if hash_code == self.hash_code {
                     if let Some(key) = weak_key.view() {
-                        if K::view_key(&self.key) == K::view_key(&key) {
+                        if K::with_key(&self.key, |k1| K::with_key(&key, |k2| k1 == k2)) {
                             return BucketStatus::MatchesKey;
                         }
                     }

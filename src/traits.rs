@@ -28,7 +28,8 @@ pub trait WeakKey : WeakElement {
     type Key: Eq + Hash;
 
     /// Borrows a view of the key.
-    fn view_key(view: &Self::Strong) -> &Self::Key;
+    fn with_key<F, R>(view: &Self::Strong, f: F) -> R
+        where F: FnOnce(&Self::Key) -> R;
 }
 
 impl<T> WeakElement for rc::Weak<T> {
@@ -46,8 +47,10 @@ impl<T> WeakElement for rc::Weak<T> {
 impl<T: Eq + Hash> WeakKey for rc::Weak<T> {
     type Key = T;
 
-    fn view_key(view: &Self::Strong) -> &Self::Key {
-        &view
+    fn with_key<F, R>(view: &Self::Strong, f: F) -> R
+        where F: FnOnce(&Self::Key) -> R
+    {
+        f(&view)
     }
 }
 
@@ -63,10 +66,14 @@ impl<T> WeakElement for sync::Weak<T> {
     }
 }
 
-impl<T: Eq + Hash> WeakKey for sync::Weak<T> {
+impl<T: Eq + Hash> WeakKey for sync::Weak<T>
+{
     type Key = T;
 
-    fn view_key(view: &Self::Strong) -> &Self::Key {
-        &view
+    fn with_key<F, R>(view: &Self::Strong, f: F) -> R
+        where F: FnOnce(&Self::Key) -> R
+    {
+        f(&view)
     }
 }
+
