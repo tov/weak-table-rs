@@ -1,11 +1,5 @@
 //! This library offers a variety of weak hash tables:
 //!
-//!   - For a hash set where the elements are held by weak pointers and compared by element value, see
-//!     [`WeakHashSet`](struct.WeakHashSet.html).
-//!
-//!   - For a hash set where the elements are held by weak pointers and compared by pointer, see
-//!     [`PtrWeakHashSet`](struct.PtrWeakHashSet.html).
-//!
 //!   - For a hash map where the keys are held by weak pointers and compared by key value, see
 //!     [`WeakKeyHashMap`](struct.WeakKeyHashMap.html).
 //!
@@ -18,6 +12,12 @@
 //!   - For a hash map where the keys and values are both held by weak pointers and the keys are
 //!     compared by value, see
 //!     [`WeakWeakHashMap`](struct.WeakWeakHashMap.html).
+//!
+//!   - For a hash set where the elements are held by weak pointers and compared by element value, see
+//!     [`WeakHashSet`](struct.WeakHashSet.html).
+//!
+//!   - For a hash set where the elements are held by weak pointers and compared by pointer, see
+//!     [`PtrWeakHashSet`](struct.PtrWeakHashSet.html).
 //!
 //! # Examples
 //!
@@ -113,14 +113,6 @@ pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(
     WeakKeyHashMap<by_ptr::ByPtr<K>, V, S>
 );
 
-/// A weak-key hash set that hashes on key pointers.
-#[derive(Clone)]
-pub struct PtrWeakHashSet<T, S = RandomState>(PtrWeakKeyHashMap<T, (), S>);
-
-/// A weak-key hash set that hashes on key pointers.
-#[derive(Clone)]
-pub struct WeakHashSet<T, S = RandomState>(WeakKeyHashMap<T, (), S>);
-
 /// A mapping from keys to weak pointers.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
@@ -150,4 +142,12 @@ struct WeakWeakInnerMap<K, V> {
     buckets: TablePtr<K, V>,
     len: usize,
 }
+
+/// A weak-key hash set that hashes on key pointers.
+#[derive(Clone)]
+pub struct WeakHashSet<T, S = RandomState>(WeakKeyHashMap<T, (), S>);
+
+/// A weak-key hash set that hashes on key pointers.
+#[derive(Clone)]
+pub struct PtrWeakHashSet<T, S = RandomState>(PtrWeakKeyHashMap<T, (), S>);
 
