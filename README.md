@@ -9,6 +9,27 @@ the [full API documentation](https://tov.github.io/weak-table-rs/).
 
 ## Usage
 
+It’s [on crates.io](https://crates.io/crates/weak-table),
+so you can add
+
+```toml
+[dependencies]
+weak-table = "0.1.0"
+```
+
+to your `Cargo.toml` and
+
+```rust
+extern crate weak_table;
+```
+
+to your crate root.
+
+### Examples
+
+Here we create a weak hash set and demonstrate that it forgets elements
+whose reference counts expire:
+
 ```rust
 use weak_table::WeakHashSet;
 use std::sync::{Arc, Weak};
