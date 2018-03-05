@@ -6,3 +6,26 @@
 
 This crate defines several kinds of weak hash maps and sets. See 
 the [full API documentation](https://tov.github.io/weak-table-rs/).
+
+## Usage
+
+```rust
+use weak_table::PtrWeakHashSet;
+use std::sync::{Arc, Weak};
+
+type Table = PtrWeakHashSet<Weak<String>>;
+
+let mut set = Table::new();
+let a = Arc::new("hello".to_string());
+let b = Arc::new("hello".to_string());
+
+set.insert(a.clone());
+
+assert!(   set.contains(&a) );
+assert!( ! set.contains(&b) );
+
+set.insert(b.clone());
+
+assert!(   set.contains(&a) );
+assert!(   set.contains(&b) );
+```

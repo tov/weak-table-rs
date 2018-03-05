@@ -15,7 +15,7 @@ use super::weak_key_hash_map as base;
 /// # Examples
 ///
 /// ```
-/// use weak_table::{PtrWeakKeyHashMap};
+/// use weak_table::PtrWeakKeyHashMap;
 /// use std::rc::{Rc, Weak};
 ///
 /// type Table = PtrWeakKeyHashMap<Weak<String>, usize>;
