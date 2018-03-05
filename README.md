@@ -10,22 +10,27 @@ the [full API documentation](https://tov.github.io/weak-table-rs/).
 ## Usage
 
 ```rust
-use weak_table::PtrWeakHashSet;
+use weak_table::WeakHashSet;
 use std::sync::{Arc, Weak};
 
-type Table = PtrWeakHashSet<Weak<String>>;
+type Table = WeakHashSet<Weak<String>>;
 
 let mut set = Table::new();
-let a = Arc::new("hello".to_string());
-let b = Arc::new("hello".to_string());
+let a = Arc::new("a".to_string());
+let b = Arc::new("b".to_string());
 
 set.insert(a.clone());
 
-assert!(   set.contains(&a) );
-assert!( ! set.contains(&b) );
+assert!(   set.contains("a") );
+assert!( ! set.contains("b") );
 
 set.insert(b.clone());
 
-assert!(   set.contains(&a) );
-assert!(   set.contains(&b) );
+assert!(   set.contains("a") );
+assert!(   set.contains("b") );
+
+drop(a);
+
+assert!( ! set.contains("a") );
+assert!(   set.contains("b") );
 ```

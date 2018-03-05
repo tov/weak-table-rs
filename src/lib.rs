@@ -11,29 +11,34 @@
 //!
 //!   - For a hash map where the keys are held by weak pointers and compared by pointer, see
 //!     [`PtrWeakKeyHashMap`](ptr_weak_key_hash_map/struct.PtrWeakKeyHashMap.html).
-///
-/// # Examples
-///
-/// ```
-/// use weak_table::PtrWeakHashSet;
-/// use std::sync::{Arc, Weak};
-///
-/// type Table = PtrWeakHashSet<Weak<String>>;
-///
-/// let mut set = Table::new();
-/// let a = Arc::new("hello".to_string());
-/// let b = Arc::new("hello".to_string());
-///
-/// set.insert(a.clone());
-///
-/// assert!(   set.contains(&a) );
-/// assert!( ! set.contains(&b) );
-///
-/// set.insert(b.clone());
-///
-/// assert!(   set.contains(&a) );
-/// assert!(   set.contains(&b) );
-/// ```
+//!
+//! # Examples
+//!
+//! ```
+//! use weak_table::WeakHashSet;
+//! use std::sync::{Arc, Weak};
+//!
+//! type Table = WeakHashSet<Weak<String>>;
+//!
+//! let mut set = Table::new();
+//! let a = Arc::new("a".to_string());
+//! let b = Arc::new("b".to_string());
+//!
+//! set.insert(a.clone());
+//!
+//! assert!(   set.contains("a") );
+//! assert!( ! set.contains("b") );
+//!
+//! set.insert(b.clone());
+//!
+//! assert!(   set.contains("a") );
+//! assert!(   set.contains("b") );
+//!
+//! drop(a);
+//!
+//! assert!( ! set.contains("a") );
+//! assert!(   set.contains("b") );
+//! ```
 
 pub mod traits;
 pub mod weak_key_hash_map;
