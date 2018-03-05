@@ -12,6 +12,9 @@
 //!   - For a hash map where the keys are held by weak pointers and compared by pointer, see
 //!     [`PtrWeakKeyHashMap`](ptr_weak_key_hash_map/struct.PtrWeakKeyHashMap.html).
 //!
+//!   - For a hash map where the values are held by weak pointers, see
+//!     [`WeakValueHashMap`](weak_value_hash_map/struct.WeakValueHashMap.html).
+//!
 //! # Examples
 //!
 //! ```

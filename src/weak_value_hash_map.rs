@@ -27,7 +27,7 @@ type FullBucket<K, V> = (K, V, HashCode);
 type Bucket<K, V> = Option<FullBucket<K, V>>;
 type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 
-/// A mapping from keys to weak pointer.
+/// A mapping from keys to weak pointers.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
@@ -669,7 +669,7 @@ impl<'a, K, V: WeakElement> VacantEntry<'a, K, V> {
         self.inner.key
     }
 
-    /// Inserts the value into the map.
+    /// Inserts the value into the map, returning the same value.
     pub fn insert(self, value: V::Strong) -> V::Strong {
         let InnerEntry { map, key, hash_code, pos } = self.inner;
 
