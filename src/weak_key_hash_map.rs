@@ -881,25 +881,27 @@ impl<'a, K: WeakKey, V> ModuloCapacity for VacantEntry<'a, K, V> {
     }
 }
 
-fn debug_table<K, V>(buckets: &TablePtr<K, V>, f: &mut Formatter) -> fmt::Result
+impl<K, V> Debug for InnerMap<K, V>
     where K: WeakElement,
           K::Strong: Debug,
           V: Debug
 {
-    write!(f, "{{ ")?;
-    for (i, bucket) in buckets.iter().enumerate() {
-        if let &Some((ref k, ref v, _)) = bucket {
-            write!(f, "[{}] {:?} => {:?}, ", i, k.view(), *v)?;
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{ ")?;
+        for (i, bucket) in self.buckets.iter().enumerate() {
+            if let &Some((ref k, ref v, _)) = bucket {
+                write!(f, "[{}] {:?} => {:?}, ", i, k.view(), *v)?;
+            }
         }
+        write!(f, "}}")
     }
-    write!(f, "}}")
 }
 
 impl<K: WeakElement, V: Debug, S> Debug for WeakKeyHashMap<K, V, S>
     where K::Strong: Debug
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        debug_table(&self.inner.buckets, f)
+        self.inner.fmt(f)
     }
 }
 
@@ -934,9 +936,7 @@ impl<'a, K: WeakKey, V: Debug> Debug for InnerEntry<'a, K, V>
     where K::Strong: Debug
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "InnerEntry {{ pos = {}, buckets = ", self.pos)?;
-        debug_table(&self.map.buckets, f)?;
-        write!(f, " }}")
+        write!(f, "InnerEntry {{ pos = {}, buckets = {:?} }}", self.pos, self.map)
     }
 }
 
