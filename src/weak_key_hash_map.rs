@@ -496,8 +496,8 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     ///
     /// In particular, all the keys of `self` must be in `other` and the values must compare
     /// `true` with `value_equal`.
-    pub fn submap_with<F, S1, V1>(&self, other: &WeakKeyHashMap<K, V1, S1>,
-                                  mut value_equal: F) -> bool
+    pub fn is_submap_with<F, S1, V1>(&self, other: &WeakKeyHashMap<K, V1, S1>,
+                                     mut value_equal: F) -> bool
         where F: FnMut(&V, &V1) -> bool,
               S1: BuildHasher
     {
@@ -515,18 +515,18 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     }
 
     /// Is `self` a submap of `other`?
-    pub fn submap<V1, S1>(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool
+    pub fn is_submap<V1, S1>(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool
         where V: PartialEq<V1>,
               S1: BuildHasher
     {
-        self.submap_with(other, PartialEq::eq)
+        self.is_submap_with(other, PartialEq::eq)
     }
 
     /// Are the keys of `self` a subset of the keys of `other`?
-    pub fn keys_subset<V1, S1>(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool
+    pub fn domain_is_subset<V1, S1>(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool
         where S1: BuildHasher
     {
-        self.submap_with(other, |_, _| true)
+        self.is_submap_with(other, |_, _| true)
     }
 
     fn hash<Q>(&self, key: &Q) -> HashCode
@@ -546,7 +546,7 @@ impl<K, V, V1, S, S1> PartialEq<WeakKeyHashMap<K, V1, S1>> for WeakKeyHashMap<K,
           S1: BuildHasher
 {
     fn eq(&self, other: &WeakKeyHashMap<K, V1, S1>) -> bool {
-        self.submap(other) && other.keys_subset(self)
+        self.is_submap(other) && other.domain_is_subset(self)
     }
 }
 

@@ -1,43 +1,38 @@
+use std::borrow::Borrow;
 use std::collections::hash_map::RandomState;
 use std::fmt::{self, Debug};
-use std::hash::BuildHasher;
+use std::hash::{BuildHasher, Hash};
 use std::iter::FromIterator;
-use std::ops::Deref;
 
 use super::traits::*;
-use super::ptr_weak_key_hash_map as base;
-use super::ptr_weak_key_hash_map::ByPtr;
+use super::weak_key_hash_map as base;
 
 /// A weak-key hash set that hashes on key pointers.
 #[derive(Clone)]
-pub struct PtrWeakHashSet<T, S = RandomState>(
-    base::PtrWeakKeyHashMap<T, (), S>);
+pub struct WeakHashSet<T, S = RandomState>(
+    base::WeakKeyHashMap<T, (), S>);
 
-impl <T: WeakElement> PtrWeakHashSet<T, RandomState>
-    where T::Strong: Deref
-{
-    /// Creates an empty `PtrWeakHashSet`.
+impl <T: WeakKey> WeakHashSet<T, RandomState> {
+    /// Creates an empty `WeakHashSet`.
     pub fn new() -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::new())
+        WeakHashSet(base::WeakKeyHashMap::new())
     }
 
-    /// Creates an empty `PtrWeakHashSet` with the given capacity.
+    /// Creates an empty `WeakHashSet` with the given capacity.
     pub fn with_capacity(capacity: usize) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_capacity(capacity))
+        WeakHashSet(base::WeakKeyHashMap::with_capacity(capacity))
     }
 }
 
-impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
-    where T::Strong: Deref
-{
-    /// Creates an empty `PtrWeakHashSet` with the given capacity and hasher.
+impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
+    /// Creates an empty `WeakHashSet` with the given capacity and hasher.
     pub fn with_hasher(hash_builder: S) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_hasher(hash_builder))
+        WeakHashSet(base::WeakKeyHashMap::with_hasher(hash_builder))
     }
 
-    /// Creates an empty `PtrWeakHashSet` with the given capacity and hasher.
+    /// Creates an empty `WeakHashSet` with the given capacity and hasher.
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_capacity_and_hasher(capacity, hash_builder))
+        WeakHashSet(base::WeakKeyHashMap::with_capacity_and_hasher(capacity, hash_builder))
     }
 
     /// Returns a reference to the map's `BuildHasher`.
@@ -82,8 +77,13 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
         self.0.clear()
     }
 
+    // Non-ptr WeakHashSet should probably have `get` method.
+
     /// Returns true if the map contains the specified key.
-    pub fn contains(&self, key: &T::Strong) -> bool {
+    pub fn contains<Q>(&self, key: &Q) -> bool
+        where Q: ?Sized + Eq + Hash,
+              T::Key: Borrow<Q>
+    {
         self.0.contains_key(key)
     }
 
@@ -94,7 +94,10 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
     }
 
     /// Removes the entry with the given key, if it exists, and returns the value.
-    pub fn remove(&mut self, key: &T::Strong) -> bool {
+    pub fn remove<Q>(&mut self, key: &Q) -> bool
+        where Q: ?Sized + Eq + Hash,
+              T::Key: Borrow<Q>
+    {
         self.0.remove(key).is_some()
     }
 
@@ -108,7 +111,7 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
     }
 
     /// Is self a subset of other?
-    pub fn is_subset<S1>(&self, other: &PtrWeakHashSet<T, S1>) -> bool
+    pub fn is_subset<S1>(&self, other: &WeakHashSet<T, S1>) -> bool
         where S1: BuildHasher
     {
         self.0.domain_is_subset(&other.0)
@@ -116,7 +119,7 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
 }
 
 /// An iterator over the elements of a set.
-pub struct Iter<'a, T: 'a>(base::Keys<'a, ByPtr<T>, ()>);
+pub struct Iter<'a, T: 'a>(base::Keys<'a, T, ()>);
 
 impl<'a, T: WeakElement> Iterator for Iter<'a, T> {
     type Item = T::Strong;
@@ -131,7 +134,7 @@ impl<'a, T: WeakElement> Iterator for Iter<'a, T> {
 }
 
 /// An iterator over the elements of a set.
-pub struct IntoIter<T>(base::IntoIter<ByPtr<T>, ()>);
+pub struct IntoIter<T>(base::IntoIter<T, ()>);
 
 impl<T: WeakElement> Iterator for IntoIter<T> {
     type Item = T::Strong;
@@ -146,7 +149,7 @@ impl<T: WeakElement> Iterator for IntoIter<T> {
 }
 
 /// A draining iterator over the elements of a set.
-pub struct Drain<'a, T: 'a>(base::Drain<'a, ByPtr<T>, ()>);
+pub struct Drain<'a, T: 'a>(base::Drain<'a, T, ()>);
 
 impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
     type Item = T::Strong;
@@ -160,9 +163,7 @@ impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
     }
 }
 
-impl<T: WeakElement, S> PtrWeakHashSet<T, S>
-    where T::Strong: Deref
-{
+impl<T: WeakKey, S> WeakHashSet<T, S> {
     /// Gets an iterator over the keys and values.
     pub fn iter(&self) -> Iter<T> {
         Iter(self.0.keys())
@@ -174,60 +175,51 @@ impl<T: WeakElement, S> PtrWeakHashSet<T, S>
     }
 }
 
-impl<T, S, S1> PartialEq<PtrWeakHashSet<T, S1>> for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Deref,
+impl<T, S, S1> PartialEq<WeakHashSet<T, S1>> for WeakHashSet<T, S>
+    where T: WeakKey,
           S: BuildHasher,
           S1: BuildHasher
 {
-    fn eq(&self, other: &PtrWeakHashSet<T, S1>) -> bool {
+    fn eq(&self, other: &WeakHashSet<T, S1>) -> bool {
         self.0 == other.0
     }
 }
 
-impl<T: WeakElement, S: BuildHasher> Eq for PtrWeakHashSet<T, S>
-    where T::Strong: Deref
+impl<T: WeakKey, S: BuildHasher> Eq for WeakHashSet<T, S>
+    where T::Key: Eq
 { }
 
-impl<T: WeakElement, S: BuildHasher + Default> Default for PtrWeakHashSet<T, S>
-    where T::Strong: Deref
-{
+impl<T: WeakKey, S: BuildHasher + Default> Default for WeakHashSet<T, S> {
     fn default() -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::<T, (), S>::default())
+        WeakHashSet(base::WeakKeyHashMap::<T, (), S>::default())
     }
 }
 
-impl<T, S> FromIterator<T::Strong> for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Deref,
+impl<T, S> FromIterator<T::Strong> for WeakHashSet<T, S>
+    where T: WeakKey,
           S: BuildHasher + Default
 {
     fn from_iter<I: IntoIterator<Item=T::Strong>>(iter: I) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::<T, (), S>::from_iter(
+        WeakHashSet(base::WeakKeyHashMap::<T, (), S>::from_iter(
             iter.into_iter().map(|k| (k, ()))))
     }
 }
 
-impl<T, S> Extend<T::Strong> for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Deref,
-          S: BuildHasher
-{
+impl<T: WeakKey, S: BuildHasher> Extend<T::Strong> for WeakHashSet<T, S> {
     fn extend<I: IntoIterator<Item=T::Strong>>(&mut self, iter: I) {
         self.0.extend(iter.into_iter().map(|k| (k, ())))
     }
 }
 
-impl<T, S> Debug for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Debug
+impl<T: WeakKey, S> Debug for WeakHashSet<T, S>
+    where T::Strong: Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl<T: WeakElement, S> IntoIterator for PtrWeakHashSet<T, S> {
+impl<T: WeakKey, S> IntoIterator for WeakHashSet<T, S> {
     type Item = T::Strong;
     type IntoIter = IntoIter<T>;
 
@@ -236,9 +228,7 @@ impl<T: WeakElement, S> IntoIterator for PtrWeakHashSet<T, S> {
     }
 }
 
-impl<'a, T: WeakElement, S> IntoIterator for &'a PtrWeakHashSet<T, S>
-    where T::Strong: Deref
-{
+impl<'a, T: WeakKey, S> IntoIterator for &'a WeakHashSet<T, S> {
     type Item = T::Strong;
     type IntoIter = Iter<'a, T>;
 

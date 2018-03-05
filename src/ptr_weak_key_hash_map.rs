@@ -184,22 +184,22 @@ impl <K: WeakElement, V, S: BuildHasher> PtrWeakKeyHashMap<K, V, S>
     where F: FnMut(&V, &V1) -> bool,
           S1: BuildHasher
     {
-        self.0.submap_with(&other.0, value_equal)
+        self.0.is_submap_with(&other.0, value_equal)
     }
 
     /// Is self a submap of other?
-    pub fn submap<V1, S1>(&self, other: &PtrWeakKeyHashMap<K, V1, S1>) -> bool
+    pub fn is_submap<V1, S1>(&self, other: &PtrWeakKeyHashMap<K, V1, S1>) -> bool
         where V: PartialEq<V1>,
             S1: BuildHasher
     {
-        self.0.submap(&other.0)
+        self.0.is_submap(&other.0)
     }
 
     /// Are the keys of self a subset of the keys of other?
-    pub fn keys_subset<V1, S1>(&self, other: &PtrWeakKeyHashMap<K, V1, S1>) -> bool
+    pub fn domain_is_subset<V1, S1>(&self, other: &PtrWeakKeyHashMap<K, V1, S1>) -> bool
         where S1: BuildHasher
     {
-        self.0.keys_subset(&other.0)
+        self.0.domain_is_subset(&other.0)
     }
 }
 
