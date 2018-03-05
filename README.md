@@ -6,7 +6,3 @@
 
 This crate defines several kinds of weak hash maps and sets. See 
 the [full API documentation](https://tov.github.io/weak-table-rs/).
-
-## Usage
-
-TODO.
