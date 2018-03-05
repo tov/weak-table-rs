@@ -7,21 +7,9 @@ use std::hash::{BuildHasher, Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
+use super::size_policy::*;
 use super::traits::*;
 use super::util::*;
-
-// No reason for this number as of now.
-const DEFAULT_INITIAL_CAPACITY: usize = 8;
-
-// When the approximate load factor reaches `COLLECT_LOAD_FACTOR`, we remove
-// all the expired pointers and then consider resizing.
-const COLLECT_LOAD_FACTOR: f32 = 0.9;
-
-// If, after collection, the load factor is above `GROW_LOAD_FACTOR`, we grow.
-const GROW_LOAD_FACTOR: f32 = 0.75;
-
-// If, after collection, the load factor is below `SHRINK_LOAD_FACTOR`, we shrink.
-const SHRINK_LOAD_FACTOR: f32 = 0.25;
 
 type FullBucket<K, V> = (K, V, HashCode);
 type Bucket<K, V> = Option<FullBucket<K, V>>;
