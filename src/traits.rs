@@ -1,3 +1,5 @@
+//! Traits for describing weak and shared pointers and their use as elements and keys.
+
 use std::hash::Hash;
 use std::{rc, sync};
 

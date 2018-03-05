@@ -1,3 +1,5 @@
+//! A hash map where the keys are held by weak pointers and compared by key value.
+
 use std::borrow::Borrow;
 use std::cmp::max;
 use std::collections::hash_map::RandomState;

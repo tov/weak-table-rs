@@ -1,3 +1,5 @@
+//! A hash set where the elements are held by weak pointers and compared by value.
+
 use std::borrow::Borrow;
 use std::collections::hash_map::RandomState;
 use std::fmt::{self, Debug};
