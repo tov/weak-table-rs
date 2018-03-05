@@ -13,6 +13,10 @@
 //!     compared by value, see
 //!     [`WeakWeakHashMap`](struct.WeakWeakHashMap.html).
 //!
+//!   - For a hash map where the keys and values are both held by weak pointers and the keys are
+//!     compared by pointer, see
+//!     [`PtrWeakWeakHashMap`](struct.PtrWeakWeakHashMap.html).
+//!
 //!   - For a hash set where the elements are held by weak pointers and compared by element value, see
 //!     [`WeakHashSet`](struct.WeakHashSet.html).
 //!
@@ -54,6 +58,7 @@ pub mod weak_key_hash_map;
 pub mod ptr_weak_key_hash_map;
 pub mod weak_value_hash_map;
 pub mod weak_weak_hash_map;
+pub mod ptr_weak_weak_hash_map;
 pub mod weak_hash_set;
 pub mod ptr_weak_hash_set;
 
@@ -68,7 +73,7 @@ type FullBucket<K, V> = (K, V, HashCode);
 type Bucket<K, V> = Option<FullBucket<K, V>>;
 type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 
-/// A mapping from weak pointers to values.
+/// A hash map with weak keys, hashed on key value.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
@@ -83,8 +88,9 @@ struct WeakKeyInnerMap<K, V> {
     len: usize,
 }
 
-/// A weak-key hash map that hashes on key pointers rather than the
-/// values they point to.
+/// A hash map with weak keys, hashed on key pointer.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
 ///
 /// # Examples
 ///
@@ -113,7 +119,7 @@ pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(
     WeakKeyHashMap<by_ptr::ByPtr<K>, V, S>
 );
 
-/// A mapping from keys to weak pointers.
+/// A hash map with weak values.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
@@ -128,7 +134,7 @@ struct WeakValueInnerMap<K, V> {
     len: usize,
 }
 
-/// A mapping from weak pointer keys to weak pointer values.
+/// A hash map with weak keys and weak values, hashed on key value.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
@@ -143,11 +149,23 @@ struct WeakWeakInnerMap<K, V> {
     len: usize,
 }
 
-/// A weak-key hash set that hashes on key pointers.
+/// A hash map with weak keys and weak values, hashed on key pointer.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
+#[derive(Clone)]
+pub struct PtrWeakWeakHashMap<K, V, S = RandomState>(
+    WeakWeakHashMap<by_ptr::ByPtr<K>, V, S>
+);
+
+/// A hash set with weak elements, hashed on element value.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
 pub struct WeakHashSet<T, S = RandomState>(WeakKeyHashMap<T, (), S>);
 
-/// A weak-key hash set that hashes on key pointers.
+/// A hash set with weak elements, hashed on element pointer.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
 pub struct PtrWeakHashSet<T, S = RandomState>(PtrWeakKeyHashMap<T, (), S>);
 
