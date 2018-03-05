@@ -124,6 +124,9 @@ impl <K: WeakElement, V, S: BuildHasher> PtrWeakKeyHashMap<K, V, S>
         self.0.len()
     }
 
+    /// The proportion of buckets that are used.
+    ///
+    /// This is an over-approximation because of expired keys.
     pub fn load_factor(&self) -> f32 {
         self.0.load_factor()
     }
