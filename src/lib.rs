@@ -15,6 +15,10 @@
 //!   - For a hash map where the values are held by weak pointers, see
 //!     [`WeakValueHashMap`](weak_value_hash_map/struct.WeakValueHashMap.html).
 //!
+//!   - For a hash map where the keys and values are both held by weak pointers and the keys are
+//!     compared by key values, see
+//!     [`WeakWeakHashMap`](weak_weak_hash_map/struct.WeakWeakHashMap.html).
+//!
 //! # Examples
 //!
 //! ```
@@ -47,6 +51,7 @@ pub mod traits;
 pub mod weak_key_hash_map;
 pub mod ptr_weak_key_hash_map;
 pub mod weak_value_hash_map;
+pub mod weak_weak_hash_map;
 pub mod weak_hash_set;
 pub mod ptr_weak_hash_set;
 
@@ -55,5 +60,6 @@ mod util;
 pub use weak_key_hash_map::WeakKeyHashMap;
 pub use ptr_weak_key_hash_map::PtrWeakKeyHashMap;
 pub use weak_value_hash_map::WeakValueHashMap;
+pub use weak_weak_hash_map::WeakWeakHashMap;
 pub use weak_hash_set::WeakHashSet;
 pub use ptr_weak_hash_set::PtrWeakHashSet;
