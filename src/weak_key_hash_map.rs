@@ -231,12 +231,12 @@ impl<K: WeakKey, V> Iterator for IntoIter<K, V> {
 
 impl<K: WeakKey, V> WeakKeyHashMap<K, V, RandomState>
 {
-    /// Creates an empty `WeakHashmap`.
+    /// Creates an empty `WeakKeyHashMap`.
     pub fn new() -> Self {
         Self::with_capacity(DEFAULT_INITIAL_CAPACITY)
     }
 
-    /// Creates an empty `WeakHashmap` with the given capacity.
+    /// Creates an empty `WeakKeyHashMap` with the given capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacity_and_hasher(capacity, Default::default())
     }
@@ -244,12 +244,12 @@ impl<K: WeakKey, V> WeakKeyHashMap<K, V, RandomState>
 
 impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 {
-    /// Creates an empty `WeakHashMap` with the given capacity and hasher.
+    /// Creates an empty `WeakKeyHashMap` with the given capacity and hasher.
     pub fn with_hasher(hash_builder: S) -> Self {
         Self::with_capacity_and_hasher(DEFAULT_INITIAL_CAPACITY, hash_builder)
     }
 
-    /// Creates an empty `WeakHashMap` with the given capacity and hasher.
+    /// Creates an empty `WeakKeyHashMap` with the given capacity and hasher.
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
         WeakKeyHashMap {
             hash_builder,
@@ -455,7 +455,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         }
     }
 
-    /// Returns a mutable reference to the value corresponding to the key.
+    /// Removes the entry with the given key, if it exists, and returns the value.
     pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
         where Q: ?Sized + Hash + Eq,
               K::Key: Borrow<Q>
@@ -990,7 +990,7 @@ impl<K: WeakKey, V, S> WeakKeyHashMap<K, V, S> {
         Values(self.iter())
     }
 
-    // Gets an iterator over the keys and mutable values.
+    /// Gets an iterator over the keys and mutable values.
     pub fn iter_mut(&mut self) -> IterMut<K, V> {
         self.into_iter()
     }
