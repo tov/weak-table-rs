@@ -234,20 +234,19 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
 
     /// This has some preconditions.
     fn resize(&mut self, capacity: usize) {
-        unimplemented!();
-//        let old_buckets = mem::replace(&mut self.inner.buckets,
-//                                       new_boxed_option_slice(capacity));
-//
-//        let iter = IntoIter {
-//            base: old_buckets.into_vec().into_iter(),
-//            size: self.inner.len,
-//        };
-//
-//        self.inner.len = 0;
-//
-//        for (key, value) in iter {
-//            self.entry_no_grow(key).or_insert(value);
-//        }
+        let old_buckets = mem::replace(&mut self.inner.buckets,
+                                       new_boxed_option_slice(capacity));
+
+        let iter = IntoIter {
+            base: old_buckets.into_vec().into_iter(),
+            size: self.inner.len,
+        };
+
+        self.inner.len = 0;
+
+        for (key, value) in iter {
+            self.entry_no_grow(key).or_insert(value);
+        }
     }
 
     /// Removes all mappings whose keys have expired.
@@ -288,61 +287,61 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
         (self.len() as f32 + 1.0) / self.capacity() as f32
     }
 
-//    fn maybe_adjust_size(&mut self) {
-//        if self.load_factor() > COLLECT_LOAD_FACTOR {
-//            self.remove_expired();
-//
-//            let load_factor = self.load_factor();
-//            let capacity = self.capacity();
-//            if load_factor > GROW_LOAD_FACTOR {
-//                self.resize(max(1, capacity * 2));
-//            } else if load_factor < SHRINK_LOAD_FACTOR && capacity > DEFAULT_INITIAL_CAPACITY {
-//                self.resize(max(1, capacity / 2));
-//            }
-//        }
-//    }
-//
-//    /// Gets the requested entry.
-//    pub fn entry(&mut self, key: K::Strong) -> Entry<K, V> {
-//        self.maybe_adjust_size();
-//        self.entry_no_grow(key)
-//    }
-//
-//    fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
-//        let mut inner = {
-//            let hash_code = K::with_key(&key, |k| self.hash(k));
-//            InnerEntry {
-//                pos:        self.which_bucket(hash_code),
-//                map:        &mut self.inner,
-//                hash_code,
-//                key,
-//            }
-//        };
-//
-//        for dist in 0 .. inner.capacity() {
-//            match inner.bucket_status() {
-//                BucketStatus::Unoccupied =>
-//                    return Entry::Vacant(VacantEntry(inner)),
-//                BucketStatus::MatchesKey =>
-//                    return Entry::Occupied(OccupiedEntry(inner)),
-//                BucketStatus::ProbeDistance(bucket_distance) => {
-//                    if bucket_distance > dist {
-//                        return Entry::Vacant(VacantEntry(inner))
-//                    } else {
-//                        inner.pos = inner.next_bucket(inner.pos);
-//                    }
-//                }
-//            }
-//        }
-//
-//        panic!("WeakKeyHashTable::entry: out of space");
-//    }
-//
-//    /// Removes all associations from the map.
-//    pub fn clear(&mut self) {
-//        self.drain();
-//    }
-//
+    fn maybe_adjust_size(&mut self) {
+        if self.load_factor() > COLLECT_LOAD_FACTOR {
+            self.remove_expired();
+
+            let load_factor = self.load_factor();
+            let capacity = self.capacity();
+            if load_factor > GROW_LOAD_FACTOR {
+                self.resize(max(1, capacity * 2));
+            } else if load_factor < SHRINK_LOAD_FACTOR && capacity > DEFAULT_INITIAL_CAPACITY {
+                self.resize(max(1, capacity / 2));
+            }
+        }
+    }
+
+    /// Gets the requested entry.
+    pub fn entry(&mut self, key: K::Strong) -> Entry<K, V> {
+        self.maybe_adjust_size();
+        self.entry_no_grow(key)
+    }
+
+    fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
+        let mut inner = {
+            let hash_code = K::with_key(&key, |k| self.hash(k));
+            InnerEntry {
+                pos:        self.which_bucket(hash_code),
+                map:        &mut self.inner,
+                hash_code,
+                key,
+            }
+        };
+
+        for dist in 0 .. inner.capacity() {
+            match inner.bucket_status() {
+                BucketStatus::Unoccupied =>
+                    return Entry::Vacant(VacantEntry {inner}),
+                BucketStatus::MatchesKey(value) =>
+                    return Entry::Occupied(OccupiedEntry {value, inner}),
+                BucketStatus::ProbeDistance(bucket_distance) => {
+                    if bucket_distance > dist {
+                        return Entry::Vacant(VacantEntry {inner})
+                    } else {
+                        inner.pos = inner.next_bucket(inner.pos);
+                    }
+                }
+            }
+        }
+
+        panic!("WeakKeyHashTable::entry: out of space");
+    }
+
+    /// Removes all associations from the map.
+    pub fn clear(&mut self) {
+        self.drain();
+    }
+
     fn find_bucket<Q>(&self, key: &Q) -> Option<(usize, K::Strong, V::Strong)>
         where Q: ?Sized + Hash + Eq,
               K::Key: Borrow<Q>
@@ -378,12 +377,11 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
     }
 
     /// Returns a reference to the value corresponding to the key.
-    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+    pub fn get<Q>(&self, key: &Q) -> Option<V::Strong>
         where Q: ?Sized + Hash + Eq,
               K::Key: Borrow<Q>
     {
-        self.find_bucket(key).and_then(move |tup|
-            self.inner.buckets[tup.0].as_ref().map(|bucket| &bucket.1))
+        self.find_bucket(key).map(|tup| tup.2)
     }
 
     /// Returns true if the map contains the specified key.
@@ -394,35 +392,33 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
         self.find_bucket(key).is_some()
     }
 
-//    /// Unconditionally inserts the value, returning the old value if already present.
-//    ///
-//    /// Unlike `std::collections::HashMap`, this replaces the key even if occupied.
-//    pub fn insert(&mut self, key: K::Strong, value: V) -> Option<V> {
-//        match self.entry(key) {
-//            Entry::Occupied(mut occupied) => {
-//                Some(occupied.insert(value))
-//            },
-//            Entry::Vacant(vacant) => {
-//                vacant.insert(value);
-//                None
-//            }
-//        }
-//    }
-//
-//    /// Removes the entry with the given key, if it exists, and returns the value.
-//    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
-//        where Q: ?Sized + Hash + Eq,
-//              K::Key: Borrow<Q>
-//    {
-//        self.find_bucket(key).map(|(pos, strong_key, hash_code)| {
-//            OccupiedEntry(InnerEntry {
-//                map:        &mut self.inner,
-//                pos,
-//                key:        strong_key,
-//                hash_code,
-//            }).remove()
-//        })
-//    }
+    /// Unconditionally inserts the value, returning the old value if already present.
+    ///
+    /// Unlike `std::collections::HashMap`, this replaces the key even if occupied.
+    pub fn insert(&mut self, key: K::Strong, value: V::Strong) -> Option<V::Strong> {
+        match self.entry(key) {
+            Entry::Occupied(mut occupied) => {
+                Some(occupied.insert(value))
+            },
+            Entry::Vacant(vacant) => {
+                vacant.insert(value);
+                None
+            }
+        }
+    }
+
+    /// Removes the entry with the given key, if it exists, and returns the value.
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V::Strong>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        if let Some((pos, _, value)) = self.find_bucket(key) {
+            self.inner.remove_index(pos);
+            Some(value)
+        } else {
+            None
+        }
+    }
 
     /// Removes all mappings not satisfying the given predicate.
     ///
@@ -446,41 +442,44 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
         }
     }
 
-//    /// Is this map a submap of the other, using the given value comparison.
-//    ///
-//    /// In particular, all the keys of `self` must be in `other` and the values must compare
-//    /// `true` with `value_equal`.
-//    pub fn is_submap_with<F, S1, V1>(&self, other: &WeakWeakHashMap<K, V1, S1>,
-//                                     mut value_equal: F) -> bool
-//        where F: FnMut(&V, &V1) -> bool,
-//              S1: BuildHasher
-//    {
-//        for (key, value1) in self {
-//            if let Some(value2) = K::with_key(&key, |k| other.get(k)) {
-//                if !value_equal(value1, value2) {
-//                }
-//            } else {
-//                return false;
-//            }
-//        }
-//
-//        true
-//    }
-//
-//    /// Is `self` a submap of `other`?
-//    pub fn is_submap<V1, S1>(&self, other: &WeakWeakHashMap<K, V1, S1>) -> bool
-//        where V: PartialEq<V1>,
-//              S1: BuildHasher
-//    {
-//        self.is_submap_with(other, PartialEq::eq)
-//    }
-//
-//    /// Are the keys of `self` a subset of the keys of `other`?
-//    pub fn domain_is_subset<V1, S1>(&self, other: &WeakWeakHashMap<K, V1, S1>) -> bool
-//        where S1: BuildHasher
-//    {
-//        self.is_submap_with(other, |_, _| true)
-//    }
+    /// Is this map a submap of the other, using the given value comparison.
+    ///
+    /// In particular, all the keys of `self` must be in `other` and the values must compare
+    /// `true` with `value_equal`.
+    pub fn is_submap_with<F, S1, V1>(&self, other: &WeakWeakHashMap<K, V1, S1>,
+                                     mut value_equal: F) -> bool
+        where V1: WeakElement,
+              F: FnMut(V::Strong, V1::Strong) -> bool,
+              S1: BuildHasher
+    {
+        for (key, value1) in self {
+            if let Some(value2) = K::with_key(&key, |k| other.get(k)) {
+                if !value_equal(value1, value2) {
+                }
+            } else {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Is `self` a submap of `other`?
+    pub fn is_submap<V1, S1>(&self, other: &WeakWeakHashMap<K, V1, S1>) -> bool
+        where V1: WeakElement,
+              V::Strong: PartialEq<V1::Strong>,
+              S1: BuildHasher
+    {
+        self.is_submap_with(other, |v, v1| v == v1)
+    }
+
+    /// Are the keys of `self` a subset of the keys of `other`?
+    pub fn domain_is_subset<V1, S1>(&self, other: &WeakWeakHashMap<K, V1, S1>) -> bool
+        where V1: WeakElement,
+              S1: BuildHasher
+    {
+        self.is_submap_with(other, |_, _| true)
+    }
 
     fn hash<Q>(&self, key: &Q) -> HashCode
         where Q: ?Sized + Hash,
@@ -492,111 +491,80 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
     }
 }
 
-//impl<K, V, V1, S, S1> PartialEq<WeakWeakHashMap<K, V1, S1>> for WeakKeyHashMap<K, V, S>
-//    where K: WeakKey,
-//          V: PartialEq<V1>,
-//          S: BuildHasher,
-//          S1: BuildHasher
-//{
-//    fn eq(&self, other: &WeakWeakHashMap<K, V1, S1>) -> bool {
-//        self.is_submap(other) && other.domain_is_subset(self)
-//    }
-//}
-//
-//impl<K: WeakKey, V: Eq, S: BuildHasher> Eq for WeakWeakHashMap<K, V, S> { }
-//
-//impl<K: WeakKey, V, S: BuildHasher + Default> Default for WeakWeakHashMap<K, V, S> {
-//    fn default() -> Self {
-//        WeakWeakHashMap::with_hasher(Default::default())
-//    }
-//}
-//
-//impl<'a, K, V, S, Q> ::std::ops::Index<&'a Q> for WeakWeakHashMap<K, V, S>
-//    where K: WeakKey,
-//          K::Key: Borrow<Q>,
-//          S: BuildHasher,
-//          Q: ?Sized + Eq + Hash
-//{
-//    type Output = V;
-//
-//    fn index(&self, index: &'a Q) -> &Self::Output {
-//        self.get(index).expect("Index::index: key not found")
-//    }
-//}
-//
-//impl<'a, K, V, S, Q> ::std::ops::IndexMut<&'a Q> for WeakWeakHashMap<K, V, S>
-//    where K: WeakKey,
-//          K::Key: Borrow<Q>,
-//          S: BuildHasher,
-//          Q: ?Sized + Eq + Hash
-//{
-//    fn index_mut(&mut self, index: &'a Q) -> &mut Self::Output {
-//        self.get_mut(index).expect("IndexMut::index_mut: key not found")
-//    }
-//}
-//
-//impl<K, V, S> ::std::iter::FromIterator<(K::Strong, V)> for WeakWeakHashMap<K, V, S>
-//    where K: WeakKey,
-//          S: BuildHasher + Default
-//{
-//    fn from_iter<T: IntoIterator<Item=(K::Strong, V)>>(iter: T) -> Self {
-//        let mut result = WeakWeakHashMap::with_hasher(Default::default());
-//        result.extend(iter);
-//        result
-//    }
-//}
-//
-//impl<K, V, S> ::std::iter::Extend<(K::Strong, V)> for WeakWeakHashMap<K, V, S>
-//    where K: WeakKey,
-//          S: BuildHasher
-//{
-//    fn extend<T: IntoIterator<Item=(K::Strong, V)>>(&mut self, iter: T) {
-//        for (key, value) in iter {
-//            self.insert(key, value);
-//        }
-//    }
-//}
-//
-//impl<'a, K, V, S> ::std::iter::Extend<(&'a K::Strong, &'a V)> for WeakWeakHashMap<K, V, S>
-//    where K: 'a + WeakKey,
-//          K::Strong: Clone,
-//          V: 'a + Clone,
-//          S: BuildHasher
-//{
-//    fn extend<T: IntoIterator<Item=(&'a K::Strong, &'a V)>>(&mut self, iter: T) {
-//        for (key, value) in iter {
-//            self.insert(key.clone(), value.clone());
-//        }
-//    }
-//}
-//
-//enum BucketStatus {
-//    Unoccupied,
-//    MatchesKey,
-//    ProbeDistance(usize),
-//}
-//
-//impl<'a, K: WeakKey, V> InnerEntry<'a, K, V> {
-//    // Gets the status of the current bucket.
-//    fn bucket_status(&self) -> BucketStatus {
-//        match self.map.buckets[self.pos] {
-//            Some((ref weak_key, _, hash_code)) => {
-//                if hash_code == self.hash_code {
-//                    if let Some(key) = weak_key.view() {
-//                        if K::with_key(&self.key, |k1| K::with_key(&key, |k2| k1 == k2)) {
-//                            return BucketStatus::MatchesKey;
-//                        }
-//                    }
-//                }
-//
-//                let dist = self.probe_distance(self.pos,
-//                                               self.which_bucket(hash_code));
-//                return BucketStatus::ProbeDistance(dist);
-//            },
-//            None => return BucketStatus::Unoccupied,
-//        }
-//    }
-//}
+impl<K, V, V1, S, S1> PartialEq<WeakWeakHashMap<K, V1, S1>> for WeakWeakHashMap<K, V, S>
+    where K: WeakKey,
+          V: WeakElement,
+          V1: WeakElement,
+          V::Strong: PartialEq<V1::Strong>,
+          S: BuildHasher,
+          S1: BuildHasher
+{
+    fn eq(&self, other: &WeakWeakHashMap<K, V1, S1>) -> bool {
+        self.is_submap(other) && other.domain_is_subset(self)
+    }
+}
+
+impl<K: WeakKey, V: WeakElement, S: BuildHasher> Eq for WeakWeakHashMap<K, V, S>
+    where V::Strong: Eq
+{ }
+
+impl<K: WeakKey, V: WeakElement, S: BuildHasher + Default> Default for WeakWeakHashMap<K, V, S> {
+    fn default() -> Self {
+        WeakWeakHashMap::with_hasher(Default::default())
+    }
+}
+
+impl<K, V, S> ::std::iter::FromIterator<(K::Strong, V::Strong)> for WeakWeakHashMap<K, V, S>
+    where K: WeakKey,
+          V: WeakElement,
+          S: BuildHasher + Default
+{
+    fn from_iter<T: IntoIterator<Item=(K::Strong, V::Strong)>>(iter: T) -> Self {
+        let mut result = WeakWeakHashMap::with_hasher(Default::default());
+        result.extend(iter);
+        result
+    }
+}
+
+impl<K, V, S> Extend<(K::Strong, V::Strong)> for WeakWeakHashMap<K, V, S>
+    where K: WeakKey,
+          V: WeakElement,
+          S: BuildHasher
+{
+    fn extend<T: IntoIterator<Item=(K::Strong, V::Strong)>>(&mut self, iter: T) {
+        for (key, value) in iter {
+            self.insert(key, value);
+        }
+    }
+}
+
+enum BucketStatus<V: WeakElement> {
+    Unoccupied,
+    MatchesKey(V::Strong),
+    ProbeDistance(usize),
+}
+
+impl<'a, K: WeakKey, V: WeakElement> InnerEntry<'a, K, V> {
+    // Gets the status of the current bucket.
+    fn bucket_status(&self) -> BucketStatus<V> {
+        match self.map.buckets[self.pos] {
+            Some((ref w_key, ref w_value, hash_code)) => {
+                if hash_code == self.hash_code {
+                    if let (Some(key), Some(value)) = (w_key.view(), w_value.view()) {
+                        if K::with_key(&self.key, |k1| K::with_key(&key, |k2| k1 == k2)) {
+                            return BucketStatus::MatchesKey(value);
+                        }
+                    }
+                }
+
+                let dist = self.probe_distance(self.pos,
+                                               self.which_bucket(hash_code));
+                return BucketStatus::ProbeDistance(dist);
+            },
+            None => return BucketStatus::Unoccupied,
+        }
+    }
+}
 
 impl<'a, K: WeakKey, V: WeakElement> Entry<'a, K, V> {
     /// Ensures a value is in the entry by inserting a default value
@@ -611,7 +579,7 @@ impl<'a, K: WeakKey, V: WeakElement> Entry<'a, K, V> {
     /// the value in the entry.
     pub fn or_insert_with<F: FnOnce() -> V::Strong>(self, default: F) -> V::Strong {
         match self {
-            Entry::Occupied(mut occupied) => occupied.get_strong(),
+            Entry::Occupied(occupied) => occupied.get_strong(),
             Entry::Vacant(vacant) => vacant.insert(default()),
         }
     }

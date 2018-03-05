@@ -529,7 +529,7 @@ impl<K, V, S> ::std::iter::FromIterator<(K, V::Strong)> for WeakValueHashMap<K, 
     }
 }
 
-impl<K, V, S> ::std::iter::Extend<(K, V::Strong)> for WeakValueHashMap<K, V, S>
+impl<K, V, S> Extend<(K, V::Strong)> for WeakValueHashMap<K, V, S>
     where K: Eq + Hash,
           V: WeakElement,
           S: BuildHasher
@@ -541,7 +541,7 @@ impl<K, V, S> ::std::iter::Extend<(K, V::Strong)> for WeakValueHashMap<K, V, S>
     }
 }
 
-impl<'a, K, V, S> ::std::iter::Extend<(&'a K, &'a V::Strong)> for WeakValueHashMap<K, V, S>
+impl<'a, K, V, S> Extend<(&'a K, &'a V::Strong)> for WeakValueHashMap<K, V, S>
     where K: 'a + Eq + Hash + Clone,
           V: 'a + WeakElement,
           V::Strong: Clone,
