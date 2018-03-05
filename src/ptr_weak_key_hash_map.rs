@@ -38,7 +38,7 @@ use super::weak_key_hash_map as base;
 pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(
     base::WeakKeyHashMap<ByPtr<K>, V, S>);
 
-pub use self::base::{Entry, Iter, IterMut, Keys, Values, ValuesMut, Drain, IntoIter};
+pub use super::weak_key_hash_map::{Entry, Iter, IterMut, Keys, Values, ValuesMut, Drain, IntoIter};
 
 /// Wrapper struct for using pointer equality and hashes rather
 /// than pointed-to value equality and hashes.
