@@ -1,6 +1,6 @@
 [package]
 name = "weak-table"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
 description = "Weak hash maps and sets"
 repository = "https://github.com/tov/weak-table-rs"
