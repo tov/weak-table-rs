@@ -43,6 +43,7 @@
 pub mod traits;
 pub mod weak_key_hash_map;
 pub mod ptr_weak_key_hash_map;
+pub mod weak_value_hash_map;
 pub mod weak_hash_set;
 pub mod ptr_weak_hash_set;
 
@@ -50,5 +51,6 @@ mod util;
 
 pub use weak_key_hash_map::WeakKeyHashMap;
 pub use ptr_weak_key_hash_map::PtrWeakKeyHashMap;
+pub use weak_value_hash_map::WeakValueHashMap;
 pub use weak_hash_set::WeakHashSet;
 pub use ptr_weak_hash_set::PtrWeakHashSet;

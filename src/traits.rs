@@ -20,6 +20,13 @@ pub trait WeakElement {
     fn expired(&self) -> bool {
         self.view().is_none()
     }
+
+    /// Clones a strong view.
+    fn clone(view: &Self::Strong) -> Self::Strong
+        where Self: Sized
+    {
+        Self::new(view).view().expect("WeakElement::clone")
+    }
 }
 
 /// Interface for elements that can act as keys in weak hash tables.
@@ -44,6 +51,10 @@ impl<T> WeakElement for rc::Weak<T> {
     fn view(&self) -> Option<Self::Strong> {
         self.upgrade()
     }
+
+    fn clone(view: &Self::Strong) -> Self::Strong {
+        view.clone()
+    }
 }
 
 impl<T: Eq + Hash> WeakKey for rc::Weak<T> {
@@ -65,6 +76,10 @@ impl<T> WeakElement for sync::Weak<T> {
 
     fn view(&self) -> Option<Self::Strong> {
         self.upgrade()
+    }
+
+    fn clone(view: &Self::Strong) -> Self::Strong {
+        view.clone()
     }
 }
 
