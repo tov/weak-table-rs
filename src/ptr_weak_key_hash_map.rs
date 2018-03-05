@@ -1,12 +1,15 @@
 use std::collections::hash_map::RandomState;
+use std::fmt::{self, Debug};
 use std::hash::BuildHasher;
-use std::ops::Deref;
+use std::iter::FromIterator;
+use std::ops::{Deref, Index, IndexMut};
 
 use super::traits::*;
 use super::weak_key_hash_map as base;
 
 /// A weak-key hash map that hashes on key pointers rather than the
 /// values they point to.
+#[derive(Clone)]
 pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(
     base::WeakKeyHashMap<ByPtr<K>, V, S>);
 
@@ -37,6 +40,7 @@ pub use self::base::{Entry, Iter, IterMut, Keys, Values, ValuesMut, Drain, IntoI
 /// assert_eq!( map.get(&(&*a as *const _)), Some(&5) );
 /// assert_eq!( map.get(&(&*b as *const _)), Some(&7) );
 /// ```
+#[derive(Clone, Debug)]
 pub struct ByPtr<K>(K);
 
 impl<K: WeakElement> WeakElement for ByPtr<K> {
@@ -227,5 +231,104 @@ impl<K: WeakElement, V, S> PtrWeakKeyHashMap<K, V, S>
     /// Gets a draining iterator, which removes all the values but retains the storage.
     pub fn drain(&mut self) -> Drain<ByPtr<K>, V> {
         self.0.drain()
+    }
+}
+
+impl<K, V, V1, S, S1> PartialEq<PtrWeakKeyHashMap<K, V1, S1>>
+    for PtrWeakKeyHashMap<K, V, S>
+    where K: WeakElement,
+          K::Strong: Deref,
+          V: PartialEq<V1>,
+          S: BuildHasher,
+          S1: BuildHasher
+{
+    fn eq(&self, other: &PtrWeakKeyHashMap<K, V1, S1>) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<K: WeakElement, V: Eq, S: BuildHasher> Eq for PtrWeakKeyHashMap<K, V, S>
+    where K::Strong: Deref
+{ }
+
+impl<K: WeakElement, V, S: BuildHasher + Default> Default for PtrWeakKeyHashMap<K, V, S>
+    where K::Strong: Deref
+{
+    fn default() -> Self {
+        PtrWeakKeyHashMap(base::WeakKeyHashMap::<ByPtr<K>, V, S>::default())
+    }
+}
+
+impl<'a, K, V, S> Index<&'a K::Strong> for PtrWeakKeyHashMap<K, V, S>
+    where K: WeakElement,
+          K::Strong: Deref,
+          S: BuildHasher
+{
+    type Output = V;
+
+    fn index(&self, index: &'a K::Strong) -> &Self::Output {
+        self.0.index(&(index.deref() as *const _))
+    }
+}
+
+impl<'a, K, V, S> IndexMut<&'a K::Strong> for PtrWeakKeyHashMap<K, V, S>
+    where
+        K: WeakElement,
+        K::Strong: Deref,
+        S: BuildHasher
+{
+    fn index_mut(&mut self, index: &'a K::Strong) -> &mut Self::Output {
+        self.0.index_mut(&(index.deref() as *const _))
+    }
+}
+
+impl<K, V, S> FromIterator<(K::Strong, V)> for PtrWeakKeyHashMap<K, V, S>
+    where K: WeakElement,
+          K::Strong: Deref,
+          S: BuildHasher + Default
+{
+    fn from_iter<T: IntoIterator<Item=(K::Strong, V)>>(iter: T) -> Self {
+        PtrWeakKeyHashMap(base::WeakKeyHashMap::<ByPtr<K>, V, S>::from_iter(iter))
+    }
+}
+
+impl<K, V, S> Extend<(K::Strong, V)> for PtrWeakKeyHashMap<K, V, S>
+    where K: WeakElement,
+          K::Strong: Deref,
+          S: BuildHasher
+{
+    fn extend<T: IntoIterator<Item=(K::Strong, V)>>(&mut self, iter: T) {
+        self.0.extend(iter)
+    }
+}
+
+impl<'a, K, V, S> Extend<(&'a K::Strong, &'a V)> for PtrWeakKeyHashMap<K, V, S>
+    where K: 'a + WeakElement,
+          K::Strong: Clone + Deref,
+          V: 'a + Clone,
+          S: BuildHasher
+{
+    fn extend<T: IntoIterator<Item=(&'a K::Strong, &'a V)>>(&mut self, iter: T) {
+        self.0.extend(iter)
+    }
+}
+
+impl<K, V: Debug, S> Debug for PtrWeakKeyHashMap<K, V, S>
+    where K: WeakElement,
+          K::Strong: Debug + Deref
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<K: WeakElement, V, S> IntoIterator for PtrWeakKeyHashMap<K, V, S>
+    where K::Strong: Deref
+{
+    type Item = (K::Strong, V);
+    type IntoIter = IntoIter<ByPtr<K>, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }

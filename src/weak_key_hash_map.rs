@@ -69,7 +69,7 @@ pub struct Iter<'a, K: 'a, V: 'a> {
     size: usize,
 }
 
-impl<'a, K: WeakKey, V> Iterator for Iter<'a, K, V> {
+impl<'a, K: WeakElement, V> Iterator for Iter<'a, K, V> {
     type Item = (K::Strong, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -97,7 +97,7 @@ pub struct IterMut<'a, K: 'a, V: 'a> {
     size: usize,
 }
 
-impl<'a, K: WeakKey, V> Iterator for IterMut<'a, K, V> {
+impl<'a, K: WeakElement, V> Iterator for IterMut<'a, K, V> {
     type Item = (K::Strong, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -122,7 +122,7 @@ impl<'a, K: WeakKey, V> Iterator for IterMut<'a, K, V> {
 #[derive(Clone, Debug)]
 pub struct Keys<'a, K: 'a, V: 'a>(Iter<'a, K, V>);
 
-impl<'a, K: WeakKey, V> Iterator for Keys<'a, K, V> {
+impl<'a, K: WeakElement, V> Iterator for Keys<'a, K, V> {
     type Item = K::Strong;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -138,7 +138,7 @@ impl<'a, K: WeakKey, V> Iterator for Keys<'a, K, V> {
 #[derive(Clone, Debug)]
 pub struct Values<'a, K: 'a, V: 'a>(Iter<'a, K, V>);
 
-impl<'a, K: WeakKey, V> Iterator for Values<'a, K, V> {
+impl<'a, K: WeakElement, V> Iterator for Values<'a, K, V> {
     type Item = &'a V;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -154,7 +154,7 @@ impl<'a, K: WeakKey, V> Iterator for Values<'a, K, V> {
 /// An iterator over the mutable values of the weak hash map.
 pub struct ValuesMut<'a, K: 'a, V: 'a>(IterMut<'a, K, V>);
 
-impl<'a, K: WeakKey, V> Iterator for ValuesMut<'a, K, V> {
+impl<'a, K: WeakElement, V> Iterator for ValuesMut<'a, K, V> {
     type Item = &'a mut V;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -173,7 +173,7 @@ pub struct Drain<'a, K: 'a, V: 'a> {
     size: usize,
 }
 
-impl<'a, K: WeakKey, V> Iterator for Drain<'a, K, V> {
+impl<'a, K: WeakElement, V> Iterator for Drain<'a, K, V> {
     type Item = (K::Strong, V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -208,7 +208,7 @@ pub struct IntoIter<K, V> {
     size: usize,
 }
 
-impl<K: WeakKey, V> Iterator for IntoIter<K, V> {
+impl<K: WeakElement, V> Iterator for IntoIter<K, V> {
     type Item = (K::Strong, V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -938,7 +938,7 @@ impl<'a, K: WeakKey, V: Debug> Debug for InnerEntry<'a, K, V>
     }
 }
 
-impl<K: WeakKey, V, S> IntoIterator for WeakKeyHashMap<K, V, S> {
+impl<K: WeakElement, V, S> IntoIterator for WeakKeyHashMap<K, V, S> {
     type Item = (K::Strong, V);
     type IntoIter = IntoIter<K, V>;
 
@@ -950,7 +950,7 @@ impl<K: WeakKey, V, S> IntoIterator for WeakKeyHashMap<K, V, S> {
     }
 }
 
-impl<'a, K: WeakKey, V, S> IntoIterator for &'a WeakKeyHashMap<K, V, S> {
+impl<'a, K: WeakElement, V, S> IntoIterator for &'a WeakKeyHashMap<K, V, S> {
     type Item = (K::Strong, &'a V);
     type IntoIter = Iter<'a, K, V>;
 
@@ -962,7 +962,7 @@ impl<'a, K: WeakKey, V, S> IntoIterator for &'a WeakKeyHashMap<K, V, S> {
     }
 }
 
-impl<'a, K: WeakKey, V, S> IntoIterator for &'a mut WeakKeyHashMap<K, V, S> {
+impl<'a, K: WeakElement, V, S> IntoIterator for &'a mut WeakKeyHashMap<K, V, S> {
     type Item = (K::Strong, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
 
@@ -974,7 +974,7 @@ impl<'a, K: WeakKey, V, S> IntoIterator for &'a mut WeakKeyHashMap<K, V, S> {
     }
 }
 
-impl<K: WeakKey, V, S> WeakKeyHashMap<K, V, S> {
+impl<K: WeakElement, V, S> WeakKeyHashMap<K, V, S> {
     /// Gets an iterator over the keys and values.
     pub fn iter(&self) -> Iter<K, V> {
         self.into_iter()
