@@ -1,4 +1,4 @@
-//! A hash map where the keys are held by weak pointers and compared by key value.
+//! A hash map where the values are held by weak pointers.
 
 use std::borrow::Borrow;
 use std::cmp::max;
@@ -7,31 +7,12 @@ use std::hash::{BuildHasher, Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
+use super::*;
 use super::size_policy::*;
 use super::traits::*;
 use super::util::*;
 
-type FullBucket<K, V> = (K, V, HashCode);
-type Bucket<K, V> = Option<FullBucket<K, V>>;
-type TablePtr<K, V> = Box<[Bucket<K, V>]>;
-
-/// A mapping from keys to weak pointers.
-///
-/// When a weak pointer expires, its mapping is lazily removed.
-#[derive(Clone)]
-pub struct WeakValueHashMap<K, V, S = RandomState> {
-    hash_builder: S,
-    inner: InnerMap<K, V>,
-}
-
-#[derive(Clone)]
-struct InnerMap<K, V> {
-    buckets: TablePtr<K, V>,
-    len: usize,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct HashCode(u64);
+pub use super::WeakValueHashMap;
 
 /// Represents an entry in the table which may be occupied or vacant.
 pub enum Entry<'a, K: 'a, V: 'a + WeakElement> {
@@ -51,7 +32,7 @@ pub struct VacantEntry<'a, K: 'a, V: 'a + WeakElement> {
 }
 
 struct InnerEntry<'a, K: 'a, V: 'a + WeakElement> {
-    map:        &'a mut InnerMap<K, V>,
+    map:        &'a mut WeakValueInnerMap<K, V>,
     pos:        usize,
     key:        K,
     hash_code:  HashCode,
@@ -204,7 +185,7 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S>
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
         WeakValueHashMap {
             hash_builder,
-            inner: InnerMap {
+            inner: WeakValueInnerMap {
                 buckets: new_boxed_option_slice(capacity),
                 len: 0,
             }
@@ -662,7 +643,7 @@ impl<'a, K, V: WeakElement> VacantEntry<'a, K, V> {
     }
 }
 
-impl<K, V: WeakElement> InnerMap<K, V> {
+impl<K, V: WeakElement> WeakValueInnerMap<K, V> {
     // Steals buckets starting at `pos`, replacing them with `bucket`.
     fn steal(&mut self, mut pos: usize, mut bucket: FullBucket<K, V>) {
         let mut dist = self.probe_distance(pos, self.which_bucket(bucket.2));
@@ -768,7 +749,7 @@ trait ModuloCapacity {
     }
 }
 
-impl<K, V> ModuloCapacity for InnerMap<K, V> {
+impl<K, V> ModuloCapacity for WeakValueInnerMap<K, V> {
     fn capacity(&self) -> usize {
         self.buckets.len()
     }
@@ -798,7 +779,7 @@ impl<'a, K, V: WeakElement> ModuloCapacity for VacantEntry<'a, K, V> {
     }
 }
 
-impl<K, V> Debug for InnerMap<K, V>
+impl<K, V> Debug for WeakValueInnerMap<K, V>
     where K: Debug,
           V: WeakElement,
           V::Strong: Debug

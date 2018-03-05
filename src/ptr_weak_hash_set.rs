@@ -8,12 +8,9 @@ use std::ops::Deref;
 
 use super::traits::*;
 use super::ptr_weak_key_hash_map as base;
-use super::ptr_weak_key_hash_map::ByPtr;
+use super::by_ptr::ByPtr;
 
-/// A weak-key hash set that hashes on key pointers.
-#[derive(Clone)]
-pub struct PtrWeakHashSet<T, S = RandomState>(
-    base::PtrWeakKeyHashMap<T, (), S>);
+pub use super::PtrWeakHashSet;
 
 impl <T: WeakElement> PtrWeakHashSet<T, RandomState>
     where T::Strong: Deref

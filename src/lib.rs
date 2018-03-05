@@ -1,23 +1,23 @@
-//! # weak-table-rs: weak hash maps and sets for Rust
+//! This library offers a variety of weak hash tables:
 //!
 //!   - For a hash set where the elements are held by weak pointers and compared by element value, see
-//!     [`WeakHashSet`](weak_hash_set/struct.WeakHashSet.html).
+//!     [`WeakHashSet`](struct.WeakHashSet.html).
 //!
 //!   - For a hash set where the elements are held by weak pointers and compared by pointer, see
-//!     [`PtrWeakHashSet`](ptr_weak_hash_set/struct.PtrWeakHashSet.html).
+//!     [`PtrWeakHashSet`](struct.PtrWeakHashSet.html).
 //!
 //!   - For a hash map where the keys are held by weak pointers and compared by key value, see
-//!     [`WeakKeyHashMap`](weak_key_hash_map/struct.WeakKeyHashMap.html).
+//!     [`WeakKeyHashMap`](struct.WeakKeyHashMap.html).
 //!
 //!   - For a hash map where the keys are held by weak pointers and compared by pointer, see
-//!     [`PtrWeakKeyHashMap`](ptr_weak_key_hash_map/struct.PtrWeakKeyHashMap.html).
+//!     [`PtrWeakKeyHashMap`](struct.PtrWeakKeyHashMap.html).
 //!
 //!   - For a hash map where the values are held by weak pointers, see
-//!     [`WeakValueHashMap`](weak_value_hash_map/struct.WeakValueHashMap.html).
+//!     [`WeakValueHashMap`](struct.WeakValueHashMap.html).
 //!
 //!   - For a hash map where the keys and values are both held by weak pointers and the keys are
-//!     compared by key values, see
-//!     [`WeakWeakHashMap`](weak_weak_hash_map/struct.WeakWeakHashMap.html).
+//!     compared by value, see
+//!     [`WeakWeakHashMap`](struct.WeakWeakHashMap.html).
 //!
 //! # Examples
 //!
@@ -47,6 +47,8 @@
 //! assert!(   set.contains("b") );
 //! ```
 
+use std::collections::hash_map::RandomState;
+
 pub mod traits;
 pub mod weak_key_hash_map;
 pub mod ptr_weak_key_hash_map;
@@ -56,11 +58,96 @@ pub mod weak_hash_set;
 pub mod ptr_weak_hash_set;
 
 mod util;
+mod by_ptr;
 mod size_policy;
 
-pub use weak_key_hash_map::WeakKeyHashMap;
-pub use ptr_weak_key_hash_map::PtrWeakKeyHashMap;
-pub use weak_value_hash_map::WeakValueHashMap;
-pub use weak_weak_hash_map::WeakWeakHashMap;
-pub use weak_hash_set::WeakHashSet;
-pub use ptr_weak_hash_set::PtrWeakHashSet;
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+struct HashCode(u64);
+
+type FullBucket<K, V> = (K, V, HashCode);
+type Bucket<K, V> = Option<FullBucket<K, V>>;
+type TablePtr<K, V> = Box<[Bucket<K, V>]>;
+
+/// A mapping from weak pointers to values.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
+#[derive(Clone)]
+pub struct WeakKeyHashMap<K, V, S = RandomState> {
+    hash_builder: S,
+    inner: WeakKeyInnerMap<K, V>,
+}
+
+#[derive(Clone)]
+struct WeakKeyInnerMap<K, V> {
+    buckets: TablePtr<K, V>,
+    len: usize,
+}
+
+/// A weak-key hash map that hashes on key pointers rather than the
+/// values they point to.
+///
+/// # Examples
+///
+/// ```
+/// use weak_table::PtrWeakKeyHashMap;
+/// use std::rc::{Rc, Weak};
+///
+/// type Table = PtrWeakKeyHashMap<Weak<String>, usize>;
+///
+/// let mut map = Table::new();
+/// let a = Rc::new("hello".to_string());
+/// let b = Rc::new("hello".to_string());
+///
+/// map.insert(a.clone(), 5);
+///
+/// assert_eq!( map.get(&a), Some(&5) );
+/// assert_eq!( map.get(&b), None );
+///
+/// map.insert(b.clone(), 7);
+///
+/// assert_eq!( map.get(&a), Some(&5) );
+/// assert_eq!( map.get(&b), Some(&7) );
+/// ```
+#[derive(Clone)]
+pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(
+    WeakKeyHashMap<by_ptr::ByPtr<K>, V, S>
+);
+
+/// A weak-key hash set that hashes on key pointers.
+#[derive(Clone)]
+pub struct PtrWeakHashSet<T, S = RandomState>(PtrWeakKeyHashMap<T, (), S>);
+
+/// A weak-key hash set that hashes on key pointers.
+#[derive(Clone)]
+pub struct WeakHashSet<T, S = RandomState>(WeakKeyHashMap<T, (), S>);
+
+/// A mapping from keys to weak pointers.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
+#[derive(Clone)]
+pub struct WeakValueHashMap<K, V, S = RandomState> {
+    hash_builder: S,
+    inner: WeakValueInnerMap<K, V>,
+}
+
+#[derive(Clone)]
+struct WeakValueInnerMap<K, V> {
+    buckets: TablePtr<K, V>,
+    len: usize,
+}
+
+/// A mapping from weak pointer keys to weak pointer values.
+///
+/// When a weak pointer expires, its mapping is lazily removed.
+#[derive(Clone)]
+pub struct WeakWeakHashMap<K, V, S = RandomState> {
+    hash_builder: S,
+    inner: WeakWeakInnerMap<K, V>,
+}
+
+#[derive(Clone)]
+struct WeakWeakInnerMap<K, V> {
+    buckets: TablePtr<K, V>,
+    len: usize,
+}
+

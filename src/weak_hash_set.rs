@@ -9,10 +9,7 @@ use std::iter::FromIterator;
 use super::traits::*;
 use super::weak_key_hash_map as base;
 
-/// A weak-key hash set that hashes on key pointers.
-#[derive(Clone)]
-pub struct WeakHashSet<T, S = RandomState>(
-    base::WeakKeyHashMap<T, (), S>);
+pub use super::WeakHashSet;
 
 impl <T: WeakKey> WeakHashSet<T, RandomState> {
     /// Creates an empty `WeakHashSet`.
