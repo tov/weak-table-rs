@@ -8,7 +8,7 @@ homepage = "https://github.com/tov/weak-table-rs"
 documentation = "http://tov.github.io/weak-table-rs/"
 readme = "README.md"
 license = "MIT"
-keywords = ["containers", "weak pointers"]
+keywords = ["containers", "Rc", "Arc", "weak"]
 
 [dependencies]
 
