@@ -880,7 +880,7 @@ impl<'a, K: WeakKey, V> ModuloCapacity for VacantEntry<'a, K, V> {
 }
 
 fn debug_table<K, V>(buckets: &TablePtr<K, V>, f: &mut Formatter) -> fmt::Result
-    where K: WeakKey,
+    where K: WeakElement,
           K::Strong: Debug,
           V: Debug
 {
@@ -893,7 +893,7 @@ fn debug_table<K, V>(buckets: &TablePtr<K, V>, f: &mut Formatter) -> fmt::Result
     write!(f, "}}")
 }
 
-impl<K: WeakKey, V: Debug, S> Debug for WeakKeyHashMap<K, V, S>
+impl<K: WeakElement, V: Debug, S> Debug for WeakKeyHashMap<K, V, S>
     where K::Strong: Debug
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {

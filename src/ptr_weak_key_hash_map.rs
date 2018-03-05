@@ -9,6 +9,29 @@ use super::weak_key_hash_map as base;
 
 /// A weak-key hash map that hashes on key pointers rather than the
 /// values they point to.
+///
+/// # Examples
+///
+/// ```
+/// use weak_table::{PtrWeakKeyHashMap};
+/// use std::rc::{Rc, Weak};
+///
+/// type Table = PtrWeakKeyHashMap<Weak<String>, usize>;
+///
+/// let mut map = Table::new();
+/// let a = Rc::new("hello".to_string());
+/// let b = Rc::new("hello".to_string());
+///
+/// map.insert(a.clone(), 5);
+///
+/// assert_eq!( map.get(&a), Some(&5) );
+/// assert_eq!( map.get(&b), None );
+///
+/// map.insert(b.clone(), 7);
+///
+/// assert_eq!( map.get(&a), Some(&5) );
+/// assert_eq!( map.get(&b), Some(&7) );
+/// ```
 #[derive(Clone)]
 pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(
     base::WeakKeyHashMap<ByPtr<K>, V, S>);
@@ -17,29 +40,6 @@ pub use self::base::{Entry, Iter, IterMut, Keys, Values, ValuesMut, Drain, IntoI
 
 /// Wrapper struct for using pointer equality and hashes rather
 /// than pointed-to value equality and hashes.
-///
-/// # Examples
-///
-/// ```
-/// use weak_table::{ByPtr, WeakKeyHashMap};
-/// use std::rc::{Rc, Weak};
-///
-/// type Table = WeakKeyHashMap<ByPtr<Weak<String>>, usize>;
-///
-/// let mut map = Table::new();
-/// let a = Rc::new("hello".to_string());
-/// let b = Rc::new("hello".to_string());
-///
-/// map.insert(a.clone(), 5);
-///
-/// assert_eq!( map.get(&(&*a as *const _)), Some(&5) );
-/// assert_eq!( map.get(&(&*b as *const _)), None );
-///
-/// map.insert(b.clone(), 7);
-///
-/// assert_eq!( map.get(&(&*a as *const _)), Some(&5) );
-/// assert_eq!( map.get(&(&*b as *const _)), Some(&7) );
-/// ```
 #[derive(Clone, Debug)]
 pub struct ByPtr<K>(K);
 
@@ -315,20 +315,36 @@ impl<'a, K, V, S> Extend<(&'a K::Strong, &'a V)> for PtrWeakKeyHashMap<K, V, S>
 
 impl<K, V: Debug, S> Debug for PtrWeakKeyHashMap<K, V, S>
     where K: WeakElement,
-          K::Strong: Debug + Deref
+          K::Strong: Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl<K: WeakElement, V, S> IntoIterator for PtrWeakKeyHashMap<K, V, S>
-    where K::Strong: Deref
-{
+impl<K: WeakElement, V, S> IntoIterator for PtrWeakKeyHashMap<K, V, S> {
     type Item = (K::Strong, V);
     type IntoIter = IntoIter<ByPtr<K>, V>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl<'a, K: WeakElement, V, S> IntoIterator for &'a PtrWeakKeyHashMap<K, V, S> {
+    type Item = (K::Strong, &'a V);
+    type IntoIter = Iter<'a, ByPtr<K>, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.0).into_iter()
+    }
+}
+
+impl<'a, K: WeakElement, V, S> IntoIterator for &'a mut PtrWeakKeyHashMap<K, V, S> {
+    type Item = (K::Strong, &'a mut V);
+    type IntoIter = IterMut<'a, ByPtr<K>, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&mut self.0).into_iter()
     }
 }
