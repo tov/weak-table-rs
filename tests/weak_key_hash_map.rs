@@ -12,9 +12,6 @@ use quickcheck::{Arbitrary, Gen};
 
 use weak_table::WeakKeyHashMap;
 
-mod util;
-
-use util::rc_key::RcKey;
 use self::Cmd::*;
 
 fn test_script<K, V>(script: &Script<K, V>) -> bool
@@ -52,7 +49,7 @@ pub struct Script<K, V>(Vec<Cmd<K, V>>);
 #[derive(Clone, Debug)]
 pub struct Tester<K: Hash + Eq, V> {
     weak:   WeakKeyHashMap<Weak<K>, V>,
-    strong: HashMap<RcKey<K>, V>,
+    strong: HashMap<Rc<K>, V>,
     log:    Vec<K>,
 }
 
@@ -73,7 +70,7 @@ impl<K, V> Tester<K, V>
     }
 
     pub fn check(&self) -> bool {
-        let copy = self.weak.iter().map(|(k, v)| (RcKey(k), v.clone())).collect();
+        let copy = self.weak.iter().map(|(k, v)| (k, v.clone())).collect();
         if self.strong == copy {
 //            eprintln!("Tester::check: succeeded: {:?}", self.weak);
             true
@@ -106,7 +103,7 @@ impl<K, V> Tester<K, V>
         let key_ptr = Rc::new(key.clone());
         self.weak.insert(key_ptr.clone(), value.clone());
         self.strong.remove(key);
-        self.strong.insert(RcKey(key_ptr), value.clone());
+        self.strong.insert(key_ptr, value.clone());
         if log { self.log.push(key.clone()); }
     }
 
