@@ -354,6 +354,22 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
         self.find_bucket(key).map(|tup| tup.2)
     }
 
+    /// Returns the strong reference to the key, if present.
+    pub fn get_key<Q>(&self, key: &Q) -> Option<K::Strong>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).map(|tup| tup.1)
+    }
+
+    /// Returns strong references to both the key and the value, if present.
+    pub fn get_both<Q>(&self, key: &Q) -> Option<(K::Strong, V::Strong)>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).map(|tup| (tup.1, tup.2))
+    }
+
     /// Returns true if the map contains the specified key.
     pub fn contains_key<Q>(&self, key: &Q) -> bool
         where Q: ?Sized + Hash + Eq,
