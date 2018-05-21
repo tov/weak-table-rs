@@ -14,7 +14,7 @@ so you can add
 
 ```toml
 [dependencies]
-weak-table = "0.1.0"
+weak-table = "0.1.2"
 ```
 
 to your `Cargo.toml` and
@@ -37,8 +37,8 @@ use std::sync::{Arc, Weak};
 type Table = WeakHashSet<Weak<String>>;
 
 let mut set = Table::new();
-let a = Arc::new("a".to_string());
-let b = Arc::new("b".to_string());
+let a = Arc::new("a".to_owned());
+let b = Arc::new("b".to_owned());
 
 set.insert(a.clone());
 
