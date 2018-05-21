@@ -86,6 +86,14 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.contains_key(key)
     }
 
+    /// Gets a strong reference to the given key.
+    pub fn get<Q>(&self, key: &Q) -> Option<T::Strong>
+        where Q: ?Sized + Eq + Hash,
+              T::Key: Borrow<Q>
+    {
+        self.0.get_key(key)
+    }
+
     /// Unconditionally inserts the value, returning the old value if already present. Does not
     /// replace the key.
     pub fn insert(&mut self, key: T::Strong) -> bool {

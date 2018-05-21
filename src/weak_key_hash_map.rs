@@ -402,6 +402,16 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.find_bucket(key).is_some()
     }
 
+    /// Returns a strong reference to the key, if found.
+    pub fn get_key<Q>(&self, key: &Q) -> Option<K::Strong>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).and_then(move |tup|
+            self.inner.buckets[tup.0].as_ref().and_then(|bucket| bucket.0.view())
+        )
+    }
+
     /// Returns a mutable reference to the value corresponding to the key.
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
         where Q: ?Sized + Hash + Eq,
