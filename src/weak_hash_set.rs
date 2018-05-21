@@ -86,7 +86,24 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.contains_key(key)
     }
 
-    /// Gets a strong reference to the given key.
+    /// Gets a strong reference to the given key, if found.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use weak_table::WeakHashSet;
+    /// use std::rc::{Rc, Weak};
+    /// use std::ops::Deref;
+    ///
+    /// let mut set: WeakHashSet<Weak<String>> = WeakHashSet::new();
+    ///
+    /// let a = Rc::new("a".to_owned());
+    /// set.insert(a.clone());
+    ///
+    /// let also_a = set.get("a").unwrap();
+    ///
+    /// assert_eq!(a.deref() as *const String, also_a.deref() as *const String);
+    /// ```
     pub fn get<Q>(&self, key: &Q) -> Option<T::Strong>
         where Q: ?Sized + Eq + Hash,
               T::Key: Borrow<Q>
