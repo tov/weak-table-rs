@@ -29,11 +29,11 @@
 //! use weak_table::WeakHashSet;
 //! use std::sync::{Arc, Weak};
 //!
-//! type Table = WeakHashSet<Weak<String>>;
+//! type Table = WeakHashSet<Weak<str>>;
 //!
 //! let mut set = Table::new();
-//! let a = Arc::new("a".to_string());
-//! let b = Arc::new("b".to_string());
+//! let a = Arc::<str>::from("a");
+//! let b = Arc::<str>::from("b");
 //!
 //! set.insert(a.clone());
 //!
@@ -101,8 +101,8 @@ struct WeakKeyInnerMap<K, V> {
 /// type Table = PtrWeakKeyHashMap<Weak<str>, usize>;
 ///
 /// let mut map = Table::new();
-/// let a = Rc::<str>::from("hello".to_owned());
-/// let b = Rc::<str>::from("hello".to_owned());
+/// let a = Rc::<str>::from("hello");
+/// let b = Rc::<str>::from("hello");
 ///
 /// map.insert(a.clone(), 5);
 ///

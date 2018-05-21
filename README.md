@@ -34,11 +34,11 @@ whose reference counts expire:
 use weak_table::WeakHashSet;
 use std::sync::{Arc, Weak};
 
-type Table = WeakHashSet<Weak<String>>;
+type Table = WeakHashSet<Weak<str>>;
 
 let mut set = Table::new();
-let a = Arc::new("a".to_owned());
-let b = Arc::new("b".to_owned());
+let a = Arc::<str>::from("a");
+let b = Arc::<str>::from("b");
 
 set.insert(a.clone());
 
