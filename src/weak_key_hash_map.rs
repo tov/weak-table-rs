@@ -418,6 +418,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.find_bucket(key).and_then(move |tup|
             self.inner.buckets[tup.0].as_ref().map(|bucket| (tup.1, &bucket.1)))
     }
+
     /// Returns a mutable reference to the value corresponding to the key.
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
         where Q: ?Sized + Hash + Eq,
