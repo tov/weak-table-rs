@@ -98,11 +98,11 @@ struct WeakKeyInnerMap<K, V> {
 /// use weak_table::PtrWeakKeyHashMap;
 /// use std::rc::{Rc, Weak};
 ///
-/// type Table = PtrWeakKeyHashMap<Weak<String>, usize>;
+/// type Table = PtrWeakKeyHashMap<Weak<str>, usize>;
 ///
 /// let mut map = Table::new();
-/// let a = Rc::new("hello".to_string());
-/// let b = Rc::new("hello".to_string());
+/// let a = Rc::<str>::from("hello".to_owned());
+/// let b = Rc::<str>::from("hello".to_owned());
 ///
 /// map.insert(a.clone(), 5);
 ///
