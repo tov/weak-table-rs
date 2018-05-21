@@ -410,6 +410,15 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.find_bucket(key).map(|tup| tup.1)
     }
 
+    /// Returns a pair of a strong reference to the key, and a reference to the value, if present.
+    pub fn get_both<Q>(&self, key: &Q) -> Option<(K::Strong, &V)>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).and_then(move |tup|
+            self.inner.buckets[tup.0].as_ref().map(|bucket| (tup.1, &bucket.1)))
+    }
+
     /// Returns a mutable reference to the value corresponding to the key.
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
         where Q: ?Sized + Hash + Eq,
@@ -417,6 +426,16 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     {
         self.find_bucket(key).and_then(move |tup|
             self.inner.buckets[tup.0].as_mut().map(|bucket| &mut bucket.1))
+    }
+
+    /// Returns a pair of a strong reference to the key, and a mutable reference to the value,
+    /// if present.
+    pub fn get_both_mut<Q>(&mut self, key: &Q) -> Option<(K::Strong, &mut V)>
+        where Q: ?Sized + Hash + Eq,
+              K::Key: Borrow<Q>
+    {
+        self.find_bucket(key).and_then(move |tup|
+            self.inner.buckets[tup.0].as_mut().map(|bucket| (tup.1, &mut bucket.1)))
     }
 
     /// Unconditionally inserts the value, returning the old value if already present.
