@@ -407,9 +407,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         where Q: ?Sized + Hash + Eq,
               K::Key: Borrow<Q>
     {
-        self.find_bucket(key).and_then(move |tup|
-            self.inner.buckets[tup.0].as_ref().and_then(|bucket| bucket.0.view())
-        )
+        self.find_bucket(key).map(|tup| tup.1)
     }
 
     /// Returns a mutable reference to the value corresponding to the key.
