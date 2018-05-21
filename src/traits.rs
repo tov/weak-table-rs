@@ -34,14 +34,14 @@ pub trait WeakKey : WeakElement {
     /// The underlying key type.
     ///
     /// For example, for `std::rc::Weak<T>`, this will be `T`.
-    type Key: Eq + Hash;
+    type Key: ?Sized + Eq + Hash;
 
     /// Borrows a view of the key.
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
         where F: FnOnce(&Self::Key) -> R;
 }
 
-impl<T> WeakElement for rc::Weak<T> {
+impl<T: ?Sized> WeakElement for rc::Weak<T> {
     type Strong = rc::Rc<T>;
 
     fn new(view: &Self::Strong) -> Self {
@@ -57,7 +57,7 @@ impl<T> WeakElement for rc::Weak<T> {
     }
 }
 
-impl<T: Eq + Hash> WeakKey for rc::Weak<T> {
+impl<T: ?Sized + Eq + Hash> WeakKey for rc::Weak<T> {
     type Key = T;
 
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
@@ -67,7 +67,7 @@ impl<T: Eq + Hash> WeakKey for rc::Weak<T> {
     }
 }
 
-impl<T> WeakElement for sync::Weak<T> {
+impl<T: ?Sized> WeakElement for sync::Weak<T> {
     type Strong = sync::Arc<T>;
 
     fn new(view: &Self::Strong) -> Self {
@@ -83,7 +83,7 @@ impl<T> WeakElement for sync::Weak<T> {
     }
 }
 
-impl<T: Eq + Hash> WeakKey for sync::Weak<T>
+impl<T: ?Sized + Eq + Hash> WeakKey for sync::Weak<T>
 {
     type Key = T;
 

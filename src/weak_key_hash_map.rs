@@ -418,7 +418,6 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.find_bucket(key).and_then(move |tup|
             self.inner.buckets[tup.0].as_ref().map(|bucket| (tup.1, &bucket.1)))
     }
-
     /// Returns a mutable reference to the value corresponding to the key.
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
         where Q: ?Sized + Hash + Eq,
@@ -1016,11 +1015,11 @@ mod tests {
 
     #[test]
     fn simple() {
-        let mut map: WeakKeyHashMap<Weak<String>, usize> = WeakKeyHashMap::new();
+        let mut map: WeakKeyHashMap<Weak<str>, usize> = WeakKeyHashMap::new();
         assert_eq!( map.len(), 0 );
         assert!( !map.contains_key("five") );
 
-        let five = Rc::new("five".to_string());
+        let five: Rc<str> = Rc::from("five".to_string());
         map.insert(five.clone(), 5);
 
         assert_eq!( map.len(), 1 );
