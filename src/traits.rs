@@ -37,7 +37,7 @@ pub trait WeakElement {
     /// Is the given weak element expired?
     ///
     /// The default implemention checks whether a strong pointer can be obtained via `view`.
-    fn expired(&self) -> bool {
+    fn is_expired(&self) -> bool {
         self.view().is_none()
     }
 
