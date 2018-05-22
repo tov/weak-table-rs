@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
 
 This crate defines several kinds of weak hash maps and sets. See 
-the [full API documentation](http://docs.rs/weak-table/).
+the [full API documentation](http://docs.rs/weak-table/) for details.
 
 This crate supports Rust version 1.23 and later.
 
