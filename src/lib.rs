@@ -23,7 +23,10 @@
 //!   - For a hash set where the elements are held by weak pointers and compared by pointer, see
 //!     [`PtrWeakHashSet`](struct.PtrWeakHashSet.html).
 //!
-//! This library supports Rust version 1.23 and later.
+//! To add support for your own weak pointers, see
+//! [the traits `WeakElement` and `WeakKey`](mod.traits.html).
+//!
+//! This crate supports Rust version 1.23 and later.
 //!
 //! # Examples
 //!
