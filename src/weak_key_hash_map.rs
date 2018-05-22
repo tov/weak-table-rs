@@ -783,7 +783,7 @@ impl<K: WeakKey, V> WeakKeyInnerMap<K, V> {
                 let dist = self.probe_distance(src, goal_pos);
                 if dist == 0 { break; }
 
-                if !self.buckets[src].as_ref().unwrap().0.expired() {
+                if !self.buckets[src].as_ref().unwrap().0.is_expired() {
                     if in_interval(dst, goal_pos, src) {
                         self.erase_range(dst, goal_pos);
                         self.buckets[goal_pos] = self.buckets[src].take();

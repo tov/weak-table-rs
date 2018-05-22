@@ -652,7 +652,7 @@ impl<K: WeakKey, V: WeakElement> WeakWeakInnerMap<K, V> {
         loop {
             let hash_code_option =
                 self.buckets[pos].as_ref().and_then(|bucket|
-                    if bucket.0.expired() || bucket.1.expired() {
+                    if bucket.0.is_expired() || bucket.1.is_expired() {
                         None
                     } else {
                         Some(bucket.2)
@@ -692,7 +692,7 @@ impl<K: WeakKey, V: WeakElement> WeakWeakInnerMap<K, V> {
 
                 let expired = {
                     let bucket = self.buckets[src].as_ref().unwrap();
-                    bucket.0.expired() || bucket.1.expired()
+                    bucket.0.is_expired() || bucket.1.is_expired()
                 };
 
                 if !expired {
