@@ -71,7 +71,7 @@
 //!
 //! impl PartialEq for Symbol {
 //!     fn eq(&self, other: &Symbol) -> bool {
-//!         self.0.as_ptr() == other.0.as_ptr()
+//!         Rc::ptr_eq(&self.0, &other.0)
 //!     }
 //! }
 //!
