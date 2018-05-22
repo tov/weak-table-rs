@@ -70,6 +70,14 @@ impl <K: WeakElement, V, S: BuildHasher> PtrWeakKeyHashMap<K, V, S>
         self.0.len()
     }
 
+    /// Is the map known to be empty?
+    ///
+    /// This could answer `false` for an empty map whose keys have
+    /// expired but have yet to be collected.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// The proportion of buckets that are used.
     ///
     /// This is an over-approximation because of expired keys.
