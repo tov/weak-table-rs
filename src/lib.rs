@@ -23,6 +23,8 @@
 //!   - For a hash set where the elements are held by weak pointers and compared by pointer, see
 //!     [`PtrWeakHashSet`](struct.PtrWeakHashSet.html).
 //!
+//! This library supports Rust version 1.23 and later.
+//!
 //! # Examples
 //!
 //! ```
