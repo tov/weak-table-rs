@@ -24,36 +24,95 @@
 //!     [`PtrWeakHashSet`](struct.PtrWeakHashSet.html).
 //!
 //! To add support for your own weak pointers, see
-//! [the traits `WeakElement` and `WeakKey`](mod.traits.html).
+//! [the traits `WeakElement` and `WeakKey`](traits/).
 //!
 //! This crate supports Rust version 1.23 and later.
 //!
 //! # Examples
 //!
+//! Here we create a weak hash table mapping strings to integers.
+//! Note that after dropping `one`, the key `"one"` is no longer present in the map.
+//! This is because the map holds the strings as `std::sync::Weak<str>`s.
+//!
 //! ```
-//! use weak_table::WeakHashSet;
+//! use weak_table::WeakKeyHashMap;
 //! use std::sync::{Arc, Weak};
 //!
-//! type Table = WeakHashSet<Weak<str>>;
+//! let mut table = <WeakKeyHashMap<Weak<str>, u32>>::new();
+//! let one = Arc::<str>::from("one");
+//! let two = Arc::<str>::from("two");
 //!
-//! let mut set = Table::new();
-//! let a = Arc::<str>::from("a");
-//! let b = Arc::<str>::from("b");
+//! table.insert(one.clone(), 1);
 //!
-//! set.insert(a.clone());
+//! assert_eq!( table.get("one"), Some(&1) );
+//! assert_eq!( table.get("two"), None );
 //!
-//! assert!(   set.contains("a") );
-//! assert!( ! set.contains("b") );
+//! table.insert(two.clone(), 2);
+//! *table.get_mut(&one).unwrap() += 10;
 //!
-//! set.insert(b.clone());
+//! assert_eq!( table.get("one"), Some(&11) );
+//! assert_eq!( table.get("two"), Some(&2) );
 //!
-//! assert!(   set.contains("a") );
-//! assert!(   set.contains("b") );
+//! drop(one);
 //!
-//! drop(a);
+//! assert_eq!( table.get("one"), None );
+//! assert_eq!( table.get("two"), Some(&2) );
+//! ```
 //!
-//! assert!( ! set.contains("a") );
-//! assert!(   set.contains("b") );
+//! Here we use a weak hash set to implement a simple string interning facility:
+//!
+//! ```
+//! use weak_table::WeakHashSet;
+//! use std::{ops::Deref, rc::{Rc, Weak}};
+//!
+//! #[derive(Clone, Debug)]
+//! pub struct Symbol(Rc<str>);
+//!
+//! impl PartialEq for Symbol {
+//!     fn eq(&self, other: &Symbol) -> bool {
+//!         self.0.as_ptr() == other.0.as_ptr()
+//!     }
+//! }
+//!
+//! impl Eq for Symbol {}
+//!
+//! impl Deref for Symbol {
+//!     type Target = str;
+//!     fn deref(&self) -> &str {
+//!         &self.0
+//!     }
+//! }
+//!
+//! #[derive(Debug, Default)]
+//! pub struct SymbolTable(WeakHashSet<Weak<str>>);
+//!
+//! impl SymbolTable {
+//!     pub fn new() -> Self {
+//!         Self::default()
+//!     }
+//!
+//!     pub fn intern(&mut self, name: &str) -> Symbol {
+//!         if let Some(rc) = self.0.get(name) {
+//!             Symbol(rc)
+//!         } else {
+//!             let rc = Rc::<str>::from(name);
+//!             self.0.insert(Rc::clone(&rc));
+//!             Symbol(rc)
+//!         }
+//!     }
+//! }
+//!
+//! #[test]
+//! fn interning() {
+//!     let mut tab = SymbolTable::new();
+//!
+//!     let a0 = tab.intern("a");
+//!     let a1 = tab.intern("a");
+//!     let b  = tab.intern("b");
+//!
+//!     assert_eq!(a0, a1);
+//!     assert_ne!(a0, b);
+//! }
 //! ```
 
 use std::collections::hash_map::RandomState;

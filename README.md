@@ -11,31 +11,87 @@ This crate supports Rust version 1.23 and later.
 
 ### Examples
 
-Here we create a weak hash set and demonstrate that it forgets elements
-whose reference counts expire:
+Here we create a weak hash map and demonstrate that it forgets mappings
+whose keys:
+
+```rust
+use weak_table::WeakKeyHashMap;
+use std::sync::{Arc, Weak};
+
+let mut table = <WeakKeyHashMap<Weak<str>, u32>>::new();
+let one = Arc::<str>::from("one");
+let two = Arc::<str>::from("two");
+
+table.insert(one.clone(), 1);
+
+assert_eq!( table.get("one"), Some(&1) );
+assert_eq!( table.get("two"), None );
+
+table.insert(two.clone(), 2);
+*table.get_mut(&one).unwrap() += 10;
+
+assert_eq!( table.get("one"), Some(&11) );
+assert_eq!( table.get("two"), Some(&2) );
+
+drop(one);
+
+assert_eq!( table.get("one"), None );
+assert_eq!( table.get("two"), Some(&2) );
+```
+
+Here we use a weak hash set to implement a simple string interning facility:
 
 ```rust
 use weak_table::WeakHashSet;
-use std::sync::{Arc, Weak};
+use std::{ops::Deref, rc::{Rc, Weak}};
 
-type Table = WeakHashSet<Weak<str>>;
+#[derive(Clone, Debug)]
+pub struct Symbol(Rc<str>);
 
-let mut set = Table::new();
-let a = Arc::<str>::from("a");
-let b = Arc::<str>::from("b");
+impl PartialEq for Symbol {
+    fn eq(&self, other: &Symbol) -> bool {
+        self.0.as_ptr() == other.0.as_ptr()
+    }
+}
 
-set.insert(a.clone());
+impl Eq for Symbol {}
 
-assert!(   set.contains("a") );
-assert!( ! set.contains("b") );
+impl Deref for Symbol {
+    type Target = str;
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
 
-set.insert(b.clone());
+#[derive(Debug, Default)]
+pub struct SymbolTable(WeakHashSet<Weak<str>>);
 
-assert!(   set.contains("a") );
-assert!(   set.contains("b") );
+impl SymbolTable {
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-drop(a);
+    pub fn intern(&mut self, name: &str) -> Symbol {
+        if let Some(rc) = self.0.get(name) {
+            Symbol(rc)
+        } else {
+            let rc = Rc::<str>::from(name);
+            self.0.insert(Rc::clone(&rc));
+            Symbol(rc)
+        }
+    }
+}
 
-assert!( ! set.contains("a") );
-assert!(   set.contains("b") );
+#[test]
+fn interning() {
+    let mut tab = SymbolTable::new();
+
+    let a0 = tab.intern("a");
+    let a1 = tab.intern("a");
+    let b  = tab.intern("b");
+
+    assert_eq!(a0, a1);
+    assert_ne!(a0, b);
+}
 ```
+
