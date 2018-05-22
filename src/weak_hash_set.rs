@@ -102,7 +102,7 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// let also_a = set.get("a").unwrap();
     ///
-    /// assert_eq!(a.deref() as *const String, also_a.deref() as *const String);
+    /// assert!(Rc::ptr_eq( &a, &also_a ));
     /// ```
     pub fn get<Q>(&self, key: &Q) -> Option<T::Strong>
         where Q: ?Sized + Eq + Hash,
