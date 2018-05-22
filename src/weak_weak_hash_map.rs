@@ -441,6 +441,7 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
         for (key, value1) in self {
             if let Some(value2) = K::with_key(&key, |k| other.get(k)) {
                 if !value_equal(value1, value2) {
+                    return false;
                 }
             } else {
                 return false;
