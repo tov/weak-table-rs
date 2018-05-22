@@ -1,4 +1,4 @@
-//! Traits for describing weak and shared pointers and their use as elements and keys.
+//! Traits for describing strong and weak pointers and their use as elements and keys.
 //!
 //! These traits provide mechanisms for converting between weak and strong pointers
 //! ([`WeakElement`](trait.WeakElement.html)) and for dereferencing strong pointers
