@@ -12,7 +12,7 @@ This crate supports Rust version 1.23 and later.
 ### Examples
 
 Here we create a weak hash map and demonstrate that it forgets mappings
-whose keys:
+whose keys expire:
 
 ```rust
 use weak_table::WeakKeyHashMap;
