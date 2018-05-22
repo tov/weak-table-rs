@@ -43,7 +43,8 @@ Here we use a weak hash set to implement a simple string interning facility:
 
 ```rust
 use weak_table::WeakHashSet;
-use std::{ops::Deref, rc::{Rc, Weak}};
+use std::ops::Deref;
+use std::rc::{Rc, Weak};
 
 #[derive(Clone, Debug)]
 pub struct Symbol(Rc<str>);
