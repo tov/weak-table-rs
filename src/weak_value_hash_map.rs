@@ -544,9 +544,9 @@ impl<'a, K: Eq + Hash, V: WeakElement> InnerEntry<'a, K, V> {
 
                 let dist = self.probe_distance(self.pos,
                                                self.which_bucket(hash_code));
-                return BucketStatus::ProbeDistance(dist);
+                BucketStatus::ProbeDistance(dist)
             },
-            None => return BucketStatus::Unoccupied,
+            None => BucketStatus::Unoccupied,
         }
     }
 }

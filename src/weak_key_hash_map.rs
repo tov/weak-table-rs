@@ -636,9 +636,9 @@ impl<'a, K: WeakKey, V> InnerEntry<'a, K, V> {
 
                 let dist = self.probe_distance(self.pos,
                                                self.which_bucket(hash_code));
-                return BucketStatus::ProbeDistance(dist);
+                BucketStatus::ProbeDistance(dist)
             },
-            None => return BucketStatus::Unoccupied,
+            None => BucketStatus::Unoccupied,
         }
     }
 }
@@ -885,7 +885,7 @@ impl<K, V> Debug for WeakKeyInnerMap<K, V>
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{{ ")?;
         for (i, bucket) in self.buckets.iter().enumerate() {
-            if let &Some((ref k, ref v, _)) = bucket {
+            if let Some((ref k, ref v, _)) = *bucket {
                 write!(f, "[{}] {:?} => {:?}, ", i, k.view(), *v)?;
             }
         }
