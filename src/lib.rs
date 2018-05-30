@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/weak-table/0.2.2")]
+#![doc(html_root_url = "https://docs.rs/weak-table/0.2.3")]
 //! This library offers a variety of weak hash tables:
 //!
 //!   - For a hash map where the keys are held by weak pointers and compared by key value, see
