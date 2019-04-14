@@ -11,5 +11,5 @@ keywords = ["containers", "Rc", "Arc", "weak"]
 [dependencies]
 
 [dev-dependencies]
-quickcheck = "0.6"
+quickcheck = "0.8"
 
