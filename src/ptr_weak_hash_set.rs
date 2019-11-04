@@ -254,3 +254,4 @@ impl<'a, T: WeakElement, S> IntoIterator for &'a PtrWeakHashSet<T, S>
         Iter(self.0.keys())
     }
 }
+

@@ -532,18 +532,18 @@ enum BucketStatus<V: WeakElement> {
 impl<'a, K: Eq + Hash, V: WeakElement> InnerEntry<'a, K, V> {
     // Gets the status of the current bucket.
     fn bucket_status(&self) -> BucketStatus<V> {
-        match self.map.buckets[self.pos] {
-            Some((ref key, ref weak_value, hash_code)) => {
-                if hash_code == self.hash_code {
-                    if let Some(value) = weak_value.view() {
-                        if self.key == *key {
+        match &self.map.buckets[self.pos] {
+            Some(bucket) => {
+                if bucket.2 == self.hash_code {
+                    if let Some(value) = bucket.1.view() {
+                        if self.key == bucket.0 {
                             return BucketStatus::MatchesKey(value);
                         }
                     }
                 }
 
                 let dist = self.probe_distance(self.pos,
-                                               self.which_bucket(hash_code));
+                                               self.which_bucket(bucket.2));
                 BucketStatus::ProbeDistance(dist)
             },
             None => BucketStatus::Unoccupied,
@@ -646,26 +646,20 @@ impl<'a, K, V: WeakElement> VacantEntry<'a, K, V> {
 impl<K, V: WeakElement> WeakValueInnerMap<K, V> {
     // Steals buckets starting at `pos`, replacing them with `bucket`.
     fn steal(&mut self, mut pos: usize, mut bucket: FullBucket<K, V>) {
-        let mut dist = self.probe_distance(pos, self.which_bucket(bucket.2));
+        let mut my_dist = self.probe_distance(pos, self.which_bucket(bucket.2));
 
-        loop {
-            let hash_code_option =
-                self.buckets[pos].as_ref().and_then(
-                    |bucket| bucket.1.view().map(|_| bucket.2));
+        while let Some(hash_code) = self.buckets[pos].as_ref().and_then(
+            |bucket| if bucket.1.is_expired() {None} else {Some(bucket.2)}) {
 
-            if let Some(hash_code) = hash_code_option {
-                let bucket_dist =
-                    self.probe_distance(pos, self.which_bucket(hash_code));
-                if dist > bucket_dist {
-                    mem::swap(self.buckets[pos].as_mut().unwrap(), &mut bucket);
-                    dist = bucket_dist;
-                }
-            } else {
-                break;
+            let victim_dist = self.probe_distance(pos, self.which_bucket(hash_code));
+
+            if my_dist > victim_dist {
+                mem::swap(self.buckets[pos].as_mut().unwrap(), &mut bucket);
+                my_dist = victim_dist;
             }
 
             pos = self.next_bucket(pos);
-            dist += 1;
+            my_dist += 1;
         }
 
         self.buckets[pos] = Some(bucket);
