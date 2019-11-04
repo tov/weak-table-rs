@@ -250,3 +250,53 @@ impl<'a, K: WeakElement, V: WeakElement, S> IntoIterator for &'a PtrWeakWeakHash
         (&self.0).into_iter()
     }
 }
+
+#[cfg(test)]
+mod test
+{
+    use crate::PtrWeakWeakHashMap;
+    use crate::weak_weak_hash_map::Entry;
+    use std::rc::{Rc, Weak};
+
+//    fn show_me(weakmap: &PtrWeakWeakHashMap<Weak<u32>, Weak<f32>>) {
+//        for (key, _) in weakmap {
+//            eprint!(" {:2}", *key);
+//        }
+//        eprintln!();
+//    }
+
+    // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
+    #[test]
+    fn insert_and_check() {
+        let mut rcs: Vec<(Rc<u32>, Rc<f32>)> = Vec::new();
+
+        for i in 0 .. 200 {
+            rcs.push((Rc::new(i), Rc::new(i as f32 + 0.1)));
+        }
+
+        let mut weakmap: PtrWeakWeakHashMap<Weak<u32>, Weak<f32>> = PtrWeakWeakHashMap::new();
+
+        for (key, value) in rcs.iter().cloned() {
+            weakmap.insert(key, value);
+//            show_me(&weakmap);
+        }
+
+        let mut count = 0;
+
+        for (key, value) in &rcs {
+            assert!(weakmap.contains_key(key));
+
+            match weakmap.entry(Rc::clone(key)) {
+                Entry::Occupied(occ) => {
+                    assert_eq!( occ.get(), value );
+                    count += 1;
+                }
+                Entry::Vacant(_) => {
+                    eprintln!("PointerWeakWeakHashMap: missing: {}", *key);
+                }
+            }
+        }
+
+        assert_eq!( count, rcs.len() );
+    }
+}

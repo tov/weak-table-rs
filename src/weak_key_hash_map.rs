@@ -1012,7 +1012,7 @@ impl<K: WeakElement, V, S> WeakKeyHashMap<K, V, S> {
 #[cfg(test)]
 mod tests {
     use std::rc::{Rc, Weak};
-    use super::WeakKeyHashMap;
+    use super::{Entry, WeakKeyHashMap};
 
     #[test]
     fn simple() {
@@ -1035,5 +1035,43 @@ mod tests {
 
         assert_eq!( map.len(), 0 );
         assert!( !map.contains_key("five") );
+    }
+
+//    fn show_me(weakmap: &WeakKeyHashMap<Weak<u32>, f32>) {
+//        for (key, _) in weakmap {
+//            eprint!(" {:2}", *key);
+//        }
+//        eprintln!();
+//    }
+
+    // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
+    #[test]
+    fn insert_and_check() {
+        let mut rcs: Vec<Rc<u32>> = Vec::new();
+
+        for i in 0 .. 200 {
+            rcs.push(Rc::new(i));
+        }
+
+        let mut weakmap: WeakKeyHashMap<Weak<u32>, f32> = WeakKeyHashMap::new();
+
+        for key in rcs.iter().cloned() {
+            let f = *key as f32 + 0.1;
+            weakmap.insert(key, f);
+//            show_me(&weakmap);
+        }
+
+        let mut count = 0;
+
+        for key in &rcs {
+            assert!(weakmap.contains_key(key));
+
+            match weakmap.entry(Rc::clone(key)) {
+                Entry::Occupied(_) => count += 1,
+                Entry::Vacant(_) => eprintln!("WeakKeyHashMap: missing: {}", *key),
+            }
+        }
+
+        assert_eq!( count, rcs.len() );
     }
 }

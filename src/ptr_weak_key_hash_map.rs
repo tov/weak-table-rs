@@ -313,6 +313,13 @@ mod test
     use crate::weak_key_hash_map::Entry;
     use std::rc::{Rc, Weak};
 
+//    fn show_me(weakmap: &PtrWeakKeyHashMap<Weak<u32>, f32>) {
+//        for (key, _) in weakmap {
+//            eprint!(" {:2}", *key);
+//        }
+//        eprintln!();
+//    }
+
     // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
     #[test]
     fn insert_and_check() {
@@ -336,7 +343,7 @@ mod test
 
             match weakmap.entry(Rc::clone(item)) {
                 Entry::Occupied(_) => count += 1,
-                Entry::Vacant(_) => (),
+                Entry::Vacant(_) => eprintln!("PointerWeakKeyHashMap: missing: {}", *item),
             }
         }
 
