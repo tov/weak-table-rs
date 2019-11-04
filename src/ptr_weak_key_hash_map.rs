@@ -305,3 +305,41 @@ impl<'a, K: WeakElement, V, S> IntoIterator for &'a mut PtrWeakKeyHashMap<K, V, 
         (&mut self.0).into_iter()
     }
 }
+
+#[cfg(test)]
+mod test
+{
+    use crate::PtrWeakKeyHashMap;
+    use crate::weak_key_hash_map::Entry;
+    use std::rc::{Rc, Weak};
+
+    // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
+    #[test]
+    fn insert_and_check() {
+        let mut rcs: Vec<Rc<u32>> = Vec::new();
+
+        for i in 0 .. 200 {
+            rcs.push(Rc::new(i));
+        }
+
+        let mut weakmap: PtrWeakKeyHashMap<Weak<u32>, f32> = PtrWeakKeyHashMap::new();
+
+        for item in rcs.iter().cloned() {
+            let f = *item as f32 + 0.1;
+            weakmap.insert(item, f);
+        }
+
+        let mut count = 0;
+
+        for item in &rcs {
+            assert!(weakmap.contains_key(item));
+
+            match weakmap.entry(Rc::clone(item)) {
+                Entry::Occupied(_) => count += 1,
+                Entry::Vacant(_) => (),
+            }
+        }
+
+        assert_eq!( count, rcs.len() );
+    }
+}
