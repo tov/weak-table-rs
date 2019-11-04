@@ -12,4 +12,5 @@ keywords = ["containers", "Rc", "Arc", "weak"]
 
 [dev-dependencies]
 quickcheck = "0.9"
+rand = "0.7.2"
 

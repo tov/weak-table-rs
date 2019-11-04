@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate quickcheck;
-
+extern crate rand;
 extern crate weak_table;
 
 use std::collections::HashMap;
@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
+use rand::Rng;
 use quickcheck::{Arbitrary, Gen};
 
 use weak_table::WeakKeyHashMap;
