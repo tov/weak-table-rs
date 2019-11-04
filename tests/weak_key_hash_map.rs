@@ -146,11 +146,11 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
         let choice = g.gen_range(0, 100);
 
         match choice {
-            00...39 => Insert(K::arbitrary(g), V::arbitrary(g)),
-            40...49 => Reinsert(usize::arbitrary(g), V::arbitrary(g)),
-            50...69 => RemoveInserted(usize::arbitrary(g)),
-            70...79 => RemoveOther(K::arbitrary(g)),
-            80...99 => ForgetInserted(usize::arbitrary(g)),
+            00..=39 => Insert(K::arbitrary(g), V::arbitrary(g)),
+            40..=49 => Reinsert(usize::arbitrary(g), V::arbitrary(g)),
+            50..=69 => RemoveInserted(usize::arbitrary(g)),
+            70..=79 => RemoveOther(K::arbitrary(g)),
+            80..=99 => ForgetInserted(usize::arbitrary(g)),
             _       => unreachable!(),
         }
     }
