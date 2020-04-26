@@ -295,7 +295,7 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
                 BucketStatus::MatchesKey(value) =>
                     return Entry::Occupied(OccupiedEntry {value, inner}),
                 BucketStatus::ProbeDistance(bucket_distance) => {
-                    if bucket_distance > dist {
+                    if bucket_distance < dist {
                         return Entry::Vacant(VacantEntry {inner})
                     } else {
                         inner.pos = inner.next_bucket(inner.pos);
@@ -333,7 +333,7 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
 
                 let bucket_dist =
                     self.probe_distance(pos, self.which_bucket(hash_code));
-                if bucket_dist > dist {
+                if bucket_dist < dist {
                     return None;
                 }
             } else {
