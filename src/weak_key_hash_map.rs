@@ -1003,25 +1003,6 @@ impl<K: WeakElement, V, S> WeakKeyHashMap<K, V, S> {
     }
 }
 
-impl<K, V, S> WeakKeyHashMap<K, V, S>
-where
-    K: WeakKey,
-    K::Key: fmt::Display,
-{
-    fn show(&self) {
-        for (actual, buckopt) in self.inner.buckets.iter().enumerate() {
-            if let Some(bucket) = buckopt {
-                if let Some(key) = K::view(&bucket.0) {
-                    let ideal = self.which_bucket(bucket.2);
-                    let diff = self.probe_distance(actual, ideal);
-                    K::with_key(&key, |k| eprint!("{}({}:{}) ", k, actual, diff));
-                }
-            }
-        }
-        eprintln!();
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::rc::{Rc, Weak};
@@ -1050,13 +1031,6 @@ mod tests {
         assert!( !map.contains_key("five") );
     }
 
-    fn show_me(weakmap: &WeakKeyHashMap<Weak<u32>, f32>) {
-        for (key, _) in weakmap {
-            eprint!(" {:2}", *key);
-        }
-        eprintln!();
-    }
-
     // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
     #[test]
     fn insert_and_check() {
@@ -1071,7 +1045,6 @@ mod tests {
         for key in rcs.iter().cloned() {
             let f = *key as f32 + 0.1;
             weakmap.insert(key, f);
-            weakmap.show();
         }
 
         let mut count = 0;
