@@ -793,7 +793,7 @@ impl<K, V> Debug for WeakWeakInnerMap<K, V>
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{{ ")?;
         for (i, bucket) in self.buckets.iter().enumerate() {
-            if let &Some((ref k, ref v, _)) = bucket {
+            if let Some((k, v, _)) = bucket {
                 write!(f, "[{}] {:?} => {:?}, ", i, k.view(), v.view())?;
             }
         }
