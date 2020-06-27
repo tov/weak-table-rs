@@ -157,7 +157,7 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for Script<K, V> {
         Script(Vec::<Cmd<K, V>>::arbitrary(g))
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
         Box::new(self.0.shrink().map(|v| Script(v)))
     }
 }
