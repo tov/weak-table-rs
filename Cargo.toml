@@ -13,5 +13,5 @@ edition = "2018"
 
 [dev-dependencies]
 quickcheck = "0.9"
-rand = "0.7.2"
+rand = "0.8.2"
 
