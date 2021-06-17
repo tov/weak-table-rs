@@ -7,8 +7,8 @@
 //! as a weak element, you need to implement `WeakElement` for your weak pointer type; to use it
 //! as a weak key, implement `WeakKey` as well.
 
-use std::hash::Hash;
-use std::{rc, sync};
+use core::hash::Hash;
+use alloc::{rc, sync};
 
 /// Interface for elements that can be stored in weak hash tables.
 ///

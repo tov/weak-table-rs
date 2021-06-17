@@ -117,7 +117,8 @@
 //! }
 //! ```
 
-use std::collections::hash_map::RandomState;
+#![no_std]
+extern crate alloc;
 
 pub mod traits;
 pub mod weak_key_hash_map;
@@ -131,6 +132,9 @@ pub mod ptr_weak_hash_set;
 mod util;
 mod by_ptr;
 mod size_policy;
+
+use util::RandomState;
+use alloc::boxed::Box;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct HashCode(u64);

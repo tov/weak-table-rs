@@ -1,14 +1,14 @@
 //! A hash map where the keys are held by weak pointers and compared by pointer.
 
-use std::collections::hash_map::RandomState;
-use std::fmt::{self, Debug};
-use std::hash::BuildHasher;
-use std::iter::FromIterator;
-use std::ops::{Deref, Index, IndexMut};
+use core::fmt::{self, Debug};
+use core::hash::BuildHasher;
+use core::iter::FromIterator;
+use core::ops::{Deref, Index, IndexMut};
 
 use super::by_ptr::*;
 use super::traits::*;
 use super::weak_key_hash_map as base;
+use super::util::RandomState;
 
 pub use super::PtrWeakKeyHashMap;
 pub use super::weak_key_hash_map::{Entry, Iter, IterMut, Keys, Values, ValuesMut, Drain, IntoIter};
@@ -309,9 +309,12 @@ impl<'a, K: WeakElement, V, S> IntoIterator for &'a mut PtrWeakKeyHashMap<K, V, 
 #[cfg(test)]
 mod test
 {
+    extern crate std;
     use crate::PtrWeakKeyHashMap;
     use crate::weak_key_hash_map::Entry;
-    use std::rc::{Rc, Weak};
+    use alloc::rc::{Rc, Weak};
+    use alloc::vec::Vec;
+    use std::eprintln;
 
 //    fn show_me(weakmap: &PtrWeakKeyHashMap<Weak<u32>, f32>) {
 //        for (key, _) in weakmap {
