@@ -1,11 +1,10 @@
 //! A hash map where the values are held by weak pointers.
 
-use std::borrow::Borrow;
-use std::cmp::max;
-use std::collections::hash_map::RandomState;
-use std::hash::{BuildHasher, Hash, Hasher};
-use std::fmt::{self, Debug, Formatter};
-use std::mem;
+use core::borrow::Borrow;
+use core::cmp::max;
+use core::hash::{BuildHasher, Hash, Hasher};
+use core::fmt::{self, Debug, Formatter};
+use core::mem;
 
 use super::*;
 use super::size_policy::*;
@@ -41,7 +40,7 @@ struct InnerEntry<'a, K: 'a, V: 'a + WeakElement> {
 /// An iterator over the keys and values of the weak hash map.
 #[derive(Clone, Debug)]
 pub struct Iter<'a, K: 'a, V: 'a> {
-    base: ::std::slice::Iter<'a, Bucket<K, V>>,
+    base: ::alloc::slice::Iter<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -101,7 +100,7 @@ impl<'a, K, V: WeakElement> Iterator for Values<'a, K, V> {
 #[derive(Debug)]
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct Drain<'a, K: 'a, V: 'a> {
-    base: ::std::slice::IterMut<'a, Bucket<K, V>>,
+    base: ::alloc::slice::IterMut<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -136,7 +135,7 @@ impl<'a, K, V> Drop for Drain<'a, K, V> {
 
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct IntoIter<K, V> {
-    base: ::std::vec::IntoIter<Bucket<K, V>>,
+    base: ::alloc::vec::IntoIter<Bucket<K, V>>,
     size: usize,
 }
 
@@ -484,7 +483,7 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher + Default> Default for WeakVal
     }
 }
 
-impl<K, V, S> ::std::iter::FromIterator<(K, V::Strong)> for WeakValueHashMap<K, V, S>
+impl<K, V, S> ::core::iter::FromIterator<(K, V::Strong)> for WeakValueHashMap<K, V, S>
     where K: Eq + Hash,
           V: WeakElement,
           S: BuildHasher + Default

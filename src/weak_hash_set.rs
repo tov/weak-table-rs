@@ -1,13 +1,13 @@
 //! A hash set where the elements are held by weak pointers and compared by value.
 
-use std::borrow::Borrow;
-use std::collections::hash_map::RandomState;
-use std::fmt::{self, Debug};
-use std::hash::{BuildHasher, Hash};
-use std::iter::FromIterator;
+use core::borrow::Borrow;
+use core::fmt::{self, Debug};
+use core::hash::{BuildHasher, Hash};
+use core::iter::FromIterator;
 
 use super::traits::*;
 use super::weak_key_hash_map as base;
+use super::util::RandomState;
 
 pub use super::WeakHashSet;
 
