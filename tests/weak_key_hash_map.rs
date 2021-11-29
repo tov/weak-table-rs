@@ -3,7 +3,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
-use rand::Rng;
 use quickcheck::{Arbitrary, Gen, quickcheck};
 
 use weak_table::WeakKeyHashMap;
@@ -138,22 +137,22 @@ impl<K, V> Tester<K, V>
 }
 
 impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let choice = g.gen_range(0, 100);
+    fn arbitrary(g: &mut Gen) -> Self {
+        let choice = u8::arbitrary(g);
 
-        match choice {
-            00..=39 => Insert(K::arbitrary(g), V::arbitrary(g)),
-            40..=49 => Reinsert(usize::arbitrary(g), V::arbitrary(g)),
-            50..=69 => RemoveInserted(usize::arbitrary(g)),
-            70..=79 => RemoveOther(K::arbitrary(g)),
-            80..=99 => ForgetInserted(usize::arbitrary(g)),
+        match choice % 10 {
+            0..=3 => Insert(K::arbitrary(g), V::arbitrary(g)),
+            4     => Reinsert(usize::arbitrary(g), V::arbitrary(g)),
+            5..=6 => RemoveInserted(usize::arbitrary(g)),
+            7     => RemoveOther(K::arbitrary(g)),
+            8..=9 => ForgetInserted(usize::arbitrary(g)),
             _       => unreachable!(),
         }
     }
 }
 
 impl<K: Arbitrary, V: Arbitrary> Arbitrary for Script<K, V> {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Script(Vec::<Cmd<K, V>>::arbitrary(g))
     }
 
