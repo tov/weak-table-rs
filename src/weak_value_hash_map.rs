@@ -49,7 +49,7 @@ impl<'a, K, V: WeakElement> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, V::Strong);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(bucket) = self.base.next() {
+        for bucket in &mut self.base {
             if let Some((ref key, ref weak_value, _)) = *bucket {
                 self.size -= 1;
                 if let Some(value) = weak_value.view() {
@@ -109,7 +109,7 @@ impl<'a, K, V: WeakElement> Iterator for Drain<'a, K, V> {
     type Item = (K, V::Strong);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(bucket) = self.base.next() {
+        for bucket in &mut self.base {
             if let Some((key, weak_value, _)) = bucket.take() {
                 self.size -= 1;
                 if let Some(value) = weak_value.view() {
@@ -128,7 +128,7 @@ impl<'a, K, V: WeakElement> Iterator for Drain<'a, K, V> {
 
 impl<'a, K, V> Drop for Drain<'a, K, V> {
     fn drop(&mut self) {
-        while let Some(option) = self.base.next() {
+        for option in &mut self.base {
             *option = None;
         }
     }
@@ -144,12 +144,10 @@ impl<K, V: WeakElement> Iterator for IntoIter<K, V> {
     type Item = (K, V::Strong);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(bucket) = self.base.next() {
-            if let Some((key, weak_value, _)) = bucket {
-                self.size -= 1;
-                if let Some(value) = weak_value.view() {
-                    return Some((key, value));
-                }
+        for (key, weak_value, _) in (&mut self.base).flatten() {
+            self.size -= 1;
+            if let Some(value) = weak_value.view() {
+                return Some((key, value));
             }
         }
 

@@ -44,7 +44,7 @@ impl<'a, K: WeakElement, V> Iterator for Iter<'a, K, V> {
     type Item = (K::Strong, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(bucket) = self.base.next() {
+        for bucket in &mut self.base {
             if let Some((ref weak_ptr, ref value, _)) = *bucket {
                 self.size -= 1;
                 if let Some(strong_ptr) = weak_ptr.view() {
@@ -72,7 +72,7 @@ impl<'a, K: WeakElement, V> Iterator for IterMut<'a, K, V> {
     type Item = (K::Strong, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(bucket) = self.base.next() {
+        for bucket in &mut self.base {
             if let Some((ref weak_ptr, ref mut value, _)) = *bucket {
                 self.size -= 1;
                 if let Some(strong_ptr) = weak_ptr.view() {
@@ -148,7 +148,7 @@ impl<'a, K: WeakElement, V> Iterator for Drain<'a, K, V> {
     type Item = (K::Strong, V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(bucket) = self.base.next() {
+        for bucket in &mut self.base {
             if let Some((weak_ptr, value, _)) = bucket.take() {
                 self.size -= 1;
                 if let Some(strong_ptr) = weak_ptr.view() {
@@ -167,7 +167,7 @@ impl<'a, K: WeakElement, V> Iterator for Drain<'a, K, V> {
 
 impl<'a, K, V> Drop for Drain<'a, K, V> {
     fn drop(&mut self) {
-        while let Some(option) = self.base.next() {
+        for option in &mut self.base {
             *option = None;
         }
     }
@@ -183,12 +183,10 @@ impl<K: WeakElement, V> Iterator for IntoIter<K, V> {
     type Item = (K::Strong, V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(bucket) = self.base.next() {
-            if let Some((weak_ptr, value, _)) = bucket {
-                self.size -= 1;
-                if let Some(strong_ptr) = weak_ptr.view() {
-                    return Some((strong_ptr, value));
-                }
+        for (weak_ptr, value, _) in (&mut self.base).flatten() {
+            self.size -= 1;
+            if let Some(strong_ptr) = weak_ptr.view() {
+                return Some((strong_ptr, value));
             }
         }
 

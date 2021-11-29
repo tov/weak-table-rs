@@ -94,7 +94,7 @@ impl<T: ?Sized + Eq + Hash> WeakKey for rc::Weak<T> {
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
         where F: FnOnce(&Self::Key) -> R
     {
-        f(&view)
+        f(view)
     }
 }
 
@@ -121,7 +121,7 @@ impl<T: ?Sized + Eq + Hash> WeakKey for sync::Weak<T>
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
         where F: FnOnce(&Self::Key) -> R
     {
-        f(&view)
+        f(view)
     }
 }
 
