@@ -82,7 +82,7 @@ pub trait WeakKey : WeakElement {
         where Q: ?Sized + Eq,
               Self::Key: Borrow<Q>
     {
-        Self::with_key(&view, |k| k.borrow() == key)
+        Self::with_key(view, |k| k.borrow() == key)
     }
 }
 
