@@ -1,4 +1,3 @@
-#![doc(html_root_url = "https://docs.rs/weak-table/0.2.4")]
 //! This library offers a variety of weak hash tables:
 //!
 //!   - For a hash map where the keys are held by weak pointers and compared by key value, see
@@ -116,6 +115,7 @@
 //!     assert_ne!(a0, b);
 //! }
 //! ```
+#![doc(html_root_url = "https://docs.rs/weak-table/0.3.0")]
 
 use std::collections::hash_map::RandomState;
 
