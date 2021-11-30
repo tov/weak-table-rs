@@ -1,14 +1,10 @@
 //! A hash set where the elements are held by weak pointers and compared by pointer.
 
-use core::fmt::{self, Debug};
-use core::hash::BuildHasher;
-use core::iter::FromIterator;
-use core::ops::Deref;
+use crate::compat::*;
 
 use super::traits::*;
 use super::ptr_weak_key_hash_map as base;
 use super::by_ptr::ByPtr;
-use super::util::RandomState;
 
 pub use super::PtrWeakHashSet;
 

@@ -1,12 +1,6 @@
 //! A hash map where the keys and values are both held by weak pointers, and keys are compared by
 //! value.
 
-use core::borrow::Borrow;
-use core::cmp::max;
-use core::hash::{BuildHasher, Hash, Hasher};
-use core::fmt::{self, Debug, Formatter};
-use core::mem;
-
 use super::*;
 use super::size_policy::*;
 use super::traits::*;
@@ -41,7 +35,7 @@ struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
 /// An iterator over the keys and values of the weak hash map.
 #[derive(Clone, Debug)]
 pub struct Iter<'a, K: 'a, V: 'a> {
-    base: ::alloc::slice::Iter<'a, Bucket<K, V>>,
+    base: slice::Iter<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -101,7 +95,7 @@ impl<'a, K: WeakElement, V: WeakElement> Iterator for Values<'a, K, V> {
 #[derive(Debug)]
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct Drain<'a, K: 'a, V: 'a> {
-    base: ::alloc::slice::IterMut<'a, Bucket<K, V>>,
+    base: slice::IterMut<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -136,7 +130,7 @@ impl<'a, K, V> Drop for Drain<'a, K, V> {
 
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct IntoIter<K, V> {
-    base: ::alloc::vec::IntoIter<Bucket<K, V>>,
+    base: vec::IntoIter<Bucket<K, V>>,
     size: usize,
 }
 
@@ -497,7 +491,7 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher + Default> Default for WeakWeakH
     }
 }
 
-impl<K, V, S> ::core::iter::FromIterator<(K::Strong, V::Strong)> for WeakWeakHashMap<K, V, S>
+impl<K, V, S> iter::FromIterator<(K::Strong, V::Strong)> for WeakWeakHashMap<K, V, S>
     where K: WeakKey,
           V: WeakElement,
           S: BuildHasher + Default

@@ -1,4 +1,4 @@
-use core::ops::Deref;
+use crate::compat::*;
 
 use super::traits::*;
 

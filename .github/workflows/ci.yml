@@ -11,6 +11,9 @@ jobs:
         rust:
           - stable
           - 1.46.0
+        features:
+          - --features=std
+          - --no-default-features --features=alloc,ahash
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -21,7 +24,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --all-targets
+          args: --all-targets ${{ matrix.features }}
 
   test:
     name: Test Suite
@@ -31,6 +34,9 @@ jobs:
         rust:
           - stable
           - 1.46.0
+        features:
+          - --features=std
+          - --no-default-features --features=alloc,ahash
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -41,6 +47,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
+          args: ${{ matrix.features }}
 
   clippy:
     name: Clippy

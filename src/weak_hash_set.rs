@@ -1,13 +1,9 @@
 //! A hash set where the elements are held by weak pointers and compared by value.
 
-use core::borrow::Borrow;
-use core::fmt::{self, Debug};
-use core::hash::{BuildHasher, Hash};
-use core::iter::FromIterator;
+use crate::compat::*;
 
 use super::traits::*;
 use super::weak_key_hash_map as base;
-use super::util::RandomState;
 
 pub use super::WeakHashSet;
 

@@ -1,15 +1,11 @@
 //! A hash map where the keys and values are both held by weak pointers, and keys are compared by
 //! pointer.
 
-use core::fmt::{self, Debug};
-use core::hash::BuildHasher;
-use core::iter::FromIterator;
-use core::ops::Deref;
+use crate::compat::*;
 
 use super::by_ptr::*;
 use super::traits::*;
 use super::weak_weak_hash_map as base;
-use super::util::RandomState;
 
 pub use super::PtrWeakWeakHashMap;
 pub use super::weak_weak_hash_map::{Entry, Iter, Keys, Values, Drain, IntoIter};
@@ -260,14 +256,13 @@ impl<'a, K: WeakElement, V: WeakElement, S> IntoIterator for &'a PtrWeakWeakHash
 }
 
 #[cfg(test)]
-mod test
-{
-    extern crate std;
-    use crate::PtrWeakWeakHashMap;
-    use crate::weak_weak_hash_map::Entry;
-    use alloc::rc::{Rc, Weak};
-    use alloc::vec::Vec;
-    use std::eprintln;
+mod test {
+    use crate::compat::{
+        eprintln,
+        rc::{Rc, Weak},
+        Vec,
+    };
+    use super::{Entry, PtrWeakWeakHashMap};
 
 //    fn show_me(weakmap: &PtrWeakWeakHashMap<Weak<u32>, Weak<f32>>) {
 //        for (key, _) in weakmap {

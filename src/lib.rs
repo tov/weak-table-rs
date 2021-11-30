@@ -117,8 +117,10 @@
 //! ```
 #![doc(html_root_url = "https://docs.rs/weak-table/0.3.0")]
 
-#![no_std]
-extern crate alloc;
+#![doc(html_root_url = "https://docs.rs/weak-table/0.3.0")]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+use self::compat::*;
 
 pub mod traits;
 pub mod weak_key_hash_map;
@@ -129,12 +131,10 @@ pub mod ptr_weak_weak_hash_map;
 pub mod weak_hash_set;
 pub mod ptr_weak_hash_set;
 
+mod compat;
 mod util;
 mod by_ptr;
 mod size_policy;
-
-use util::RandomState;
-use alloc::boxed::Box;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct HashCode(u64);

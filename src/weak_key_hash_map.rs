@@ -1,11 +1,5 @@
 //! A hash map where the keys are held by weak pointers and compared by key value.
 
-use core::borrow::Borrow;
-use core::cmp::max;
-use core::hash::{BuildHasher, Hash, Hasher};
-use core::fmt::{self, Debug, Formatter};
-use core::mem;
-
 use super::*;
 use super::size_policy::*;
 use super::traits::*;
@@ -35,7 +29,7 @@ struct InnerEntry<'a, K: 'a + WeakKey, V: 'a> {
 /// An iterator over the keys and values of the weak hash map.
 #[derive(Clone, Debug)]
 pub struct Iter<'a, K: 'a, V: 'a> {
-    base: ::alloc::slice::Iter<'a, Bucket<K, V>>,
+    base: slice::Iter<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -63,7 +57,7 @@ impl<'a, K: WeakElement, V> Iterator for Iter<'a, K, V> {
 #[derive(Debug)]
 /// An iterator over the keys and mutable values of the weak hash map.
 pub struct IterMut<'a, K: 'a, V: 'a> {
-    base: ::alloc::slice::IterMut<'a, Bucket<K, V>>,
+    base: slice::IterMut<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -139,7 +133,7 @@ impl<'a, K: WeakElement, V> Iterator for ValuesMut<'a, K, V> {
 #[derive(Debug)]
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct Drain<'a, K: 'a, V: 'a> {
-    base: ::alloc::slice::IterMut<'a, Bucket<K, V>>,
+    base: slice::IterMut<'a, Bucket<K, V>>,
     size: usize,
 }
 
@@ -174,7 +168,7 @@ impl<'a, K, V> Drop for Drain<'a, K, V> {
 
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
 pub struct IntoIter<K, V> {
-    base: ::alloc::vec::IntoIter<Bucket<K, V>>,
+    base: vec::IntoIter<Bucket<K, V>>,
     size: usize,
 }
 
@@ -554,7 +548,7 @@ impl<K: WeakKey, V, S: BuildHasher + Default> Default for WeakKeyHashMap<K, V, S
     }
 }
 
-impl<'a, K, V, S, Q> ::core::ops::Index<&'a Q> for WeakKeyHashMap<K, V, S>
+impl<'a, K, V, S, Q> ops::Index<&'a Q> for WeakKeyHashMap<K, V, S>
     where K: WeakKey,
           K::Key: Borrow<Q>,
           S: BuildHasher,
@@ -567,7 +561,7 @@ impl<'a, K, V, S, Q> ::core::ops::Index<&'a Q> for WeakKeyHashMap<K, V, S>
     }
 }
 
-impl<'a, K, V, S, Q> ::core::ops::IndexMut<&'a Q> for WeakKeyHashMap<K, V, S>
+impl<'a, K, V, S, Q> ops::IndexMut<&'a Q> for WeakKeyHashMap<K, V, S>
     where K: WeakKey,
           K::Key: Borrow<Q>,
           S: BuildHasher,
@@ -578,7 +572,7 @@ impl<'a, K, V, S, Q> ::core::ops::IndexMut<&'a Q> for WeakKeyHashMap<K, V, S>
     }
 }
 
-impl<K, V, S> ::core::iter::FromIterator<(K::Strong, V)> for WeakKeyHashMap<K, V, S>
+impl<K, V, S> iter::FromIterator<(K::Strong, V)> for WeakKeyHashMap<K, V, S>
     where K: WeakKey,
           S: BuildHasher + Default
 {
@@ -589,7 +583,7 @@ impl<K, V, S> ::core::iter::FromIterator<(K::Strong, V)> for WeakKeyHashMap<K, V
     }
 }
 
-impl<K, V, S> ::core::iter::Extend<(K::Strong, V)> for WeakKeyHashMap<K, V, S>
+impl<K, V, S> iter::Extend<(K::Strong, V)> for WeakKeyHashMap<K, V, S>
     where K: WeakKey,
           S: BuildHasher
 {
@@ -600,7 +594,7 @@ impl<K, V, S> ::core::iter::Extend<(K::Strong, V)> for WeakKeyHashMap<K, V, S>
     }
 }
 
-impl<'a, K, V, S> ::core::iter::Extend<(&'a K::Strong, &'a V)> for WeakKeyHashMap<K, V, S>
+impl<'a, K, V, S> iter::Extend<(&'a K::Strong, &'a V)> for WeakKeyHashMap<K, V, S>
     where K: 'a + WeakKey,
           K::Strong: Clone,
           V: 'a + Clone,
@@ -1002,12 +996,13 @@ impl<K: WeakElement, V, S> WeakKeyHashMap<K, V, S> {
 }
 
 #[cfg(test)]
-mod tests {
-    extern crate std;
-    use alloc::rc::{Rc, Weak};
-    use alloc::vec::Vec;
-    use alloc::string::String;
-    use std::eprintln;
+mod test {
+    use crate::compat::{
+        eprintln,
+        rc::{Rc, Weak},
+        String,
+        Vec,
+    };
     use super::{Entry, WeakKeyHashMap};
 
     #[test]
