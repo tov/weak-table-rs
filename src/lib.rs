@@ -116,7 +116,7 @@
 //! }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/weak-table/0.3.0")]
+#![doc(html_root_url = "https://docs.rs/weak-table/0.3.1")]
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
