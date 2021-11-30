@@ -115,9 +115,9 @@
 //!     assert_ne!(a0, b);
 //! }
 //! ```
-#![doc(html_root_url = "https://docs.rs/weak-table/0.3.0")]
 
 #![doc(html_root_url = "https://docs.rs/weak-table/0.3.0")]
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use self::compat::*;
