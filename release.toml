@@ -12,6 +12,6 @@ replace     = "## [Next Release]\n\n## [{{version}}] - {{date}}"
 
 [[pre-release-replacements]]
 file        = "CHANGELOG.md"
-search      = "\\[Next Release\\]: <https://github.com/tov/weak-table-rs/compare/v[0-9.]*[.][.][.]HEAD>"
+search      = "\\[Next Release\\]: <https://github.com/tov/weak-table-rs/compare/v*[0-9.]*[.][.][.]HEAD>"
 replace     = '''[Next Release]: <https://github.com/tov/weak-table-rs/compare/v{{version}}...HEAD>
 [{{version}}]: <https://github.com/tov/weak-table-rs/compare/v{{prev_version}}...v{{version}}>'''

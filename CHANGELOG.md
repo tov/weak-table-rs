@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog] and this project adheres to
 
 ## [Next Release]
 
+### Added
+- `no_std` compatibility (h/t @tsao-chi)
+
 ## [0.2.4] - 2020-06-27
 
 ### Fixed
