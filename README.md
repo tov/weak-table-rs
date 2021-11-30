@@ -7,7 +7,7 @@
 This crate defines several kinds of weak hash maps and sets. See 
 the [full API documentation](http://docs.rs/weak-table/) for details.
 
-This crate supports Rust version 1.32 and later.
+This crate supports Rust version 1.46 and later.
 
 ### Examples
 

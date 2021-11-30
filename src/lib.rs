@@ -26,7 +26,7 @@
 //! To add support for your own weak pointers, see
 //! [the traits `WeakElement` and `WeakKey`](traits/).
 //!
-//! This crate supports Rust version 1.32 and later.
+//! This crate supports Rust version 1.46 and later.
 //!
 //! # Examples
 //!
