@@ -316,7 +316,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
 
     fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
         let mut inner = {
-            let hash_code = K::with_key(&key, |k| self.hash(k));
+            let hash_code = self.hash(&key, K::hash);
             InnerEntry {
                 pos:        self.which_bucket(hash_code),
                 map:        &mut self.inner,
@@ -355,14 +355,14 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
     {
         if self.capacity() == 0 { return None; }
 
-        let hash_code = self.hash(key);
+        let hash_code = self.hash(key, Q::hash);
         let mut pos = self.which_bucket(hash_code);
 
         for dist in 0 .. self.capacity() {
             if let Some((ref weak_key, _, bucket_hash_code)) = self.inner.buckets[pos] {
                 if bucket_hash_code == hash_code {
                     if let Some(bucket_key) = weak_key.view() {
-                        if K::with_key(&bucket_key, |k| k.borrow() == key) {
+                        if K::equals(&bucket_key, key) {
                             return Some((pos, bucket_key, bucket_hash_code));
                         }
                     }
@@ -488,18 +488,20 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         }
     }
 
-    /// Is this map a submap of the other, using the given value comparison.
+    /// Is this map a submap of the other under the given value comparison `cmp`?
     ///
-    /// In particular, all the keys of `self` must be in `other` and the values must compare
-    /// `true` with `value_equal`.
+    /// In particular, for every key `k` of `self`,
+    ///
+    ///  - `k` must also be a key of `other` and
+    ///  - `cmp(self[k], other[k])` must hold.
     pub fn is_submap_with<F, S1, V1>(&self, other: &WeakKeyHashMap<K, V1, S1>,
-                                     mut value_equal: F) -> bool
+                                     mut cmp: F) -> bool
         where F: FnMut(&V, &V1) -> bool,
               S1: BuildHasher
     {
         for (key, value1) in self {
             if let Some(value2) = K::with_key(&key, |k| other.get(k)) {
-                if !value_equal(value1, value2) {
+                if !cmp(value1, value2) {
                     return false;
                 }
             } else {
@@ -525,12 +527,11 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S>
         self.is_submap_with(other, |_, _| true)
     }
 
-    fn hash<Q>(&self, key: &Q) -> HashCode
-        where Q: ?Sized + Hash,
-              K::Key: Borrow<Q>
+    fn hash<Q, H>(&self, key: Q, hash: H) -> HashCode
+        where H: FnOnce(Q, &mut S::Hasher)
     {
-        let mut hasher = self.hash_builder.build_hasher();
-        key.hash(&mut hasher);
+        let hasher = &mut self.hash_builder.build_hasher();
+        hash(key, hasher);
         HashCode(hasher.finish())
     }
 }
@@ -626,7 +627,7 @@ impl<'a, K: WeakKey, V> InnerEntry<'a, K, V> {
             Some(bucket) => {
                 if bucket.2 == self.hash_code {
                     if let Some(key) = bucket.0.view() {
-                        if K::with_key(&self.key, |k1| K::with_key(&key, |k2| k1 == k2)) {
+                        if K::with_key(&self.key, |k| K::equals(&key, k)) {
                             return BucketStatus::MatchesKey;
                         }
                     }

@@ -277,7 +277,7 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
 
     fn entry_no_grow(&mut self, key: K::Strong) -> Entry<K, V> {
         let mut inner = {
-            let hash_code = K::with_key(&key, |k| self.hash(k));
+            let hash_code = self.hash(&key, K::hash);
             InnerEntry {
                 pos:        self.which_bucket(hash_code),
                 map:        &mut self.inner,
@@ -316,14 +316,14 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
     {
         if self.capacity() == 0 { return None; }
 
-        let hash_code = self.hash(key);
+        let hash_code = self.hash(key, Q::hash);
         let mut pos = self.which_bucket(hash_code);
 
         for dist in 0 .. self.capacity() {
             if let Some((ref w_key, ref w_value, b_hash_code)) = self.inner.buckets[pos] {
                 if b_hash_code == hash_code {
                     if let (Some(b_key), Some(b_value)) = (w_key.view(), w_value.view()) {
-                        if K::with_key(&b_key, |k| k.borrow() == key) {
+                        if K::equals(&b_key, key) {
                             return Some((pos, b_key, b_value));
                         }
                     }
@@ -466,12 +466,11 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
         self.is_submap_with(other, |_, _| true)
     }
 
-    fn hash<Q>(&self, key: &Q) -> HashCode
-        where Q: ?Sized + Hash,
-              K::Key: Borrow<Q>
+    fn hash<Q, H>(&self, key: Q, hash: H) -> HashCode
+        where H: FnOnce(Q, &mut S::Hasher)
     {
-        let mut hasher = self.hash_builder.build_hasher();
-        key.hash(&mut hasher);
+        let hasher = &mut self.hash_builder.build_hasher();
+        hash(key, hasher);
         HashCode(hasher.finish())
     }
 }
@@ -536,7 +535,7 @@ impl<'a, K: WeakKey, V: WeakElement> InnerEntry<'a, K, V> {
             Some(bucket) => {
                 if bucket.2 == self.hash_code {
                     if let (Some(key), Some(value)) = (bucket.0.view(), bucket.1.view()) {
-                        if K::with_key(&self.key, |k1| K::with_key(&key, |k2| k1 == k2)) {
+                        if K::with_key(&self.key, |k| K::equals(&key, k)) {
                             return BucketStatus::MatchesKey(value);
                         }
                     }
