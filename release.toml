@@ -1,3 +1,17 @@
-pre-release-replacements = [
-  { file="src/lib.rs", search="https://docs[.]rs/weak-table/[0-9.]*", replace="https://docs.rs/weak-table/{{version}}" }
-]
+tag-name    = "v{{version}}"
+
+[[pre-release-replacements]]
+file        = "src/lib.rs"
+search      = "https://docs[.]rs/weak-table/[0-9.]*"
+replace     = "https://docs.rs/weak-table/{{version}}"
+
+[[pre-release-replacements]]
+file        = "CHANGELOG.md"
+search      = "## \\[Next Release\\]"
+replace     = "## [Next Release]\n\n## [{{version}}] - {{date}}"
+
+[[pre-release-replacements]]
+file        = "CHANGELOG.md"
+search      = "\\[Next Release\\]: <https://github.com/tov/weak-table-rs/compare/v[0-9.]*[.][.][.]HEAD>"
+replace     = '''[Next Release]: <https://github.com/tov/weak-table-rs/compare/v{{version}}...HEAD>
+[{{version}}]: <https://github.com/tov/weak-table-rs/compare/v{{prev_version}}...v{{version}}>'''
