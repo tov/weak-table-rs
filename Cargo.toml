@@ -19,4 +19,6 @@ rand = "0.8.4"
 [features]
 default = ["std"]
 std = []
+
+# This feature doesn’t actually do anything. TODO: remove in v0.4.
 alloc = []
