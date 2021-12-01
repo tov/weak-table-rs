@@ -1,12 +1,17 @@
 //! `no_std` compatibility
 
-// Use the `std` hasher if we don’t depend on `ahash`.
-#[cfg(not(feature = "ahash"))]
-pub use std::collections::hash_map::RandomState;
-
-// If we do depend on `ahash`, use its hasher.
+// If we depend on `ahash`, use its hasher.
 #[cfg(feature = "ahash")]
 pub use ahash::RandomState;
+
+// Use the `std` hasher if we don’t depend on `ahash` but do depend on
+// `std`.
+#[cfg(all(not(feature = "ahash"), feature = "std"))]
+pub use std::collections::hash_map::RandomState;
+
+// If we depend on neither `ahash` nor `std` then it’s an error.
+#[cfg(not(any(feature = "ahash", feature = "std")))]
+compile_error!("weak-table: no_std requires that you enable the `ahash` feature.");
 
 // If we depend on `std`, alias `lib` to `std`.
 #[cfg(feature = "std")]
