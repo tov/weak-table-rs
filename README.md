@@ -7,19 +7,19 @@
 This crate defines several kinds of weak hash maps and sets. See 
 the [full API documentation](http://docs.rs/weak-table/) for details.
 
+### Rust version support
+
 This crate supports Rust version 1.46 and later.
 
-### Crate Features
+### Crate features
 
-`weak-table` is built with one feature by default:
-
-  - `std`: enables functionality dependent on the `std` lib
-
+`weak-table` is built with the `std` feature, which enables
+functionality dependent on the `std` library, enabled by default.
 Optionally, the following dependency may be enabled:
 
   - `ahash`: use `ahash`’s hasher rather than the `std` hasher
 
-If the `std` feature is disabled (for no_std) then the `ahash` dependency must be enabled.
+If the `std` feature is disabled (for no_std) then the `ahash` dependency **must** be enabled.
 
 ### Examples
 

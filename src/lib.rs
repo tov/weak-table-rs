@@ -26,19 +26,32 @@
 //! To add support for your own weak pointers, see
 //! [the traits `WeakElement` and `WeakKey`](traits/).
 //!
+//! ## Rust version support
+//!
 //! This crate supports Rust version 1.46 and later.
 //!
-//! # Crate Features
+//! ## Asymptotic complexity
 //!
-//! `weak-table` is built with one feature by default:
+//! Most operations have documented asymptotic time complexities. When time complexities are
+//! given in big-*O* notation, the following parameters are used consistently:
 //!
-//!   - `std`: enables functionality dependent on the `std` lib
+//!   - *n*: the *capacity* of the map or set being accessed or constructed
 //!
+//!   - *m*: the *capacity* of a second map/set involved in a submap/subset operation
+//!
+//!   - *p*: the length of the probe sequence for the key in question
+//!
+//! Note that *p* ∈ *O*(*n*), but we expect it to be *O*(1).
+//!
+//! # Crate features
+//!
+//! `weak-table` is built with the `std` feature, which enables
+//! functionality dependent on the `std` library, enabled by default.
 //! Optionally, the following dependency may be enabled:
 //!
 //!   - `ahash`: use `ahash`’s hasher rather than the `std` hasher
 //!
-//! If the `std` feature is disabled (for no_std) then the `ahash` dependency must be enabled.
+//! If the `std` feature is disabled (for no_std) then the `ahash` dependency **must** be enabled.
 //!
 //! # Examples
 //!
