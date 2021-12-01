@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog] and this project adheres to
 
 ## [0.3.2] - 2021-12-01
 
+### Documentation
+- listed asymptotic time complexities for each operation
+
 ## [0.3.1] - 2021-11-30
 
 ### Added
@@ -39,22 +42,26 @@ The format is based on [Keep a Changelog] and this project adheres to
 ## [0.2.1] - 2018-05-22
 
 ### Fixed
-- documentation
 - a test that was breaking on an older `rustc`
+
+### Documention
+- improved
 
 ## [0.2.0] - 2018-05-22
 
 ### Renamed
 - from `WeakElement::expired` to `WeakElement::is_expired`
 
-### Improved
-- documentation
+### Documention
+- improved
 
 ## [0.1.3] - 2018-05-22
 
-### Added
-- documentation of minimum supported `rustc`
-- a test
+### Testing
+- added a test
+
+### Documention
+- minimum supported `rustc`
 
 ## [0.1.2] - 2018-05-21
 
@@ -69,8 +76,8 @@ The format is based on [Keep a Changelog] and this project adheres to
 ### Removed
 - `struct RcKey<K>`
 
-### Improved
-- documentation
+### Documentation
+- improved
 
 ## [0.1.1] - 2018-03-05
 
