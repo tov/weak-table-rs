@@ -28,6 +28,18 @@
 //!
 //! This crate supports Rust version 1.46 and later.
 //!
+//! # Crate Features
+//!
+//! `weak-table` is built with one feature by default:
+//!
+//!   - `std`: enables functionality dependent on the `std` lib
+//!
+//! Optionally, the following dependency may be enabled:
+//!
+//!   - `ahash`: use `ahash`’s hasher rather than the `std` hasher
+//!
+//! If the `std` feature is disabled (for no_std) then the `ahash` dependency must be enabled.
+//!
 //! # Examples
 //!
 //! Here we create a weak hash table mapping strings to integers.
