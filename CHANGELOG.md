@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog] and this project adheres to
 
 ## [Next Release]
 
+## [0.3.2] - 2021-12-01
+
 ## [0.3.1] - 2021-11-30
 
 ### Added
@@ -74,7 +76,8 @@ The format is based on [Keep a Changelog] and this project adheres to
 
 Initial release.
 
-[Next Release]: <https://github.com/tov/weak-table-rs/compare/v0.3.1...HEAD>
+[Next Release]: <https://github.com/tov/weak-table-rs/compare/v0.3.2...HEAD>
+[0.3.2]: <https://github.com/tov/weak-table-rs/compare/v0.3.1...v0.3.2>
 [0.3.1]: <https://github.com/tov/weak-table-rs/compare/v0.3.1-alpha.0...v0.3.1>
 [0.2.4]: <https://github.com/tov/weak-table-rs/compare/0.2.3...0.2.4>
 [0.2.3]: <https://github.com/tov/weak-table-rs/compare/0.2.2...0.2.3>
