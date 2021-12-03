@@ -6,6 +6,7 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
         rust:
@@ -14,6 +15,14 @@ jobs:
         features:
           - --features=std
           - --no-default-features --features=alloc,ahash
+        experimental: [false]
+        include:
+          - rust: nightly
+            features: --features=std
+            experimental: true
+          - rust: nightly
+            features: --no-default-features --features=alloc,ahash
+            experimental: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -29,6 +38,7 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
         rust:
@@ -37,6 +47,14 @@ jobs:
         features:
           - --features=std
           - --no-default-features --features=alloc,ahash
+        experimental: [false]
+        include:
+          - rust: nightly
+            features: --features=std
+            experimental: true
+          - rust: nightly
+            features: --no-default-features --features=alloc,ahash
+            experimental: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -52,11 +70,16 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
         rust:
           - stable
           - 1.46.0
+        experimental: [false]
+        include:
+          - rust: nightly
+            experimental: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
