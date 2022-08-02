@@ -612,6 +612,24 @@ impl<'a, K, V: WeakElement> Entry<'a, K, V> {
         }
     }
 
+    /// Ensures a value is in the entry by inserting, if empty, the result of the default function.
+    /// This method allows for generating key-derived values for insertion by providing the default
+    /// function a reference to the key that was moved during the `.entry(key)` method call.
+    ///
+    /// The reference to the moved key is provided so that cloning or copying the key is
+    /// unnecessary, unlike with `.or_insert_with(|| ... )`.
+    ///
+    /// *O*(1) time
+    pub fn or_insert_with_key<F: FnOnce(&K) -> V::Strong>(self, default: F) -> V::Strong {
+        match self {
+            Entry::Occupied(occupied) => occupied.get_strong(),
+            Entry::Vacant(vacant) => {
+                let value = default(vacant.key());
+                vacant.insert(value)
+            },
+        }
+    }
+
     /// Returns a reference to this entry's key.
     ///
     /// *O*(1) time
