@@ -10,7 +10,7 @@ keywords = ["containers", "Rc", "Arc", "weak", "no_std"]
 edition = "2018"
 
 [dependencies]
-ahash = { version = "0.7.6", optional = true, features = [] }
+ahash = { version = "0.8.3", optional = true, features = [] }
 
 [dev-dependencies]
 quickcheck = "1"
