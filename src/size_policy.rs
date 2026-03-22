@@ -10,5 +10,3 @@ pub const GROW_LOAD_FACTOR: f32 = 0.75;
 
 /// If, after collection, the load factor is below `SHRINK_LOAD_FACTOR`, we shrink.
 pub const SHRINK_LOAD_FACTOR: f32 = 0.25;
-
-

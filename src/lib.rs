@@ -142,24 +142,23 @@
 //! ```
 
 #![doc(html_root_url = "https://docs.rs/weak-table/0.3.2")]
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use self::compat::*;
 
-pub mod traits;
-pub mod weak_key_hash_map;
+pub mod ptr_weak_hash_set;
 pub mod ptr_weak_key_hash_map;
+pub mod ptr_weak_weak_hash_map;
+pub mod traits;
+pub mod weak_hash_set;
+pub mod weak_key_hash_map;
 pub mod weak_value_hash_map;
 pub mod weak_weak_hash_map;
-pub mod ptr_weak_weak_hash_map;
-pub mod weak_hash_set;
-pub mod ptr_weak_hash_set;
 
-mod compat;
-mod util;
 mod by_ptr;
+mod compat;
 mod size_policy;
+mod util;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct HashCode(u64);
@@ -210,9 +209,7 @@ struct WeakKeyInnerMap<K, V> {
 /// assert_eq!( map.get(&b), Some(&7) );
 /// ```
 #[derive(Clone)]
-pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(
-    WeakKeyHashMap<by_ptr::ByPtr<K>, V, S>
-);
+pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(WeakKeyHashMap<by_ptr::ByPtr<K>, V, S>);
 
 /// A hash map with weak values.
 ///
@@ -248,9 +245,7 @@ struct WeakWeakInnerMap<K, V> {
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct PtrWeakWeakHashMap<K, V, S = RandomState>(
-    WeakWeakHashMap<by_ptr::ByPtr<K>, V, S>
-);
+pub struct PtrWeakWeakHashMap<K, V, S = RandomState>(WeakWeakHashMap<by_ptr::ByPtr<K>, V, S>);
 
 /// A hash set with weak elements, hashed on element value.
 ///
@@ -263,4 +258,3 @@ pub struct WeakHashSet<T, S = RandomState>(WeakKeyHashMap<T, (), S>);
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
 pub struct PtrWeakHashSet<T, S = RandomState>(PtrWeakKeyHashMap<T, (), S>);
-

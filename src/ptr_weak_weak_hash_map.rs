@@ -7,11 +7,12 @@ use super::by_ptr::*;
 use super::traits::*;
 use super::weak_weak_hash_map as base;
 
+pub use super::weak_weak_hash_map::{Drain, Entry, IntoIter, Iter, Keys, Values};
 pub use super::PtrWeakWeakHashMap;
-pub use super::weak_weak_hash_map::{Entry, Iter, Keys, Values, Drain, IntoIter};
 
-impl <K: WeakElement, V: WeakElement> PtrWeakWeakHashMap<K, V, RandomState>
-    where K::Strong: Deref
+impl<K: WeakElement, V: WeakElement> PtrWeakWeakHashMap<K, V, RandomState>
+where
+    K::Strong: Deref,
 {
     /// Creates an empty `PtrWeakWeakHashMap`.
     ///
@@ -28,8 +29,9 @@ impl <K: WeakElement, V: WeakElement> PtrWeakWeakHashMap<K, V, RandomState>
     }
 }
 
-impl <K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S>
-    where K::Strong: Deref
+impl<K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S>
+where
+    K::Strong: Deref,
 {
     /// Creates an empty `PtrWeakWeakHashMap` with the given capacity and hasher.
     ///
@@ -42,7 +44,10 @@ impl <K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S
     ///
     /// *O*(*n*) time
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        PtrWeakWeakHashMap(base::WeakWeakHashMap::with_capacity_and_hasher(capacity, hash_builder))
+        PtrWeakWeakHashMap(base::WeakWeakHashMap::with_capacity_and_hasher(
+            capacity,
+            hash_builder,
+        ))
     }
 
     /// Returns a reference to the map's `BuildHasher`.
@@ -155,7 +160,8 @@ impl <K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S
     ///
     /// *O*(*n*) time
     pub fn retain<F>(&mut self, f: F)
-        where F: FnMut(K::Strong, V::Strong) -> bool
+    where
+        F: FnMut(K::Strong, V::Strong) -> bool,
     {
         self.0.retain(f)
     }
@@ -168,10 +174,15 @@ impl <K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S
     /// expected *O*(*n*) time; worst-case *O*(*nq*) time (where *n* is
     /// `self.capacity()` and *q* is the length of the probe sequences
     /// in `other`)
-    pub fn submap_with<F, S1, V1>(&self, other: &PtrWeakWeakHashMap<K, V1, S1>, value_equal: F) -> bool
-    where F: FnMut(V::Strong, V1::Strong) -> bool,
-          V1: WeakElement,
-          S1: BuildHasher
+    pub fn submap_with<F, S1, V1>(
+        &self,
+        other: &PtrWeakWeakHashMap<K, V1, S1>,
+        value_equal: F,
+    ) -> bool
+    where
+        F: FnMut(V::Strong, V1::Strong) -> bool,
+        V1: WeakElement,
+        S1: BuildHasher,
     {
         self.0.is_submap_with(&other.0, value_equal)
     }
@@ -182,9 +193,10 @@ impl <K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S
     /// `self.capacity()` and *q* is the length of the probe sequences
     /// in `other`)
     pub fn is_submap<V1, S1>(&self, other: &PtrWeakWeakHashMap<K, V1, S1>) -> bool
-        where V1: WeakElement,
-              V::Strong: PartialEq<V1::Strong>,
-              S1: BuildHasher
+    where
+        V1: WeakElement,
+        V::Strong: PartialEq<V1::Strong>,
+        S1: BuildHasher,
     {
         self.0.is_submap(&other.0)
     }
@@ -195,15 +207,17 @@ impl <K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S
     /// `self.capacity()` and *q* is the length of the probe sequences
     /// in `other`)
     pub fn domain_is_subset<V1, S1>(&self, other: &PtrWeakWeakHashMap<K, V1, S1>) -> bool
-        where V1: WeakElement,
-              S1: BuildHasher
+    where
+        V1: WeakElement,
+        S1: BuildHasher,
     {
         self.0.domain_is_subset(&other.0)
     }
 }
 
 impl<K: WeakElement, V: WeakElement, S> PtrWeakWeakHashMap<K, V, S>
-    where K::Strong: Deref
+where
+    K::Strong: Deref,
 {
     /// Gets an iterator over the keys and values.
     ///
@@ -234,15 +248,15 @@ impl<K: WeakElement, V: WeakElement, S> PtrWeakWeakHashMap<K, V, S>
     }
 }
 
-impl<K, V, V1, S, S1> PartialEq<PtrWeakWeakHashMap<K, V1, S1>>
-    for PtrWeakWeakHashMap<K, V, S>
-    where K: WeakElement,
-          K::Strong: Deref,
-          V: WeakElement,
-          V1: WeakElement,
-          V::Strong: PartialEq<V1::Strong>,
-          S: BuildHasher,
-          S1: BuildHasher
+impl<K, V, V1, S, S1> PartialEq<PtrWeakWeakHashMap<K, V1, S1>> for PtrWeakWeakHashMap<K, V, S>
+where
+    K: WeakElement,
+    K::Strong: Deref,
+    V: WeakElement,
+    V1: WeakElement,
+    V::Strong: PartialEq<V1::Strong>,
+    S: BuildHasher,
+    S1: BuildHasher,
 {
     fn eq(&self, other: &PtrWeakWeakHashMap<K, V1, S1>) -> bool {
         self.0 == other.0
@@ -250,12 +264,16 @@ impl<K, V, V1, S, S1> PartialEq<PtrWeakWeakHashMap<K, V1, S1>>
 }
 
 impl<K: WeakElement, V: WeakElement, S: BuildHasher> Eq for PtrWeakWeakHashMap<K, V, S>
-    where K::Strong: Deref,
-          V::Strong: Eq
-{ }
+where
+    K::Strong: Deref,
+    V::Strong: Eq,
+{
+}
 
-impl<K: WeakElement, V: WeakElement, S: BuildHasher + Default> Default for PtrWeakWeakHashMap<K, V, S>
-    where K::Strong: Deref
+impl<K: WeakElement, V: WeakElement, S: BuildHasher + Default> Default
+    for PtrWeakWeakHashMap<K, V, S>
+where
+    K::Strong: Deref,
 {
     fn default() -> Self {
         PtrWeakWeakHashMap(base::WeakWeakHashMap::<ByPtr<K>, V, S>::default())
@@ -263,32 +281,35 @@ impl<K: WeakElement, V: WeakElement, S: BuildHasher + Default> Default for PtrWe
 }
 
 impl<K, V, S> FromIterator<(K::Strong, V::Strong)> for PtrWeakWeakHashMap<K, V, S>
-    where K: WeakElement,
-          K::Strong: Deref,
-          V: WeakElement,
-          S: BuildHasher + Default
+where
+    K: WeakElement,
+    K::Strong: Deref,
+    V: WeakElement,
+    S: BuildHasher + Default,
 {
-    fn from_iter<T: IntoIterator<Item=(K::Strong, V::Strong)>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = (K::Strong, V::Strong)>>(iter: T) -> Self {
         PtrWeakWeakHashMap(base::WeakWeakHashMap::<ByPtr<K>, V, S>::from_iter(iter))
     }
 }
 
 impl<K, V, S> Extend<(K::Strong, V::Strong)> for PtrWeakWeakHashMap<K, V, S>
-    where K: WeakElement,
-          K::Strong: Deref,
-          V: WeakElement,
-          S: BuildHasher
+where
+    K: WeakElement,
+    K::Strong: Deref,
+    V: WeakElement,
+    S: BuildHasher,
 {
-    fn extend<T: IntoIterator<Item=(K::Strong, V::Strong)>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = (K::Strong, V::Strong)>>(&mut self, iter: T) {
         self.0.extend(iter)
     }
 }
 
 impl<K, V, S> Debug for PtrWeakWeakHashMap<K, V, S>
-    where K: WeakElement,
-          K::Strong: Debug,
-          V: WeakElement,
-          V::Strong: Debug
+where
+    K: WeakElement,
+    K::Strong: Debug,
+    V: WeakElement,
+    V::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
@@ -321,26 +342,26 @@ impl<'a, K: WeakElement, V: WeakElement, S> IntoIterator for &'a PtrWeakWeakHash
 
 #[cfg(test)]
 mod test {
+    use super::{Entry, PtrWeakWeakHashMap};
     use crate::compat::{
         eprintln,
         rc::{Rc, Weak},
         Vec,
     };
-    use super::{Entry, PtrWeakWeakHashMap};
 
-//    fn show_me(weakmap: &PtrWeakWeakHashMap<Weak<u32>, Weak<f32>>) {
-//        for (key, _) in weakmap {
-//            eprint!(" {:2}", *key);
-//        }
-//        eprintln!();
-//    }
+    //    fn show_me(weakmap: &PtrWeakWeakHashMap<Weak<u32>, Weak<f32>>) {
+    //        for (key, _) in weakmap {
+    //            eprint!(" {:2}", *key);
+    //        }
+    //        eprintln!();
+    //    }
 
     // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
     #[test]
     fn insert_and_check() {
         let mut rcs: Vec<(Rc<u32>, Rc<f32>)> = Vec::new();
 
-        for i in 0 .. 200 {
+        for i in 0..200 {
             rcs.push((Rc::new(i), Rc::new(i as f32 + 0.1)));
         }
 
@@ -348,7 +369,7 @@ mod test {
 
         for (key, value) in rcs.iter().cloned() {
             weakmap.insert(key, value);
-//            show_me(&weakmap);
+            //            show_me(&weakmap);
         }
 
         let mut count = 0;
@@ -358,7 +379,7 @@ mod test {
 
             match weakmap.entry(Rc::clone(key)) {
                 Entry::Occupied(occ) => {
-                    assert_eq!( occ.get(), value );
+                    assert_eq!(occ.get(), value);
                     count += 1;
                 }
                 Entry::Vacant(_) => {
@@ -367,8 +388,6 @@ mod test {
             }
         }
 
-        assert_eq!( count, rcs.len() );
+        assert_eq!(count, rcs.len());
     }
 }
-
-

@@ -30,8 +30,7 @@ mod lib {
 // Stuff from `std`/`alloc` that we use often.
 pub use lib::{
     boxed::Box,
-    rc,
-    slice,
+    rc, slice,
     string::String,
     sync,
     vec::{self, Vec},
@@ -41,9 +40,9 @@ pub use lib::{
 pub use core::{
     borrow::Borrow,
     cmp::max,
+    fmt::{self, Debug, Formatter},
     hash::{BuildHasher, Hash, Hasher},
     iter::{self, FromIterator},
-    fmt::{self, Debug, Formatter},
     mem,
     ops::{self, Deref, Index, IndexMut},
 };

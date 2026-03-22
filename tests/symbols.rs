@@ -47,7 +47,7 @@ fn interning() {
 
     let a0 = tab.intern("a");
     let a1 = tab.intern("a");
-    let b  = tab.intern("b");
+    let b = tab.intern("b");
 
     assert_eq!(a0, a1);
     assert_ne!(a0, b);

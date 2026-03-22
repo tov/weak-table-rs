@@ -3,15 +3,16 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
-use quickcheck::{Arbitrary, Gen, quickcheck};
+use quickcheck::{quickcheck, Arbitrary, Gen};
 
 use weak_table::WeakKeyHashMap;
 
 use self::Cmd::*;
 
 fn test_script<K, V>(script: &Script<K, V>) -> bool
-    where K: Clone + Debug + Eq + Hash,
-          V: Clone + Debug + Eq
+where
+    K: Clone + Debug + Eq + Hash,
+    V: Clone + Debug + Eq,
 {
     let mut tester = Tester::with_capacity(4);
     tester.execute_script(script);
@@ -29,8 +30,7 @@ quickcheck! {
 }
 
 #[derive(Clone, Debug)]
-pub enum Cmd<K, V>
-{
+pub enum Cmd<K, V> {
     Insert(K, V),
     Reinsert(usize, V),
     RemoveInserted(usize),
@@ -43,14 +43,15 @@ pub struct Script<K, V>(Vec<Cmd<K, V>>);
 
 #[derive(Clone, Debug)]
 pub struct Tester<K: Hash + Eq, V> {
-    weak:   WeakKeyHashMap<Weak<K>, V>,
+    weak: WeakKeyHashMap<Weak<K>, V>,
     strong: HashMap<Rc<K>, V>,
-    log:    Vec<K>,
+    log: Vec<K>,
 }
 
 impl<K, V> Tester<K, V>
-    where K: Hash + Eq + Clone + Debug,
-          V: Eq + Clone + Debug
+where
+    K: Hash + Eq + Clone + Debug,
+    V: Eq + Clone + Debug,
 {
     pub fn new() -> Self {
         Tester::with_capacity(8)
@@ -58,16 +59,16 @@ impl<K, V> Tester<K, V>
 
     pub fn with_capacity(capacity: usize) -> Self {
         Tester {
-            weak:   WeakKeyHashMap::with_capacity(capacity),
+            weak: WeakKeyHashMap::with_capacity(capacity),
             strong: HashMap::new(),
-            log:    Vec::new(),
+            log: Vec::new(),
         }
     }
 
     pub fn check(&self) -> bool {
         let copy = self.weak.iter().map(|(k, v)| (k, v.clone())).collect();
         if self.strong == copy {
-//            eprintln!("Tester::check: succeeded: {:?}", self.weak);
+            //            eprintln!("Tester::check: succeeded: {:?}", self.weak);
             true
         } else {
             eprintln!("Tester::check: failed: {:?} ≠ {:?}", self.strong, copy);
@@ -76,22 +77,22 @@ impl<K, V> Tester<K, V>
     }
 
     pub fn execute_script(&mut self, script: &Script<K, V>) {
-//        eprintln!("\n*** Starting script ***");
+        //        eprintln!("\n*** Starting script ***");
         for cmd in &script.0 {
             self.execute_command(cmd);
         }
     }
 
     pub fn execute_command(&mut self, cmd: &Cmd<K, V>) {
-//        eprintln!("Executing command: {:?}", cmd);
+        //        eprintln!("Executing command: {:?}", cmd);
         match *cmd {
-            Insert(ref k, ref v)    => self.insert(k, v, true),
-            Reinsert(index, ref v)  => self.reinsert(index, v),
-            RemoveInserted(index)   => self.remove_inserted(index),
-            RemoveOther(ref k)      => self.remove_other(k),
-            ForgetInserted(index)   => self.forget_inserted(index),
+            Insert(ref k, ref v) => self.insert(k, v, true),
+            Reinsert(index, ref v) => self.reinsert(index, v),
+            RemoveInserted(index) => self.remove_inserted(index),
+            RemoveOther(ref k) => self.remove_other(k),
+            ForgetInserted(index) => self.forget_inserted(index),
         }
-//        eprintln!("Table state: {:?}", self.weak);
+        //        eprintln!("Table state: {:?}", self.weak);
     }
 
     pub fn insert(&mut self, key: &K, value: &V, log: bool) {
@@ -99,7 +100,9 @@ impl<K, V> Tester<K, V>
         self.weak.insert(key_ptr.clone(), value.clone());
         self.strong.remove(key);
         self.strong.insert(key_ptr, value.clone());
-        if log { self.log.push(key.clone()); }
+        if log {
+            self.log.push(key.clone());
+        }
     }
 
     pub fn reinsert(&mut self, index: usize, value: &V) {
@@ -126,8 +129,7 @@ impl<K, V> Tester<K, V>
         }
     }
 
-    fn nth_key_mod_len(&self, n: usize) -> Option<K>
-    {
+    fn nth_key_mod_len(&self, n: usize) -> Option<K> {
         if self.log.is_empty() {
             None
         } else {
@@ -142,11 +144,11 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
 
         match choice % 10 {
             0..=3 => Insert(K::arbitrary(g), V::arbitrary(g)),
-            4     => Reinsert(usize::arbitrary(g), V::arbitrary(g)),
+            4 => Reinsert(usize::arbitrary(g), V::arbitrary(g)),
             5..=6 => RemoveInserted(usize::arbitrary(g)),
-            7     => RemoveOther(K::arbitrary(g)),
+            7 => RemoveOther(K::arbitrary(g)),
             8..=9 => ForgetInserted(usize::arbitrary(g)),
-            _       => unreachable!(),
+            _ => unreachable!(),
         }
     }
 }
@@ -156,7 +158,7 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for Script<K, V> {
         Script(Vec::<Cmd<K, V>>::arbitrary(g))
     }
 
-    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         Box::new(self.0.shrink().map(|v| Script(v)))
     }
 }
