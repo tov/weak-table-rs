@@ -172,16 +172,7 @@ type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakKeyHashMap<K, V, S = RandomState> {
-    hash_builder: S,
-    inner: WeakKeyInnerMap<K, V>,
-}
-
-#[derive(Clone)]
-struct WeakKeyInnerMap<K, V> {
-    buckets: TablePtr<K, V>,
-    len: usize,
-}
+pub struct WeakKeyHashMap<K, V, S = RandomState>(weak_key_hash_map::InnerTable<K, V, S>);
 
 /// A hash map with weak keys, hashed on key pointer.
 ///

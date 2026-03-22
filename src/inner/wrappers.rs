@@ -24,6 +24,12 @@ pub(crate) trait Element: Sized {
     fn into_owned(self) -> Option<Self::Owned>;
 
     fn owned_ref_from_upgrade<'a>(&'a self, upgraded: &'a Self::Upgraded) -> &'a Self::Owned;
+
+    fn owned_from_upgrade(self, upgraded: Self::Upgraded) -> Self::Owned;
+
+    fn upgraded_from_owned(owned: &Self::Owned) -> Self::Upgraded;
+
+    fn reset_from_upgrade(&mut self, _upgraded: &Self::Upgraded);
 }
 
 pub(crate) trait Key: Element + Sized {
@@ -45,6 +51,7 @@ pub(crate) trait Key: Element + Sized {
         F: FnOnce(&Self::Key) -> R;
 }
 
+#[derive(Clone, Debug)]
 pub(crate) struct Owned<T> {
     pub(crate) val: T,
 }
@@ -80,6 +87,13 @@ impl<T> Element for Owned<T> {
     fn owned_ref_from_upgrade<'a>(&'a self, _upgraded: &'a Self::Upgraded) -> &'a Self::Owned {
         &self.val
     }
+    fn owned_from_upgrade(self, _upgraded: Self::Upgraded) -> Self::Owned {
+        self.val
+    }
+
+    fn upgraded_from_owned(_owned: &Self::Owned) -> Self::Upgraded {}
+
+    fn reset_from_upgrade(&mut self, _upgraded: &Self::Upgraded) {}
 }
 
 impl<T: Hash + Eq> Key for Owned<T> {
@@ -129,6 +143,7 @@ impl MaybeHash for u64 {
     }
 }
 
+#[derive(Clone, Debug)]
 pub(crate) struct Weak<T, H> {
     pub(crate) val: T,
     pub(crate) hash: H,
@@ -177,6 +192,18 @@ where
 
     fn owned_ref_from_upgrade<'a>(&'a self, upgraded: &'a Self::Upgraded) -> &'a Self::Owned {
         upgraded
+    }
+
+    fn owned_from_upgrade(self, upgraded: Self::Upgraded) -> Self::Owned {
+        upgraded
+    }
+
+    fn upgraded_from_owned(owned: &Self::Owned) -> Self::Upgraded {
+        T::clone(owned)
+    }
+
+    fn reset_from_upgrade(&mut self, upgraded: &Self::Upgraded) {
+        self.val = T::new(upgraded);
     }
 }
 
