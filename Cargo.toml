@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 ahash = { version = "0.7.6", optional = true, features = [] }
+hashbrown = "0.16.1"
 
 [dev-dependencies]
 quickcheck = "1"

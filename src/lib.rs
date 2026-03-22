@@ -157,6 +157,7 @@ pub mod weak_weak_hash_map;
 
 mod by_ptr;
 mod compat;
+mod inner;
 mod size_policy;
 mod util;
 
