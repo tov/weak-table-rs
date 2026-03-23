@@ -159,14 +159,6 @@ mod by_ptr;
 mod compat;
 mod inner;
 mod size_policy;
-mod util;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct HashCode(u64);
-
-type FullBucket<K, V> = (K, V, HashCode);
-type Bucket<K, V> = Option<FullBucket<K, V>>;
-type TablePtr<K, V> = Box<[Bucket<K, V>]>;
 
 /// A hash map with weak keys, hashed on key value.
 ///

@@ -45,10 +45,6 @@ pub(crate) trait Key: Element + Sized {
     where
         Q: ?Sized + Hash + Eq,
         Self::Key: Borrow<Q>;
-
-    fn with_key_ref<F, R>(strong: &Self::Owned, func: F) -> R
-    where
-        F: FnOnce(&Self::Key) -> R;
 }
 
 #[derive(Clone, Debug)]
@@ -117,13 +113,6 @@ impl<T: Hash + Eq> Key for Owned<T> {
         Self::Key: Borrow<Q>,
     {
         self.val.borrow() == key
-    }
-
-    fn with_key_ref<F, R>(strong: &Self::Owned, func: F) -> R
-    where
-        F: FnOnce(&Self::Key) -> R,
-    {
-        func(strong)
     }
 }
 
@@ -237,12 +226,5 @@ where
         self.val
             .view()
             .is_some_and(|self_view| T::equals(&self_view, key))
-    }
-
-    fn with_key_ref<F, R>(strong: &Self::Owned, func: F) -> R
-    where
-        F: FnOnce(&Self::Key) -> R,
-    {
-        T::with_key(strong, func)
     }
 }

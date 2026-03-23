@@ -5,8 +5,6 @@ use std::{fmt, mem};
 use hashbrown::hash_table as raw;
 use hashbrown::HashTable as RawTable;
 
-use crate::traits::WeakElement;
-
 use super::{Element, Key, MaybeHash};
 
 #[derive(Clone)]
@@ -185,6 +183,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         }
     }
 
+    /* XXXX
     pub(crate) fn retain<F>(&mut self, mut func: F)
     where
         F: FnMut(K::Ref<'_>, V::Ref<'_>) -> bool,
@@ -197,6 +196,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
             }
         })
     }
+    */
 }
 
 impl<K: Element, V: Element, S> Table<K, V, S> {
@@ -236,6 +236,7 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
 }
 
 impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
+    /* XXXX
     pub(crate) fn retain_mut<F>(&mut self, mut func: F)
     where
         F: FnMut(K::Ref<'_>, &mut T) -> bool,
@@ -248,6 +249,7 @@ impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
             }
         })
     }
+    */
 
     pub(crate) fn iter_mut(&mut self) -> IterMut<'_, K, super::Owned<T>> {
         IterMut {
@@ -287,14 +289,12 @@ impl<'a, K: Element + 'a, V: Element<CachedHash = ()> + 'a> OccupiedEntry<'a, K,
 }
 
 impl<'a, K: Key + 'a, T: 'a> OccupiedEntry<'a, K, super::Owned<T>> {
+    /* XXXX
     pub(crate) fn get_mut(&'a mut self) -> (&'a K::Owned, &'a mut T) {
         let (k, v) = self.inner.get_mut();
         (K::owned_ref_from_upgrade(k, &self.k_up), &mut v.val)
     }
-
-    pub(crate) fn val_mut(&'a mut self) -> &'a mut T {
-        &mut self.inner.get_mut().1.val
-    }
+    */
 
     pub(crate) fn into_mut(self) -> &'a mut T {
         &mut self.inner.into_mut().1.val
@@ -438,8 +438,4 @@ where
 
 fn grow_at_threshold(cap: usize) -> usize {
     cap.div_ceil(4) * 3
-}
-
-fn shrink_at_threshold(cap: usize) -> usize {
-    cap / 4
 }
