@@ -3,7 +3,10 @@ use std::{
     hash::{BuildHasher, Hash, Hasher},
 };
 
-use crate::traits::{WeakElement, WeakKey};
+use crate::{
+    traits::{WeakElement, WeakKey},
+    util::hash_one,
+};
 
 pub(crate) trait Element: Sized {
     type Owned;
@@ -96,11 +99,11 @@ impl<T: Hash + Eq> Key for Owned<T> {
     type Key = T;
 
     fn hash<S: BuildHasher>(&self, hash_builder: &S) -> u64 {
-        hash_builder.hash_one(&self.val)
+        hash_one(hash_builder, &self.val)
     }
 
     fn hash_owned<S: BuildHasher>(strong: &Self::Owned, hash_builder: &S) -> u64 {
-        hash_builder.hash_one(strong)
+        hash_one(hash_builder, strong)
     }
 
     fn eq_owned(&self, strong: &Self::Owned) -> bool {
@@ -213,9 +216,11 @@ where
     }
 
     fn eq_owned(&self, strong: &Self::Owned) -> bool {
-        self.val.view().is_some_and(|self_view| {
+        if let Some(self_view) = self.val.view() {
             T::with_key(strong, |other_as_key| T::equals(&self_view, other_as_key))
-        })
+        } else {
+            false
+        }
     }
 
     fn eq_borrow<Q>(&self, key: &Q) -> bool
@@ -223,8 +228,10 @@ where
         Q: ?Sized + Hash + Eq,
         Self::Key: Borrow<Q>,
     {
-        self.val
-            .view()
-            .is_some_and(|self_view| T::equals(&self_view, key))
+        if let Some(self_view) = self.val.view() {
+            T::equals(&self_view, key)
+        } else {
+            false
+        }
     }
 }

@@ -159,6 +159,7 @@ mod by_ptr;
 mod compat;
 mod inner;
 mod size_policy;
+mod util;
 
 /// A hash map with weak keys, hashed on key value.
 ///

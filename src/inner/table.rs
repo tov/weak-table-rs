@@ -5,6 +5,8 @@ use std::{fmt, mem};
 use hashbrown::hash_table as raw;
 use hashbrown::HashTable as RawTable;
 
+use crate::util::hash_one;
+
 use super::{Element, Key, MaybeHash};
 
 #[derive(Clone)]
@@ -151,7 +153,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         Q: ?Sized + Hash + Eq,
         K::Key: Borrow<Q>,
     {
-        let hash = self.hash_builder.hash_one(key);
+        let hash = hash_one(&self.hash_builder, key);
         match self.table.find_entry(hash, |(k, _)| k.eq_borrow(key)) {
             Ok(occupied_entry) => {
                 let (k, v) = occupied_entry.get();
@@ -174,7 +176,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         Q: ?Sized + Hash + Eq,
         K::Key: Borrow<Q>,
     {
-        let hash = self.hash_builder.hash_one(key);
+        let hash = hash_one(&self.hash_builder, key);
         let (k, v) = self.table.find(hash, |(k, _)| k.eq_borrow(key))?;
         if let (Some(k_ref), Some(v_ref)) = (k.as_ref(), v.as_ref()) {
             Some((k_ref, v_ref))
@@ -225,7 +227,7 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
         Q: ?Sized + Hash + Eq,
         K::Key: Borrow<Q>,
     {
-        let hash = self.hash_builder.hash_one(key);
+        let hash = hash_one(&self.hash_builder, key);
         let (k, v) = self.table.find_mut(hash, |(k, _)| k.eq_borrow(key))?;
         if let Some(k_ref) = k.as_ref() {
             Some((k_ref, &mut v.val))
@@ -437,5 +439,9 @@ where
 }
 
 fn grow_at_threshold(cap: usize) -> usize {
-    cap.div_ceil(4) * 3
+    div_ceil(cap, 4) * 3
+}
+
+fn div_ceil(a: usize, b: usize) -> usize {
+    a.saturating_add(b - 1) / b
 }
