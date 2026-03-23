@@ -1,7 +1,4 @@
-use std::{
-    borrow::Borrow,
-    hash::{BuildHasher, Hash, Hasher},
-};
+use crate::compat::*;
 
 use crate::{
     traits::{WeakElement, WeakKey},

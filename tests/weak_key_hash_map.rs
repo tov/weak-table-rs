@@ -53,10 +53,6 @@ where
     K: Hash + Eq + Clone + Debug,
     V: Eq + Clone + Debug,
 {
-    pub fn new() -> Self {
-        Tester::with_capacity(8)
-    }
-
     pub fn with_capacity(capacity: usize) -> Self {
         Tester {
             weak: WeakKeyHashMap::with_capacity(capacity),

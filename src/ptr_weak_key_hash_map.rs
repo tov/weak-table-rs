@@ -115,7 +115,7 @@ where
     /// Gets the requested entry.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
-    pub fn entry(&mut self, key: K::Strong) -> Entry<ByPtr<K>, V> {
+    pub fn entry(&mut self, key: K::Strong) -> Entry<'_, ByPtr<K>, V> {
         self.0.entry(key)
     }
 
@@ -227,42 +227,42 @@ where
     /// Gets an iterator over the keys and values.
     ///
     /// *O*(1) time
-    pub fn iter(&self) -> Iter<ByPtr<K>, V> {
+    pub fn iter(&self) -> Iter<'_, ByPtr<K>, V> {
         self.0.iter()
     }
 
     /// Gets an iterator over the keys.
     ///
     /// *O*(1) time
-    pub fn keys(&self) -> Keys<ByPtr<K>, V> {
+    pub fn keys(&self) -> Keys<'_, ByPtr<K>, V> {
         self.0.keys()
     }
 
     /// Gets an iterator over the values.
     ///
     /// *O*(1) time
-    pub fn values(&self) -> Values<ByPtr<K>, V> {
+    pub fn values(&self) -> Values<'_, ByPtr<K>, V> {
         self.0.values()
     }
 
     /// Gets an iterator over the keys and mutable values.
     ///
     /// *O*(1) time
-    pub fn iter_mut(&mut self) -> IterMut<ByPtr<K>, V> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, ByPtr<K>, V> {
         self.0.iter_mut()
     }
 
     /// Gets an iterator over the mutable values.
     ///
     /// *O*(1) time
-    pub fn values_mut(&mut self) -> ValuesMut<ByPtr<K>, V> {
+    pub fn values_mut(&mut self) -> ValuesMut<'_, ByPtr<K>, V> {
         self.0.values_mut()
     }
 
     /// Gets a draining iterator, which removes all the values but retains the storage.
     ///
     /// *O*(1) time (and *O*(*n*) time to dispose of the result)
-    pub fn drain(&mut self) -> Drain<ByPtr<K>, V> {
+    pub fn drain(&mut self) -> Drain<'_, ByPtr<K>, V> {
         self.0.drain()
     }
 }

@@ -1,6 +1,4 @@
-use std::borrow::Borrow;
-use std::hash::{BuildHasher, Hash};
-use std::{fmt, mem};
+use crate::compat::*;
 
 use hashbrown::hash_table as raw;
 use hashbrown::HashTable as RawTable;

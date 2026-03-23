@@ -28,12 +28,10 @@ mod lib {
 }
 
 // Stuff from `std`/`alloc` that we use often.
-pub use lib::{
-    rc,
-    string::String,
-    sync,
-    vec::{self, Vec},
-};
+pub use lib::{rc, sync};
+
+#[cfg(test)]
+pub use lib::{string::String, vec::Vec};
 
 // Stuff from `core` that we use often:
 pub use core::{
