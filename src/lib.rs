@@ -207,10 +207,7 @@ pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(WeakKeyHashMap<by_ptr::ByPtr
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakValueHashMap<K, V, S = RandomState> {
-    hash_builder: S,
-    inner: WeakValueInnerMap<K, V>,
-}
+pub struct WeakValueHashMap<K, V, S = RandomState>(weak_value_hash_map::InnerTable<K, V, S>);
 
 #[derive(Clone)]
 struct WeakValueInnerMap<K, V> {

@@ -5,6 +5,8 @@ use std::{fmt, mem};
 use hashbrown::hash_table as raw;
 use hashbrown::HashTable as RawTable;
 
+use crate::traits::WeakElement;
+
 use super::{Element, Key, MaybeHash};
 
 #[derive(Clone)]
@@ -14,14 +16,14 @@ pub(crate) struct Table<K, V, S> {
     hash_builder: S,
 }
 
-pub(crate) struct OccupiedEntry<'a, K: Key + 'a, V: Element + 'a> {
+pub(crate) struct OccupiedEntry<'a, K: Element + 'a, V: Element + 'a> {
     // XXXX
     pub(crate) inner: raw::OccupiedEntry<'a, (K, V)>,
     k_up: K::Upgraded,
     v_up: V::Upgraded,
 }
 
-pub(crate) struct VacantEntry<'a, K: Key + 'a, V: 'a> {
+pub(crate) struct VacantEntry<'a, K: Element + 'a, V: 'a> {
     hash: K::CachedHash,
     inner: raw::VacantEntry<'a, (K, V)>,
     pending_key: K::Owned,
@@ -254,7 +256,7 @@ impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
     }
 }
 
-impl<'a, K: Key + 'a, V: Element<CachedHash = ()> + 'a> OccupiedEntry<'a, K, V> {
+impl<'a, K: Element + 'a, V: Element + 'a> OccupiedEntry<'a, K, V> {
     pub(crate) fn get(&'a self) -> (&'a K::Owned, &'a V::Owned) {
         let (k, v) = self.inner.get();
         (
@@ -270,7 +272,9 @@ impl<'a, K: Key + 'a, V: Element<CachedHash = ()> + 'a> OccupiedEntry<'a, K, V> 
             V::owned_from_upgrade(v, self.v_up),
         )
     }
+}
 
+impl<'a, K: Element + 'a, V: Element<CachedHash = ()> + 'a> OccupiedEntry<'a, K, V> {
     pub(crate) fn insert(&mut self, value: V::Owned) -> V::Owned {
         let (_k, v) = self.inner.get_mut();
         let (mut new_val, mut v_up) = V::from_owned(value, ());
@@ -297,7 +301,7 @@ impl<'a, K: Key + 'a, T: 'a> OccupiedEntry<'a, K, super::Owned<T>> {
     }
 }
 
-impl<'a, K: Key + 'a, V: Element<CachedHash = ()> + 'a> VacantEntry<'a, K, V> {
+impl<'a, K: Element + 'a, V: Element<CachedHash = ()> + 'a> VacantEntry<'a, K, V> {
     pub(crate) fn insert(self, val: V::Owned) -> OccupiedEntry<'a, K, V> {
         let (key, k_up) = K::from_owned(self.pending_key, self.hash);
         let (val, v_up) = V::from_owned(val, ());
@@ -308,7 +312,9 @@ impl<'a, K: Key + 'a, V: Element<CachedHash = ()> + 'a> VacantEntry<'a, K, V> {
             v_up,
         }
     }
+}
 
+impl<'a, K: Element + 'a, V: Element + 'a> VacantEntry<'a, K, V> {
     pub(crate) fn into_key(self) -> K::Owned {
         self.pending_key
     }
@@ -406,7 +412,7 @@ impl<'a, K: Element, V: Element> Iterator for Drain<'a, K, V> {
     }
 }
 
-impl<'a, K: Key + 'a, V: Element<CachedHash = ()> + 'a> fmt::Debug for OccupiedEntry<'a, K, V>
+impl<'a, K: Element + 'a, V: Element + 'a> fmt::Debug for OccupiedEntry<'a, K, V>
 where
     K::Owned: fmt::Debug,
     V::Owned: fmt::Debug,
@@ -420,7 +426,7 @@ where
     }
 }
 
-impl<'a, K: Key + 'a, V: Element<CachedHash = ()> + 'a> fmt::Debug for VacantEntry<'a, K, V>
+impl<'a, K: Element + 'a, V: Element + 'a> fmt::Debug for VacantEntry<'a, K, V>
 where
     K::Owned: fmt::Debug,
 {
