@@ -209,26 +209,11 @@ pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(WeakKeyHashMap<by_ptr::ByPtr
 #[derive(Clone)]
 pub struct WeakValueHashMap<K, V, S = RandomState>(weak_value_hash_map::InnerTable<K, V, S>);
 
-#[derive(Clone)]
-struct WeakValueInnerMap<K, V> {
-    buckets: TablePtr<K, V>,
-    len: usize,
-}
-
 /// A hash map with weak keys and weak values, hashed on key value.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakWeakHashMap<K, V, S = RandomState> {
-    hash_builder: S,
-    inner: WeakWeakInnerMap<K, V>,
-}
-
-#[derive(Clone)]
-struct WeakWeakInnerMap<K, V> {
-    buckets: TablePtr<K, V>,
-    len: usize,
-}
+pub struct WeakWeakHashMap<K, V, S = RandomState>(weak_weak_hash_map::InnerTable<K, V, S>);
 
 /// A hash map with weak keys and weak values, hashed on key pointer.
 ///
