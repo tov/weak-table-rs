@@ -8,6 +8,7 @@ readme = "README.md"
 license = "MIT"
 keywords = ["containers", "Rc", "Arc", "weak", "no_std"]
 edition = "2018"
+rust-version = "1.65.0"
 
 [dependencies]
 ahash = { version = "0.7.6", optional = true, features = [] }
