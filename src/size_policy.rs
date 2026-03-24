@@ -1,2 +1,2 @@
 /// No reason for this number as of now.
-pub const DEFAULT_INITIAL_CAPACITY: usize = 0;
+pub(crate) const DEFAULT_INITIAL_CAPACITY: usize = 0;

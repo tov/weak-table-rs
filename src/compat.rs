@@ -2,7 +2,7 @@
 
 // If we depend on `ahash`, use its hasher.
 #[cfg(feature = "ahash")]
-pub use ahash::RandomState;
+pub(crate) use ahash::RandomState;
 
 // Use the `std` hasher if we don’t depend on `ahash` but do depend on
 // `std`.
@@ -17,7 +17,7 @@ compile_error!("weak-table: no_std requires that you enable the `ahash` feature.
 #[cfg(feature = "std")]
 mod lib {
     extern crate std;
-    pub use std::*;
+    pub(crate) use std::*;
 }
 
 // Otherwise, we are `no_std`, so alias `lib` to `alloc`.
@@ -28,13 +28,13 @@ mod lib {
 }
 
 // Stuff from `std`/`alloc` that we use often.
-pub use lib::{rc, sync};
+pub(crate) use lib::{rc, sync};
 
 #[cfg(test)]
-pub use lib::{string::String, vec::Vec};
+pub(crate) use lib::{string::String, vec::Vec};
 
 // Stuff from `core` that we use often:
-pub use core::{
+pub(crate) use core::{
     borrow::Borrow,
     fmt::{self, Debug, Formatter},
     hash::{BuildHasher, Hash, Hasher},
@@ -48,4 +48,4 @@ pub use core::{
 extern crate std;
 
 #[cfg(test)]
-pub use std::eprintln;
+pub(crate) use std::eprintln;

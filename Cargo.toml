@@ -29,7 +29,7 @@ alloc = []
 unsafe_code = "warn"
 #missing_docs = "warn"
 noop_method_call = "warn"
-#unreachable_pub = "warn"
+unreachable_pub = "warn"
 
 [lints.clippy]
 all = "warn"
