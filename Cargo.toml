@@ -10,6 +10,13 @@ keywords = ["containers", "Rc", "Arc", "weak", "no_std"]
 edition = "2021"
 rust-version = "1.65.0"
 
+[features]
+default = ["std"]
+std = []
+
+# This feature doesn’t actually do anything. TODO: remove in v0.4.
+alloc = []
+
 [dependencies]
 ahash = { version = "0.7.6", optional = true, features = [] }
 hashbrown = { version = "0.16.1", default-features = false, features = ["inline-more"] }
@@ -17,13 +24,6 @@ hashbrown = { version = "0.16.1", default-features = false, features = ["inline-
 [dev-dependencies]
 quickcheck = "1"
 rand = "0.8.4"
-
-[features]
-default = ["std"]
-std = []
-
-# This feature doesn’t actually do anything. TODO: remove in v0.4.
-alloc = []
 
 [lints.rust]
 unsafe_code = "warn"
@@ -34,7 +34,7 @@ unreachable_pub = "warn"
 [lints.clippy]
 all = "warn"
 cargo_common_metadata = "warn"
-cast_lossless  ="warn"
+cast_lossless  = "warn"
 checked_conversions = "warn"
 cognitive_complexity = "warn"
 debug_assert_with_mut_call = "warn"
