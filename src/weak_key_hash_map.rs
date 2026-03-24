@@ -347,7 +347,8 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
     where
         F: FnMut(K::Strong, &mut V) -> bool,
     {
-        //        XXXX
+        // TODO: It would be better to use a retain method on Table, but I've
+        // run into lifetime issues there. See "TODO retain" in inner/table.rs
         self.0.table.retain(|(k, v)| {
             if let Some(k) = k.val.view() {
                 f(k, &mut v.val)
@@ -556,7 +557,8 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     ///
     /// *O*(1) time
     pub fn get_mut(&mut self) -> &mut V {
-        // XXXX
+        // TODO: It would be better to use a retain method on inner::OccupiedEntry, but I've
+        // run into lifetime issues there. See "TODO get_mut" in inner/table.rs
         &mut self.0.inner.get_mut().1.val
     }
 

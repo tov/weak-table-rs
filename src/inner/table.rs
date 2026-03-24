@@ -85,7 +85,7 @@ pub(crate) enum Entry<'a, K: Key, V: Element> {
 }
 
 impl<K, V, S> Table<K, V, S> {
-    /// Construct a new `Table` with a given minimum `capacity`, and a given [`BuildHasher`].
+    /// Construct a new `Table` with a given _minimum_ `capacity`, and a given [`BuildHasher`].
     ///
     /// See notes on [`capacity`](Self::capacity).
     pub(crate) fn new(capacity: usize, hash_builder: S) -> Self {
@@ -632,7 +632,7 @@ fn grow_at_threshold(cap: usize) -> usize {
 
 /// Return CEIL(a / b).
 ///
-/// We have to provide this because `usize::div_ceil` isn't available at our MSRV.
+/// We need this because [`usize::div_ceil`] isn't available at our MSRV.
 fn div_ceil(a: usize, b: usize) -> usize {
     a.saturating_add(b - 1) / b
 }
@@ -652,6 +652,8 @@ mod test {
     type WkValMap = Table<Owned<u8>, WeakV<Weak<u8>>, RandomState>;
 
     impl<'a, K: Key, V: Element> super::Entry<'a, K, V> {
+        /// Testing helper: Extract the OccupiedEntry from this Entry,
+        /// and panic if the entry was vacant.
         fn unwrap_occupied(self) -> OccupiedEntry<'a, K, V> {
             match self {
                 Entry::Occupied(e) => e,
@@ -659,6 +661,8 @@ mod test {
             }
         }
 
+        /// Testing helper: Extract the VacantEntry from this Entry,
+        /// and panic if the entry was occupied.
         fn unwrap_vacant(self) -> VacantEntry<'a, K, V> {
             match self {
                 Entry::Occupied(_) => panic!("Entry was not vacant"),
@@ -671,7 +675,6 @@ mod test {
     fn construct() {
         for cap in 0..64 {
             let tab = WkKeyMap::new(cap, RandomState::default());
-            // XXXX: Document that capacity is a minimum.
             assert!(tab.capacity() >= cap);
         }
     }
@@ -799,7 +802,8 @@ mod test {
 
         // Now use into_mut() to replace the value.
         //
-        // We don't have a full get_mut, due to XXXXX lifetime issues.
+        // We don't have a full get_mut, due to lifetime issues.  See "TODO
+        // get_mut" above.
         *e.into_mut() = 77;
         // This time use find_entry, which _shouldn't_ change the key in the table.
         let e = tab.find_entry(&7).unwrap();

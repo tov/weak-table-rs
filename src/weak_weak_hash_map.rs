@@ -294,7 +294,8 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
     where
         F: FnMut(K::Strong, V::Strong) -> bool,
     {
-        // XXXX
+        // TODO: It would be better to use a retain method on Table, but I've
+        // run into lifetime issues there. See "TODO retain" in inner/table.rs
         self.0.table.retain(|(k, v)| {
             if let (Some(k), Some(v)) = (k.val.view(), v.val.view()) {
                 f(k, v)
