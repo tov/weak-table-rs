@@ -637,7 +637,7 @@ fn div_ceil(a: usize, b: usize) -> usize {
     a.saturating_add(b - 1) / b
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature="std"))]
 mod test {
     use super::*;
     use crate::compat::rc::{Rc, Weak};
