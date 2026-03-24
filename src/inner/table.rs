@@ -17,8 +17,8 @@ pub(crate) struct Table<K, V, S> {
 pub(crate) struct OccupiedEntry<'a, K: Element, V: Element> {
     // XXXX
     pub(crate) inner: raw::OccupiedEntry<'a, (K, V)>,
-    k_up: K::Upgraded,
-    v_up: V::Upgraded,
+    k_handle: K::Handle,
+    v_handle: V::Handle,
 }
 
 pub(crate) struct VacantEntry<'a, K: Element, V> {
@@ -118,19 +118,19 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         ) {
             raw::Entry::Occupied(mut occupied_entry) => {
                 let (k, v) = occupied_entry.get_mut();
-                if let Some(v_up) = v.upgrade() {
+                if let Some(v_handle) = v.handle() {
                     // Here is where we change the key, if appropriate.
-                    // We don't need to upgrade k, since we are going to
+                    // We don't need to get a handle to preserve k, since we are going to
                     // replace it.
                     // We don't need to check whether k is present, since
                     // eq_owned always returns false on a dangling reference.
-                    let k_up = K::upgraded_from_owned(&key);
-                    k.reset_from_upgrade(&k_up);
+                    let k_handle = K::handle_from_owned(&key);
+                    k.reset_from_handle(&k_handle);
 
                     Entry::Occupied(OccupiedEntry {
                         inner: occupied_entry,
-                        k_up,
-                        v_up,
+                        k_handle,
+                        v_handle,
                     })
                 } else {
                     let (_, vacant_entry) = occupied_entry.remove();
@@ -158,11 +158,11 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         match self.table.find_entry(hash, |(k, _)| k.eq_borrow(key)) {
             Ok(occupied_entry) => {
                 let (k, v) = occupied_entry.get();
-                if let (Some(k_up), Some(v_up)) = (k.upgrade(), v.upgrade()) {
+                if let (Some(k_handle), Some(v_handle)) = (k.handle(), v.handle()) {
                     Some(OccupiedEntry {
                         inner: occupied_entry,
-                        k_up,
-                        v_up,
+                        k_handle,
+                        v_handle,
                     })
                 } else {
                     None
@@ -265,16 +265,16 @@ impl<'a, K: Element, V: Element> OccupiedEntry<'a, K, V> {
     pub(crate) fn get(&'a self) -> (&'a K::Owned, &'a V::Owned) {
         let (k, v) = self.inner.get();
         (
-            K::owned_ref_from_upgrade(k, &self.k_up),
-            V::owned_ref_from_upgrade(v, &self.v_up),
+            K::owned_ref_from_handle(k, &self.k_handle),
+            V::owned_ref_from_handle(v, &self.v_handle),
         )
     }
     pub(crate) fn remove(self) -> (K::Owned, V::Owned) {
         // TODO: It would be nice to expose vacant when possible.
         let ((k, v), _vacant) = self.inner.remove();
         (
-            K::owned_from_upgrade(k, self.k_up),
-            V::owned_from_upgrade(v, self.v_up),
+            K::owned_from_handle(k, self.k_handle),
+            V::owned_from_handle(v, self.v_handle),
         )
     }
 }
@@ -282,12 +282,12 @@ impl<'a, K: Element, V: Element> OccupiedEntry<'a, K, V> {
 impl<'a, K: Element, V: Element<CachedHash = ()>> OccupiedEntry<'a, K, V> {
     pub(crate) fn insert(&mut self, value: V::Owned) -> V::Owned {
         let (_k, v) = self.inner.get_mut();
-        let (mut new_val, mut v_up) = V::from_owned(value, ());
+        let (mut new_val, mut v_handle) = V::from_owned(value, ());
 
         mem::swap(v, &mut new_val);
-        mem::swap(&mut self.v_up, &mut v_up);
+        mem::swap(&mut self.v_handle, &mut v_handle);
 
-        V::owned_from_upgrade(new_val, v_up)
+        V::owned_from_handle(new_val, v_handle)
     }
 }
 
@@ -295,7 +295,7 @@ impl<'a, K: Key, T> OccupiedEntry<'a, K, super::Owned<T>> {
     /* XXXX
     pub(crate) fn get_mut(&'a mut self) -> (&'a K::Owned, &'a mut T) {
         let (k, v) = self.inner.get_mut();
-        (K::owned_ref_from_upgrade(k, &self.k_up), &mut v.val)
+        (K::owned_ref_from_handle(k, &self.k_handle), &mut v.val)
     }
     */
 
@@ -306,13 +306,13 @@ impl<'a, K: Key, T> OccupiedEntry<'a, K, super::Owned<T>> {
 
 impl<'a, K: Element, V: Element<CachedHash = ()>> VacantEntry<'a, K, V> {
     pub(crate) fn insert(self, val: V::Owned) -> OccupiedEntry<'a, K, V> {
-        let (key, k_up) = K::from_owned(self.pending_key, self.hash);
-        let (val, v_up) = V::from_owned(val, ());
+        let (key, k_handle) = K::from_owned(self.pending_key, self.hash);
+        let (val, v_handle) = V::from_owned(val, ());
         let occupied = self.inner.insert((key, val));
         OccupiedEntry {
             inner: occupied,
-            k_up,
-            v_up,
+            k_handle,
+            v_handle,
         }
     }
 }
@@ -605,7 +605,7 @@ mod test {
         let e = tab.entry(u8_7_other.clone()).unwrap_occupied();
         assert_eq!(e.get().1, &7);
         assert_eq!(e.get().0, &u8_7_other);
-        assert!(Rc::ptr_eq(&e.inner.get().0.upgrade().unwrap(), &u8_7_other));
+        assert!(Rc::ptr_eq(&e.inner.get().0.handle().unwrap(), &u8_7_other));
 
         // Now use into_mut() to replace the value.
         //
@@ -624,7 +624,7 @@ mod test {
         let e = tab.entry(u8_9.clone()).unwrap_vacant();
         let e = e.insert(99);
         assert_eq!(e.get().1, &99);
-        assert!(Rc::ptr_eq(&e.inner.get().0.upgrade().unwrap(), &u8_9));
+        assert!(Rc::ptr_eq(&e.inner.get().0.handle().unwrap(), &u8_9));
         let e = tab.find_entry(&9).unwrap();
         assert_eq!(e.get().1, &99);
         assert_eq!(tab.find(&9).unwrap(), (u8_9, &99));

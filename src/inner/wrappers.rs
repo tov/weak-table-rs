@@ -37,11 +37,11 @@ pub(crate) trait Element: Sized {
     /// We hold this in our [`Entry`](super::Entry) types
     /// so that weak pointers do not expire while an `Entry` is live.
     ///
-    /// | Element type | Self               |  Upgraded              |
+    /// | Element type | Self               |  Handle                |
     /// | ------------ | ------------------ | ---------------------- |
     /// | Weak         | `Weak<WeakPtr<T>>` | `StrongPtr<T>`         |
     /// | Owned        | `Owned<T>`         | `()`                   |
-    type Upgraded;
+    type Handle;
 
     /// A value that we need to store in order to be able to recover the hash of
     /// this element.
@@ -77,18 +77,18 @@ pub(crate) trait Element: Sized {
     /// | ------------ | ------------------- | ---------------------- |
     /// | Weak         | `&Weak<WeakPtr<T>>` | `Option<StrongPtr<T>>` |
     /// | Owned        | `&Owned<T>`         | `Some(())`             |
-    fn upgrade(&self) -> Option<Self::Upgraded>;
+    fn handle(&self) -> Option<Self::Handle>;
 
     /// Create a new instance of this element from its Owned form and a hash value.
     ///
-    /// Return this element, and a `Upgraded` handle to hold
+    /// Return this element, and a [`Self::Handle`]` to hold
     /// in order to prevent this this element from disappearing.
     ///
     /// | Element type | Input             | Output                             |
     /// | ------------ | ----------------- | ---------------------------------- |
     /// | Weak         | `Strong<T>`, `u64`| `(Weak<WeakPtr<T>>, StrongPtr<T>)` |
     /// | Owned        | `T`, `u64`        | `(T, ())`                          |
-    fn from_owned(owned: Self::Owned, cached_hash: Self::CachedHash) -> (Self, Self::Upgraded);
+    fn from_owned(owned: Self::Owned, cached_hash: Self::CachedHash) -> (Self, Self::Handle);
 
     /// Try to convert this element into its owned form.
     ///
@@ -99,27 +99,27 @@ pub(crate) trait Element: Sized {
     fn into_owned(self) -> Option<Self::Owned>;
 
     /// Convert a reference this element,
-    /// plus a reference to an `Upgraded` handle,
+    /// plus a reference to a [`Self::Handle`],
     /// into a reference to the Owned form of this element.
     ///
     /// | Element type | Input                                | Output          |
     /// | ------------ | ------------------------------------ | --------------- |
     /// | Weak         | `&Weak<WeakPtr<T>>`, `&StrongPtr<T>` | `&StrongPtr<T>` |
     /// | Owned        | `&Owned<T>`, `&()`                   | `&T`            |
-    fn owned_ref_from_upgrade<'a>(&'a self, upgraded: &'a Self::Upgraded) -> &'a Self::Owned;
+    fn owned_ref_from_handle<'a>(&'a self, handle: &'a Self::Handle) -> &'a Self::Owned;
 
     /// Convert an owned instance of this element,
-    /// plus an owned instance of an `Upgraded` handle,
+    /// plus an owned instance of a [`Self::Handle`],
     /// into an Owned instance of this element.
     ///
     /// | Element type | Input                              | Output         |
     /// | ------------ | ---------------------------------- | -------------- |
     /// | Weak         | `Weak<WeakPtr<T>>`, `StrongPtr<T>` | `StrongPtr<T>` |
     /// | Owned        | `Owned<T>`, `()`                   | `T`            |
-    fn owned_from_upgrade(self, upgraded: Self::Upgraded) -> Self::Owned;
+    fn owned_from_handle(self, handle: Self::Handle) -> Self::Owned;
 
     /// Given a reference to an owned copy of the element,
-    /// return an `Upgraded` handle that we have to hold
+    /// return a [`Self::Handle`] that we have to hold
     /// to keep the owned copy from disappearing if it is downgraded
     /// to a weak pointer.
     ///
@@ -127,16 +127,21 @@ pub(crate) trait Element: Sized {
     /// | ------------ | --------------- | -------------- |
     /// | Weak         | `&StrongPtr<T>` | `StrongPtr<T>` |
     /// | Owned        | `&T`            | `()`           |
-    fn upgraded_from_owned(owned: &Self::Owned) -> Self::Upgraded;
+    fn handle_from_owned(owned: &Self::Owned) -> Self::Handle;
 
-    /// Change this element to correspond to the provided Upgraded handle,
-    /// assuming that they are equal.
+    /// If this element is weak,
+    /// change it to live as long as the provided [`Self::Handle`].
+    ///
+    /// Requirements: Only use this when `handle` == `self`.
+    ///
+    /// We use this to implement the behavior of [`Table::entry()`](super::Table::entry)
+    /// for weak keys.
     ///
     /// | Element type | Input                                    | Behavior |
     /// | ------------ | ---------------------------------------- | -------- |
-    /// | Weak         | `&mut Weak<WeakPtr<T>>`, `&StrongPtr<T>` | `self = upgraded.downgrade()` |
+    /// | Weak         | `&mut Weak<WeakPtr<T>>`, `&StrongPtr<T>` | `self = handle.downgrade()` |
     /// | Owned        | `&mut Owned<T>`, `&T`                    | {}       |
-    fn reset_from_upgrade(&mut self, upgraded: &Self::Upgraded);
+    fn reset_from_handle(&mut self, handle: &Self::Handle);
 }
 
 /// A type that can be Owned or Weak, and which can be used as key.
@@ -187,7 +192,7 @@ impl<T> Element for Owned<T> {
         = &'a T
     where
         T: 'a;
-    type Upgraded = ();
+    type Handle = ();
     type CachedHash = ();
 
     fn is_expired(&self) -> bool {
@@ -197,11 +202,11 @@ impl<T> Element for Owned<T> {
     fn as_ref(&self) -> Option<Self::Ref<'_>> {
         Some(&self.val)
     }
-    fn upgrade(&self) -> Option<Self::Upgraded> {
+    fn handle(&self) -> Option<Self::Handle> {
         Some(())
     }
 
-    fn from_owned(val: Self::Owned, _hash: ()) -> (Self, Self::Upgraded) {
+    fn from_owned(val: Self::Owned, _hash: ()) -> (Self, Self::Handle) {
         (Owned { val }, ())
     }
 
@@ -209,16 +214,16 @@ impl<T> Element for Owned<T> {
         Some(self.val)
     }
 
-    fn owned_ref_from_upgrade<'a>(&'a self, _upgraded: &'a Self::Upgraded) -> &'a Self::Owned {
+    fn owned_ref_from_handle<'a>(&'a self, _handle: &'a Self::Handle) -> &'a Self::Owned {
         &self.val
     }
-    fn owned_from_upgrade(self, _upgraded: Self::Upgraded) -> Self::Owned {
+    fn owned_from_handle(self, _handle: Self::Handle) -> Self::Owned {
         self.val
     }
 
-    fn upgraded_from_owned(_owned: &Self::Owned) -> Self::Upgraded {}
+    fn handle_from_owned(_owned: &Self::Owned) -> Self::Handle {}
 
-    fn reset_from_upgrade(&mut self, _upgraded: &Self::Upgraded) {}
+    fn reset_from_handle(&mut self, _handle: &Self::Handle) {}
 }
 
 impl<T: Hash + Eq> Key for Owned<T> {
@@ -294,7 +299,7 @@ where
     where
         Self: 'a;
 
-    type Upgraded = T::Strong;
+    type Handle = T::Strong;
     type CachedHash = H;
 
     fn is_expired(&self) -> bool {
@@ -305,11 +310,11 @@ where
         self.val.view()
     }
 
-    fn upgrade(&self) -> Option<Self::Upgraded> {
+    fn handle(&self) -> Option<Self::Handle> {
         self.val.view()
     }
 
-    fn from_owned(owned: Self::Owned, hash: H) -> (Self, Self::Upgraded) {
+    fn from_owned(owned: Self::Owned, hash: H) -> (Self, Self::Handle) {
         (
             Weak {
                 val: T::new(&owned),
@@ -323,20 +328,20 @@ where
         self.val.view()
     }
 
-    fn owned_ref_from_upgrade<'a>(&'a self, upgraded: &'a Self::Upgraded) -> &'a Self::Owned {
-        upgraded
+    fn owned_ref_from_handle<'a>(&'a self, handle: &'a Self::Handle) -> &'a Self::Owned {
+        handle
     }
 
-    fn owned_from_upgrade(self, upgraded: Self::Upgraded) -> Self::Owned {
-        upgraded
+    fn owned_from_handle(self, handle: Self::Handle) -> Self::Owned {
+        handle
     }
 
-    fn upgraded_from_owned(owned: &Self::Owned) -> Self::Upgraded {
+    fn handle_from_owned(owned: &Self::Owned) -> Self::Handle {
         T::clone(owned)
     }
 
-    fn reset_from_upgrade(&mut self, upgraded: &Self::Upgraded) {
-        self.val = T::new(upgraded);
+    fn reset_from_handle(&mut self, handle: &Self::Handle) {
+        self.val = T::new(handle);
     }
 }
 
