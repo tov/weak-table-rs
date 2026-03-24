@@ -7,7 +7,7 @@ pub(crate) use ahash::RandomState;
 // Use the `std` hasher if we don’t depend on `ahash` but do depend on
 // `std`.
 #[cfg(all(not(feature = "ahash"), feature = "std"))]
-pub use std::collections::hash_map::RandomState;
+pub(crate) use std::collections::hash_map::RandomState;
 
 // If we depend on neither `ahash` nor `std` then it’s an error.
 #[cfg(not(any(feature = "ahash", feature = "std")))]
