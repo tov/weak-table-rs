@@ -7,32 +7,87 @@ use crate::util::hash_one;
 
 use super::{Element, Key, MaybeHash};
 
+/// An internal implementation type for all weak tables.
+///
+/// This type uses [`hashbrown::HashTable`] internally,
+/// for performance and correctness.
+///
+/// Its key type is should be either a `Weak<T: WeakKey, u64>`,
+/// or an `Owned<T>`.
+///
+/// Its value type  should be either a `Weak<T: WeakElement, ()>`,
+/// or `Owned<T>`.
+///
+/// Since this is an internal type, we try to only implement the bare minimum
+/// of functionality needed to implement the various weak tables.
 #[derive(Clone)]
 pub(crate) struct Table<K, V, S> {
-    // XXXX
+    /// The underlying [`hashbrown::HashTable`].
+    ///
+    /// For correctness, all elements in this table must be inserted using
+    /// hashes produced by running this object's `hash_builder`
+    /// on their keys.
+    ///
+    // TODO: It would be nice if we did not have to make this pub(crate),
+    // but we need it to implement retain().  See comment below beginning with
+    // "TODO retain".
     pub(crate) table: RawTable<(K, V)>,
+
+    /// The hash builder we use to hash elements in this table.
     hash_builder: S,
 }
 
+/// A mutable handle to an occupied entry in an internal [`Table`].
+///
+/// While this `OccupiedEntry` exists, the entry in the table cannot expire.
 pub(crate) struct OccupiedEntry<'a, K: Element, V: Element> {
-    // XXXX
+    /// The `OccupiedEntry` for the underlying [`hashbrown::HashTable`].
+    ///
+    // TODO: It would be nice if we did not have to make this pub(crate),
+    // but we need it to implement get_mut().  See comment below beginning with
+    // "TODO get_mut".
     pub(crate) inner: raw::OccupiedEntry<'a, (K, V)>,
+
+    /// A handle used to prevent the key from disappearing (if it is weak)
+    /// while this entrty exists.
     k_handle: K::Handle,
+
+    /// A handle used to prevent the value from disappearing (if it is weak)
+    /// While this entry exists.
     v_handle: V::Handle,
 }
 
+/// A mutable handle to a vacant entry in an internal [`Table`].
 pub(crate) struct VacantEntry<'a, K: Element, V> {
-    hash: K::CachedHash,
+    /// The `VacantEntry` for the underlying [`hashbrown::HashTable`].
     inner: raw::VacantEntry<'a, (K, V)>,
+
+    /// The key that we will insert into the entry, if we are told to insert.
     pending_key: K::Owned,
+
+    /// The hash of `pending_key`, if K is Weak.
+    ///
+    /// We need a hash in order to construct a [`Weak`](super::Weak) key,
+    /// so we need to store either the hash itself, or a reference to the
+    /// BuildHasher.
+    /// We're going with the hash here, since we've already computed it,
+    /// and we'd like to avoid excessive parameterization.
+    pending_key_hash: K::CachedHash,
 }
 
+/// An internal enum for an entry in a [`Table`] that may be occupied or vacant.
+///
+/// Since this type is internal, we don't actually need to implement any methods
+/// on it.
 pub(crate) enum Entry<'a, K: Key, V: Element> {
     Occupied(OccupiedEntry<'a, K, V>),
     Vacant(VacantEntry<'a, K, V>),
 }
 
 impl<K, V, S> Table<K, V, S> {
+    /// Construct a new `Table` with a given minimum `capacity`, and a given [`BuildHasher`].
+    ///
+    /// See notes on [`capacity`](Self::capacity).
     pub(crate) fn new(capacity: usize, hash_builder: S) -> Self {
         Self {
             table: RawTable::with_capacity(capacity),
@@ -40,40 +95,75 @@ impl<K, V, S> Table<K, V, S> {
         }
     }
 
+    /// Return a reference to this table's [`BuildHasher`].
     pub(crate) fn hasher(&self) -> &S {
         &self.hash_builder
     }
 
+    /// Return the current capacity of the table.
+    ///
+    /// We define the capacity an upper bound to the number of entries that
+    /// this table can hold without reallocating.
+    ///
+    /// This calculation can behave surprisingly since [`hashbrown`] uses "Deleted"
+    /// records internally in order to implement their
+    /// [open-addressing hash table](https://en.wikipedia.org/wiki/Open_addressing).
+    /// This makes deletion faster, but means that sometimes the table needs to
+    /// be rebuilt _even if it does not have to grow_.
+    /// Additionally, it means that `remove()` may reduce the capacity of the table.
     pub(crate) fn capacity(&self) -> usize {
         self.table.capacity()
     }
 
-    // Over-approximation.
+    /// Return an over-approximation of the number of entries in the table.
+    ///
+    /// This can be an over-approximation since it includes expired entries
+    /// that have not yet been removed.
     pub(crate) fn len(&self) -> usize {
         self.table.len()
     }
 
+    /// Remove all entries from this table.
+    ///
+    /// Does not reallocate.
     pub(crate) fn clear(&mut self) {
         self.table.clear();
     }
 }
 
 impl<K: Key, V: Element, S> Table<K, V, S> {
+    /// Remove all expired entries from this table.
+    ///
+    /// This is an internal helper and does not reallocate.
     pub(crate) fn remove_expired_inner(&mut self) {
         self.table
             .retain(|(k, v)| !(k.is_expired() || v.is_expired()));
     }
 
+    /// Remove all expired entries from this table.
+    ///
+    /// (At some point in the future, this may shrink the allocation, as the
+    /// original `weak_table` implementation did.)
     pub(crate) fn remove_expired(&mut self) {
         self.remove_expired_inner();
     }
 }
 
 impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
+    /// Construct a function from a `hash_builder` suitable for hashing the
+    /// entries of this table.
+    ///
+    /// Many [`hashbrown::HashTable`] APIs need callbacks of this type.
+    ///
+    /// This can't take &self, for lifetime reasons.
     fn make_hasher(hash_builder: &S) -> impl Fn(&(K, V)) -> u64 + '_ {
         move |(k, _)| k.hash(hash_builder)
     }
 
+    /// Ensure that this table has capacity to insert `additional` entries
+    /// without reallocating.
+    ///
+    /// See caveats on [`Self::capacity`].
     pub(crate) fn try_reserve(
         &mut self,
         additional: usize,
@@ -81,10 +171,16 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         let orig_capacity = self.table.capacity();
         let orig_len = self.table.len();
 
+        // Check whether our existing capacity can handle this insertion.
         if orig_len + additional <= orig_capacity {
             return Ok(());
         }
 
+        // TODO: Split the rest of this into a #[cold] function.
+
+        // Remove all expired entries, and see whether doing so gave us enough
+        // capacity to accommodate the request.  Make sure that in this case we
+        // leave extra space so that we do not need to garbage-collect too often.
         self.remove_expired_inner();
         let new_len = self.table.len();
 
@@ -94,23 +190,40 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
             return Ok(());
         }
 
+        // We need to reallocate.
+
+        // XXXX Rethink n_to_grow in light of the way that capacity can shrink.
         let n_to_grow = (orig_capacity - new_len) + 1;
         self.table
             .try_reserve(n_to_grow, Self::make_hasher(&self.hash_builder))?;
         Ok(())
     }
 
+    /// Remove expired entries from this table, and reallocate it if appropriate
+    /// to reduce its size.
     pub(crate) fn shrink_to_fit(&mut self) {
-        // XXXX allow additional space?
         self.remove_expired_inner();
+        // TODO: Should we allow some additional space, as `weak-table` did?
+        // It seems to violate the contract of `shrink_to_fit` though.
         self.table
             .shrink_to_fit(Self::make_hasher(&self.hash_builder));
     }
 
+    /// Return an [`Entry`] corresponding to the occupied or unoccupied slot
+    /// of the provided `key`.
+    ///
+    /// If K is a Weak key, we always replace any existing occupied entry's key with K.
     pub(crate) fn entry(&mut self, key: K::Owned) -> Entry<'_, K, V> {
         let hash = K::hash_owned(&key, &self.hash_builder);
+
+        // Make sure that there is space for one more entry.
+        //
+        // We call this even though `hashbrown::HashTable::entry` will also
+        // allocate as needed, since we may want to expire old entries, and we
+        // may want to reallocate to a size other than `hashbrown` would choose.
         self.try_reserve(1)
             .expect("Unable to allocate space for entry!");
+
         match self.table.entry(
             hash,
             |(k, _v)| k.eq_owned(&key),
@@ -119,36 +232,51 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
             raw::Entry::Occupied(mut occupied_entry) => {
                 let (k, v) = occupied_entry.get_mut();
                 if let Some(v_handle) = v.handle() {
-                    // Here is where we change the key, if appropriate.
-                    // We don't need to get a handle to preserve k, since we are going to
-                    // replace it.
-                    // We don't need to check whether k is present, since
-                    // eq_owned always returns false on a dangling reference.
+                    // We have found an existing occupied entry with a
+                    // non-expired key and value.  (We know that the key was
+                    // non-expired when we looked it up, since eq_owned
+                    // succeeded.  If the entry's key expired between then and now,
+                    // it doesn't matter, since we are about to replace it with `key`.
+
+                    // Change the key if appropriate
                     let k_handle = K::handle_from_owned(&key);
                     k.reset_from_handle(&k_handle);
 
+                    // Return the entry.
                     Entry::Occupied(OccupiedEntry {
                         inner: occupied_entry,
                         k_handle,
                         v_handle,
                     })
                 } else {
-                    let (_, vacant_entry) = occupied_entry.remove();
+                    // We found an entry with the desired key, but the value was expired.
+                    //
+                    // Remove the entry and transform it into a vacant entry.
+                    let ((_k, _v), vacant_entry) = occupied_entry.remove();
                     Entry::Vacant(VacantEntry {
                         inner: vacant_entry,
                         pending_key: key,
-                        hash: K::CachedHash::new(hash),
+                        pending_key_hash: K::CachedHash::new(hash),
                     })
                 }
             }
-            raw::Entry::Vacant(vacant_entry) => Entry::Vacant(VacantEntry {
-                inner: vacant_entry,
-                pending_key: key,
-                hash: K::CachedHash::new(hash),
-            }),
+            raw::Entry::Vacant(vacant_entry) => {
+                // We found no existing entry.  Wrap the VacantEntry that we received.
+                Entry::Vacant(VacantEntry {
+                    inner: vacant_entry,
+                    pending_key: key,
+                    pending_key_hash: K::CachedHash::new(hash),
+                })
+            }
         }
     }
 
+    /// Look up an `OccupiedEntry` for a given key, if there is one and it has not expired.
+    ///
+    /// Unlike `find_entry`, this method never has to reallocate the table, and
+    /// never has to return a VacantEntry.
+    ///
+    /// It *does not* replace weak keys.
     pub(crate) fn find_entry<Q>(&mut self, key: &Q) -> Option<OccupiedEntry<'_, K, V>>
     where
         Q: ?Sized + Hash + Eq,
@@ -165,13 +293,18 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
                         v_handle,
                     })
                 } else {
+                    // Key or value has expired.
                     None
                 }
             }
-            Err(_) => None,
+            Err(_absent_entry) => {
+                // No entry present.
+                None
+            }
         }
     }
 
+    /// Look up the key and value for a given non-expired entry, if there is one.
     pub(crate) fn find<Q>(&self, key: &Q) -> Option<(K::Ref<'_>, V::Ref<'_>)>
     where
         Q: ?Sized + Hash + Eq,
@@ -186,7 +319,14 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         }
     }
 
-    /* XXXX
+    /* TODO retain:
+
+    This implementation doesn't work, for lifetime and invariance reasons.
+
+    It would be nice if we could fix it,
+    so we could make our `table` field stop being pub(crate),
+    and so we wouldn't have to have to maintain separate `retain()` implementations.
+
     pub(crate) fn retain<F>(&mut self, mut func: F)
     where
         F: FnMut(K::Ref<'_>, V::Ref<'_>) -> bool,
@@ -203,26 +343,32 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
 }
 
 impl<K: Element, V: Element, S> Table<K, V, S> {
+    /// Return an iterator over the non-expired entries in this Table, in an arbitrary order.
     pub(crate) fn iter(&self) -> Iter<'_, K, V> {
-        Iter {
-            iter: self.table.iter(),
-        }
+        Iter(self.table.iter())
     }
 
+    /// Return a consuming iterator over the non-expired entries in this Table, in an arbitrary order.
     pub(crate) fn into_iter(self) -> IntoIter<K, V> {
-        IntoIter {
-            iter: self.table.into_iter(),
-        }
+        IntoIter(self.table.into_iter())
     }
 
+    /// Return a draining iterator over the non-expired entries in this Table, in an arbitrary order.
+    ///
+    /// After this iterator is dropped, the table will be empty.  No
+    /// reallocation is performed.
     pub(crate) fn drain(&mut self) -> Drain<'_, K, V> {
-        Drain {
-            iter: self.table.drain(),
-        }
+        Drain(self.table.drain())
     }
 }
 
 impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
+    /// Return a reference to the key, and a mutable reference to the value, of
+    /// an entry in the table.
+    ///
+    /// Only implemented for owned values.
+    ///
+    /// Returns None if an entry exists but it is expired.
     pub(crate) fn find_mut<Q>(&mut self, key: &Q) -> Option<(K::Ref<'_>, &mut T)>
     where
         Q: ?Sized + Hash + Eq,
@@ -239,7 +385,9 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
 }
 
 impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
-    /* XXXX
+    /*
+      See "TODO retain" note above.
+
     pub(crate) fn retain_mut<F>(&mut self, mut func: F)
     where
         F: FnMut(K::Ref<'_>, &mut T) -> bool,
@@ -254,14 +402,16 @@ impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
     }
     */
 
+    /// Return an iterator over keys and mutable references to values in the table.
+    ///
+    /// Only implemented for owned values.
     pub(crate) fn iter_mut(&mut self) -> IterMut<'_, K, super::Owned<T>> {
-        IterMut {
-            iter: self.table.iter_mut(),
-        }
+        IterMut(self.table.iter_mut())
     }
 }
 
 impl<'a, K: Element, V: Element> OccupiedEntry<'a, K, V> {
+    /// Return references to the key and value of this entry.
     pub(crate) fn get(&'a self) -> (&'a K::Owned, &'a V::Owned) {
         let (k, v) = self.inner.get();
         (
@@ -269,8 +419,10 @@ impl<'a, K: Element, V: Element> OccupiedEntry<'a, K, V> {
             V::owned_ref_from_handle(v, &self.v_handle),
         )
     }
+
+    /// Remove this entry and return its members.
     pub(crate) fn remove(self) -> (K::Owned, V::Owned) {
-        // TODO: It would be nice to expose vacant when possible.
+        // TODO: It would be nice to expose `_vacant` when possible.
         let ((k, v), _vacant) = self.inner.remove();
         (
             K::owned_from_handle(k, self.k_handle),
@@ -280,7 +432,14 @@ impl<'a, K: Element, V: Element> OccupiedEntry<'a, K, V> {
 }
 
 impl<'a, K: Element, V: Element<CachedHash = ()>> OccupiedEntry<'a, K, V> {
+    /// Replace the value of this `OccupiedEntry` with `value`.
+    ///
+    /// Return the previous value.
     pub(crate) fn insert(&mut self, value: V::Owned) -> V::Owned {
+        // This is a little tricky because we need to replace self.inner.get_mut().1
+        // _and_ self.v_handle.  Then we need to return an owned value
+        // constructed from the previous values of those fields.
+
         let (_k, v) = self.inner.get_mut();
         let (mut new_val, mut v_handle) = V::from_owned(value, ());
 
@@ -292,21 +451,29 @@ impl<'a, K: Element, V: Element<CachedHash = ()>> OccupiedEntry<'a, K, V> {
 }
 
 impl<'a, K: Key, T> OccupiedEntry<'a, K, super::Owned<T>> {
-    /* XXXX
+    /* TODO get_mut:
+
+       Because of lifetime issues, this implementation isn't viable.
+       It would be nice to fix this, so we can make OccupiedEntry completely opaque.
+
     pub(crate) fn get_mut(&'a mut self) -> (&'a K::Owned, &'a mut T) {
         let (k, v) = self.inner.get_mut();
         (K::owned_ref_from_handle(k, &self.k_handle), &mut v.val)
     }
     */
 
+    /// Consume this `OccupiedEntry` returning a mutable pointer to its value.
+    ///
+    /// Only implemented for Owned values.
     pub(crate) fn into_mut(self) -> &'a mut T {
         &mut self.inner.into_mut().1.val
     }
 }
 
 impl<'a, K: Element, V: Element<CachedHash = ()>> VacantEntry<'a, K, V> {
+    /// Insert `val` into this vacant entry, and return the resulting `OccupiedEntry`.
     pub(crate) fn insert(self, val: V::Owned) -> OccupiedEntry<'a, K, V> {
-        let (key, k_handle) = K::from_owned(self.pending_key, self.hash);
+        let (key, k_handle) = K::from_owned(self.pending_key, self.pending_key_hash);
         let (val, v_handle) = V::from_owned(val, ());
         let occupied = self.inner.insert((key, val));
         OccupiedEntry {
@@ -318,25 +485,27 @@ impl<'a, K: Element, V: Element<CachedHash = ()>> VacantEntry<'a, K, V> {
 }
 
 impl<'a, K: Element, V: Element> VacantEntry<'a, K, V> {
+    /// Consume this `VacantEntry` and return the key that was used to
+    /// construct it.
     pub(crate) fn into_key(self) -> K::Owned {
         self.pending_key
     }
 
+    /// Return a reference to the key that was used to construct this `VacantEntry`.
     pub(crate) fn key(&self) -> &K::Owned {
         &self.pending_key
     }
 }
 
+/// An iterator over the keys and values in a [`Table`].
 #[derive(Debug, Clone)]
-pub(crate) struct Iter<'a, K, V> {
-    iter: raw::Iter<'a, (K, V)>,
-}
+pub(crate) struct Iter<'a, K, V>(raw::Iter<'a, (K, V)>);
 
 impl<'a, K: Element, V: Element> Iterator for Iter<'a, K, V> {
     type Item = (K::Ref<'a>, V::Ref<'a>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (k, v) in &mut self.iter {
+        for (k, v) in &mut self.0 {
             if let (Some(k_ref), Some(v_ref)) = (k.as_ref(), v.as_ref()) {
                 return Some((k_ref, v_ref));
             }
@@ -345,20 +514,23 @@ impl<'a, K: Element, V: Element> Iterator for Iter<'a, K, V> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, self.iter.size_hint().1)
+        // We have to replace the lower bound with 0 since we don't know the
+        // true lower bound: entries in the table may expire while we are
+        // iterating over it.
+        (0, self.0.size_hint().1)
     }
 }
 
+/// An iterator over the keys and mutable references to values in a [`Table`]
+/// with Owned values.
 #[derive(Debug)]
-pub(crate) struct IterMut<'a, K, V> {
-    iter: raw::IterMut<'a, (K, V)>,
-}
+pub(crate) struct IterMut<'a, K, V>(raw::IterMut<'a, (K, V)>);
 
 impl<'a, K: Element, T> Iterator for IterMut<'a, K, super::Owned<T>> {
     type Item = (K::Ref<'a>, &'a mut T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (k, super::Owned { val }) in &mut self.iter {
+        for (k, super::Owned { val }) in &mut self.0 {
             if let Some(k_ref) = k.as_ref() {
                 return Some((k_ref, val));
             }
@@ -367,20 +539,22 @@ impl<'a, K: Element, T> Iterator for IterMut<'a, K, super::Owned<T>> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, self.iter.size_hint().1)
+        // We have to replace the lower bound with 0 since we don't know the
+        // true lower bound: entries in the table may expire while we are
+        // iterating over it.
+        (0, self.0.size_hint().1)
     }
 }
 
+/// A consuming iterator over the keys and values in a [`Table`].
 #[derive(Debug)]
-pub(crate) struct IntoIter<K, V> {
-    iter: raw::IntoIter<(K, V)>,
-}
+pub(crate) struct IntoIter<K, V>(raw::IntoIter<(K, V)>);
 
 impl<K: Element, V: Element> Iterator for IntoIter<K, V> {
     type Item = (K::Owned, V::Owned);
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (k, v) in &mut self.iter {
+        for (k, v) in &mut self.0 {
             if let (Some(k_owned), Some(v_owned)) = (k.into_owned(), v.into_owned()) {
                 return Some((k_owned, v_owned));
             }
@@ -389,20 +563,25 @@ impl<K: Element, V: Element> Iterator for IntoIter<K, V> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, self.iter.size_hint().1)
+        // We have to replace the lower bound with 0 since we don't know the
+        // true lower bound: entries in the table may expire while we are
+        // iterating over it.
+        (0, self.0.size_hint().1)
     }
 }
 
+/// A draining iterator over the keys and values in a [`Table`].
+//
+// Note: We don't need to implement Drop for this, since
+// `hashbrown::hash_table::Drain` already implements Drop.
 #[derive(Debug)]
-pub(crate) struct Drain<'a, K, V> {
-    iter: raw::Drain<'a, (K, V)>,
-}
+pub(crate) struct Drain<'a, K, V>(raw::Drain<'a, (K, V)>);
 
 impl<'a, K: Element, V: Element> Iterator for Drain<'a, K, V> {
     type Item = (K::Owned, V::Owned);
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (k, v) in &mut self.iter {
+        for (k, v) in &mut self.0 {
             if let (Some(k_owned), Some(v_owned)) = (k.into_owned(), v.into_owned()) {
                 return Some((k_owned, v_owned));
             }
@@ -411,7 +590,10 @@ impl<'a, K: Element, V: Element> Iterator for Drain<'a, K, V> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, self.iter.size_hint().1)
+        // We have to replace the lower bound with 0 since we don't know the
+        // true lower bound: entries in the table may expire while we are
+        // iterating over it.
+        (0, self.0.size_hint().1)
     }
 }
 
@@ -439,10 +621,18 @@ where
     }
 }
 
+/// At what length threshold should a table of capacity `cap` grow?
+///
+/// We check this threshold only when we have removed expired entries from a table,
+/// to see whether we should use the newly freed space, or whether we should
+/// expand in order to avoid repeated garbage-collection steps.
 fn grow_at_threshold(cap: usize) -> usize {
     div_ceil(cap, 4) * 3
 }
 
+/// Return CEIL(a / b).
+///
+/// We have to provide this because `usize::div_ceil` isn't available at our MSRV.
 fn div_ceil(a: usize, b: usize) -> usize {
     a.saturating_add(b - 1) / b
 }
