@@ -1,3 +1,5 @@
+#![allow(missing_docs, clippy::missing_docs_in_private_items)]
+
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;

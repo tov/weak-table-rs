@@ -1,3 +1,5 @@
+//! Define wrappers for implementing pointer-equality checking.
+
 use crate::compat::*;
 
 use super::traits::*;

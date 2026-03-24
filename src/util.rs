@@ -1,3 +1,5 @@
+//! Internal utility functions.
+
 use crate::compat::*;
 
 /// Use `hash_builder` to compute the hash of `value`.

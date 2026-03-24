@@ -1,3 +1,5 @@
+//! Backend implementation for a weak table based on [`hashbrown`].
+
 use crate::compat::*;
 
 use hashbrown::hash_table as raw;
@@ -80,7 +82,9 @@ pub(crate) struct VacantEntry<'a, K: Element, V> {
 /// Since this type is internal, we don't actually need to implement any methods
 /// on it.
 pub(crate) enum Entry<'a, K: Key, V: Element> {
+    /// An occupied entry.
     Occupied(OccupiedEntry<'a, K, V>),
+    /// A vacant entry.
     Vacant(VacantEntry<'a, K, V>),
 }
 

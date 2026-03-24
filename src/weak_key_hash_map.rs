@@ -7,22 +7,24 @@ use super::*;
 
 pub use super::WeakKeyHashMap;
 
-pub(super) type InnerTable<K, V, S> = inner::Table<inner::WeakK<K>, inner::Owned<V>, S>;
-type InnerOccupiedEntry<'a, K, V> = inner::OccupiedEntry<'a, inner::WeakK<K>, inner::Owned<V>>;
-type InnerVacantEntry<'a, K, V> = inner::VacantEntry<'a, inner::WeakK<K>, inner::Owned<V>>;
-
 /// Represents an entry in the table which may be occupied or vacant.
 #[allow(clippy::exhaustive_enums)]
 pub enum Entry<'a, K: 'a + WeakKey, V: 'a> {
+    /// An occupied entry.
     Occupied(OccupiedEntry<'a, K, V>),
+    /// A vacant entry.
     Vacant(VacantEntry<'a, K, V>),
 }
 
 /// An occupied entry, which can be removed or viewed.
-pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(InnerOccupiedEntry<'a, K, V>);
+pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(
+    inner::OccupiedEntry<'a, inner::WeakK<K>, inner::Owned<V>>,
+);
 
 /// A vacant entry, which can be inserted in or viewed.
-pub struct VacantEntry<'a, K: 'a + WeakKey, V: 'a>(InnerVacantEntry<'a, K, V>);
+pub struct VacantEntry<'a, K: 'a + WeakKey, V: 'a>(
+    inner::VacantEntry<'a, inner::WeakK<K>, inner::Owned<V>>,
+);
 
 /// An iterator over the keys and values of the weak hash map.
 #[derive(Clone, Debug)]
@@ -163,7 +165,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
     ///
     /// *O*(*n*) time
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        WeakKeyHashMap(InnerTable::new(capacity, hash_builder))
+        WeakKeyHashMap(inner::Table::new(capacity, hash_builder))
     }
 
     /// Returns a reference to the map's `BuildHasher`.

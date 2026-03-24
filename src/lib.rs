@@ -22,7 +22,7 @@ mod util;
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakKeyHashMap<K, V, S = RandomState>(weak_key_hash_map::InnerTable<K, V, S>);
+pub struct WeakKeyHashMap<K, V, S = RandomState>(inner::Table<inner::WeakK<K>, inner::Owned<V>, S>);
 
 /// A hash map with weak keys, hashed on key pointer.
 ///
@@ -57,13 +57,17 @@ pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(WeakKeyHashMap<by_ptr::ByPtr
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakValueHashMap<K, V, S = RandomState>(weak_value_hash_map::InnerTable<K, V, S>);
+pub struct WeakValueHashMap<K, V, S = RandomState>(
+    inner::Table<inner::Owned<K>, inner::WeakV<V>, S>,
+);
 
 /// A hash map with weak keys and weak values, hashed on key value.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakWeakHashMap<K, V, S = RandomState>(weak_weak_hash_map::InnerTable<K, V, S>);
+pub struct WeakWeakHashMap<K, V, S = RandomState>(
+    inner::Table<inner::WeakK<K>, inner::WeakV<V>, S>,
+);
 
 /// A hash map with weak keys and weak values, hashed on key pointer.
 ///

@@ -255,6 +255,7 @@ impl<T: Hash + Eq> Key for Owned<T> {
 /// This is a `u64` for weak keys,
 /// and a `()` everywhere else.
 pub(crate) trait MaybeHash {
+    /// Construct a new hash (or discard the input).
     fn new(hash: u64) -> Self;
 }
 

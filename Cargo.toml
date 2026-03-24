@@ -27,7 +27,7 @@ alloc = []
 
 [lints.rust]
 unsafe_code = "warn"
-#missing_docs = "warn"
+missing_docs = "warn"
 noop_method_call = "warn"
 unreachable_pub = "warn"
 
@@ -45,7 +45,7 @@ fallible_impl_from = "warn"
 implicit_clone = "warn"
 large_stack_arrays = "warn"
 manual_ok_or = "warn"
-#missing_docs_in_private_items = "warn"
+missing_docs_in_private_items = "warn"
 needless_borrow = "warn"
 needless_pass_by_value = "warn"
 option_option = "warn"

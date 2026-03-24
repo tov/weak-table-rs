@@ -6,22 +6,24 @@ use super::*;
 
 pub use super::WeakValueHashMap;
 
-pub(super) type InnerTable<K, V, S> = inner::Table<inner::Owned<K>, inner::WeakV<V>, S>;
-type InnerOccupiedEntry<'a, K, V> = inner::OccupiedEntry<'a, inner::Owned<K>, inner::WeakV<V>>;
-type InnerVacantEntry<'a, K, V> = inner::VacantEntry<'a, inner::Owned<K>, inner::WeakV<V>>;
-
 /// Represents an entry in the table which may be occupied or vacant.
 #[allow(clippy::exhaustive_enums)]
 pub enum Entry<'a, K: 'a, V: 'a + WeakElement> {
+    /// An occupied entry.
     Occupied(OccupiedEntry<'a, K, V>),
+    /// A vacant entry.
     Vacant(VacantEntry<'a, K, V>),
 }
 
 /// An occupied entry, which can be removed or viewed.
-pub struct OccupiedEntry<'a, K: 'a, V: 'a + WeakElement>(InnerOccupiedEntry<'a, K, V>);
+pub struct OccupiedEntry<'a, K: 'a, V: 'a + WeakElement>(
+    inner::OccupiedEntry<'a, inner::Owned<K>, inner::WeakV<V>>,
+);
 
 /// A vacant entry, which can be inserted in or viewed.
-pub struct VacantEntry<'a, K: 'a, V: 'a + WeakElement>(InnerVacantEntry<'a, K, V>);
+pub struct VacantEntry<'a, K: 'a, V: 'a + WeakElement>(
+    inner::VacantEntry<'a, inner::Owned<K>, inner::WeakV<V>>,
+);
 
 /// An iterator over the keys and values of the weak hash map.
 #[derive(Clone, Debug)]

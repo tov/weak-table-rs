@@ -13,14 +13,14 @@ pub use std::collections::hash_map::RandomState;
 #[cfg(not(any(feature = "ahash", feature = "std")))]
 compile_error!("weak-table: no_std requires that you enable the `ahash` feature.");
 
-// If we depend on `std`, alias `lib` to `std`.
+/// If we depend on `std`, we alias `lib` to `std`.
 #[cfg(feature = "std")]
 mod lib {
     extern crate std;
     pub(crate) use std::*;
 }
 
-// Otherwise, we are `no_std`, so alias `lib` to `alloc`.
+/// If we are `no_std`, we alias `lib` to `alloc`.
 #[cfg(not(feature = "std"))]
 mod lib {
     extern crate alloc;

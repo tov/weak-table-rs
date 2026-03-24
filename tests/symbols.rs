@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 extern crate weak_table;
 
 use weak_table::WeakHashSet;
