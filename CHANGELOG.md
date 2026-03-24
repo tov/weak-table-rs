@@ -10,6 +10,38 @@ The format is based on [Keep a Changelog] and this project adheres to
 
 ## [Next Release]
 
+### Added
+
+- High-coverage unit tests for the hash table backend.
+
+### Changed (visible)
+
+- All hash-tables now use a new backend based on [`hashbrown`]
+  for improved speed and correctness.
+- The Minimum Supported Rust Version is now 1.65.
+  (This is necessary to use `hashbrown`.)
+- The default capacity for new tables is now zero.
+
+### Changed (internal)
+
+- Numerous Clippy warnings are now enabled.
+- The Rust Edition is now 2021.
+- We no longer rely on floating-point except in methods that return a
+  floating-point result.
+- The `Debug` output is slightly different.
+- The source is now formatted according to the Rust style guide,
+  using `cargo fmt`.
+- Allocation sizes are now slightly different.
+- The output of `Debug` is now slightly different.
+- Because of `hashbrown` internals, capacity calculations can behave
+  differently.
+
+### Fixed
+
+- The `retain()` and `remove_expired()` methods no longer
+  skip elements that changed position due to other elements having been
+  removed. ([github#22])
+
 ## [0.3.2] - 2021-12-01
 
 ### Documentation
@@ -94,3 +126,6 @@ Initial release.
 [0.1.3]: <https://github.com/tov/weak-table-rs/compare/0.1.2...0.1.3>
 [0.1.2]: <https://github.com/tov/weak-table-rs/compare/0.1.1...0.1.2>
 [0.1.1]: <https://github.com/tov/weak-table-rs/tree/0.1.1>
+[`weak-table`]: <https://crates.io/crates/weak-table>
+[`hashbrown`]: <https://docs.rs/hashbrown/latest/hashbrown/struct.HashTable.html>
+[github#22]: <https://github.com/tov/weak-table-rs/issues/22>
