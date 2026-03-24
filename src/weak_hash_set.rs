@@ -324,3 +324,40 @@ impl<'a, T: WeakKey, S> IntoIterator for &'a WeakHashSet<T, S> {
         Iter(self.0.keys())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::compat::rc::{Rc, Weak};
+
+    // Regression check for https://github.com/tov/weak-table-rs/issues/22
+    #[test]
+    fn test_retain_regresion() {
+        // Run multiple iterations, since this was a heisenbug.
+        for _ in 0..20 {
+            let mut set: WeakHashSet<Weak<u8>> = WeakHashSet::default();
+            let mut preserve_vals = Vec::new();
+
+            const N: u8 = 50;
+
+            for i in 0..N {
+                let rc = Rc::new(i);
+                preserve_vals.push(rc.clone());
+                set.insert(rc);
+            }
+
+            let rc_n = Rc::new(N);
+            set.insert(rc_n.clone());
+
+            drop(preserve_vals);
+
+            let mut retain_called_on = Vec::new();
+            set.retain(|val| {
+                retain_called_on.push(val);
+                false
+            });
+
+            assert_eq!(retain_called_on, vec![rc_n]);
+        }
+    }
+}
