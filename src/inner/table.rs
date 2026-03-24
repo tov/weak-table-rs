@@ -14,20 +14,20 @@ pub(crate) struct Table<K, V, S> {
     hash_builder: S,
 }
 
-pub(crate) struct OccupiedEntry<'a, K: Element + 'a, V: Element + 'a> {
+pub(crate) struct OccupiedEntry<'a, K: Element, V: Element> {
     // XXXX
     pub(crate) inner: raw::OccupiedEntry<'a, (K, V)>,
     k_up: K::Upgraded,
     v_up: V::Upgraded,
 }
 
-pub(crate) struct VacantEntry<'a, K: Element + 'a, V: 'a> {
+pub(crate) struct VacantEntry<'a, K: Element, V> {
     hash: K::CachedHash,
     inner: raw::VacantEntry<'a, (K, V)>,
     pending_key: K::Owned,
 }
 
-pub(crate) enum Entry<'a, K: Key + 'a, V: Element + 'a> {
+pub(crate) enum Entry<'a, K: Key, V: Element> {
     Occupied(OccupiedEntry<'a, K, V>),
     Vacant(VacantEntry<'a, K, V>),
 }
@@ -261,7 +261,7 @@ impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
     }
 }
 
-impl<'a, K: Element + 'a, V: Element + 'a> OccupiedEntry<'a, K, V> {
+impl<'a, K: Element, V: Element> OccupiedEntry<'a, K, V> {
     pub(crate) fn get(&'a self) -> (&'a K::Owned, &'a V::Owned) {
         let (k, v) = self.inner.get();
         (
@@ -279,7 +279,7 @@ impl<'a, K: Element + 'a, V: Element + 'a> OccupiedEntry<'a, K, V> {
     }
 }
 
-impl<'a, K: Element + 'a, V: Element<CachedHash = ()> + 'a> OccupiedEntry<'a, K, V> {
+impl<'a, K: Element, V: Element<CachedHash = ()>> OccupiedEntry<'a, K, V> {
     pub(crate) fn insert(&mut self, value: V::Owned) -> V::Owned {
         let (_k, v) = self.inner.get_mut();
         let (mut new_val, mut v_up) = V::from_owned(value, ());
@@ -291,7 +291,7 @@ impl<'a, K: Element + 'a, V: Element<CachedHash = ()> + 'a> OccupiedEntry<'a, K,
     }
 }
 
-impl<'a, K: Key + 'a, T: 'a> OccupiedEntry<'a, K, super::Owned<T>> {
+impl<'a, K: Key, T> OccupiedEntry<'a, K, super::Owned<T>> {
     /* XXXX
     pub(crate) fn get_mut(&'a mut self) -> (&'a K::Owned, &'a mut T) {
         let (k, v) = self.inner.get_mut();
@@ -304,7 +304,7 @@ impl<'a, K: Key + 'a, T: 'a> OccupiedEntry<'a, K, super::Owned<T>> {
     }
 }
 
-impl<'a, K: Element + 'a, V: Element<CachedHash = ()> + 'a> VacantEntry<'a, K, V> {
+impl<'a, K: Element, V: Element<CachedHash = ()>> VacantEntry<'a, K, V> {
     pub(crate) fn insert(self, val: V::Owned) -> OccupiedEntry<'a, K, V> {
         let (key, k_up) = K::from_owned(self.pending_key, self.hash);
         let (val, v_up) = V::from_owned(val, ());
@@ -317,7 +317,7 @@ impl<'a, K: Element + 'a, V: Element<CachedHash = ()> + 'a> VacantEntry<'a, K, V
     }
 }
 
-impl<'a, K: Element + 'a, V: Element + 'a> VacantEntry<'a, K, V> {
+impl<'a, K: Element, V: Element> VacantEntry<'a, K, V> {
     pub(crate) fn into_key(self) -> K::Owned {
         self.pending_key
     }
@@ -415,7 +415,7 @@ impl<'a, K: Element, V: Element> Iterator for Drain<'a, K, V> {
     }
 }
 
-impl<'a, K: Element + 'a, V: Element + 'a> fmt::Debug for OccupiedEntry<'a, K, V>
+impl<'a, K: Element, V: Element> fmt::Debug for OccupiedEntry<'a, K, V>
 where
     K::Owned: fmt::Debug,
     V::Owned: fmt::Debug,
@@ -429,7 +429,7 @@ where
     }
 }
 
-impl<'a, K: Element + 'a, V: Element + 'a> fmt::Debug for VacantEntry<'a, K, V>
+impl<'a, K: Element, V: Element> fmt::Debug for VacantEntry<'a, K, V>
 where
     K::Owned: fmt::Debug,
 {
@@ -461,7 +461,7 @@ mod test {
     // WeakValMap
     type WkValMap = Table<Owned<u8>, WeakV<Weak<u8>>, RandomState>;
 
-    impl<'a, K: Key + 'a, V: Element + 'a> super::Entry<'a, K, V> {
+    impl<'a, K: Key, V: Element> super::Entry<'a, K, V> {
         fn unwrap_occupied(self) -> OccupiedEntry<'a, K, V> {
             match self {
                 Entry::Occupied(e) => e,
