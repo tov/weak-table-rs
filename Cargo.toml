@@ -24,3 +24,39 @@ std = []
 
 # This feature doesn’t actually do anything. TODO: remove in v0.4.
 alloc = []
+
+[lints.rust]
+unsafe_code = "warn"
+#missing_docs = "warn"
+noop_method_call = "warn"
+#unreachable_pub = "warn"
+
+[lints.clippy]
+all = "warn"
+cargo_common_metadata = "warn"
+cast_lossless  ="warn"
+checked_conversions = "warn"
+cognitive_complexity = "warn"
+debug_assert_with_mut_call = "warn"
+#exhaustive_enums = "warn"
+#exhaustive_structs = "warn"
+expl_impl_clone_on_copy = "warn"
+fallible_impl_from = "warn"
+implicit_clone = "warn"
+large_stack_arrays = "warn"
+manual_ok_or = "warn"
+#missing_docs_in_private_items = "warn"
+needless_borrow = "warn"
+needless_pass_by_value = "warn"
+option_option = "warn"
+#print_stderr = "warn"
+print_stdout = "warn"
+rc_buffer = "warn"
+ref_option_ref = "warn"
+#semicolon_if_nothing_returned = "warn"
+trait_duplication_in_bounds = "warn"
+unchecked_time_subtraction = "warn"
+unnecessary_wraps = "warn"
+unseparated_literal_suffix = "warn"
+unwrap_used = "warn"
+mod_module_files = "warn"

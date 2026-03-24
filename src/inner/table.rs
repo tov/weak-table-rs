@@ -637,8 +637,9 @@ fn div_ceil(a: usize, b: usize) -> usize {
     a.saturating_add(b - 1) / b
 }
 
-#[cfg(all(test, feature="std"))]
+#[cfg(all(test, feature = "std"))]
 mod test {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::compat::rc::{Rc, Weak};
     use crate::inner::{Owned, WeakK, WeakV};
@@ -683,7 +684,7 @@ mod test {
     fn get_hasher() {
         let rs = RandomState::default();
         let tab = WkKeyMap::new(7, rs.clone());
-        assert_eq!(hash_one(&rs, &13u8), hash_one(tab.hasher(), &13u8));
+        assert_eq!(hash_one(&rs, &13_u8), hash_one(tab.hasher(), &13_u8));
     }
 
     #[test]

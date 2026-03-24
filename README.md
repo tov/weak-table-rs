@@ -129,8 +129,7 @@ impl SymbolTable {
     }
 }
 
-#[test]
-fn interning() {
+fn interning_test() {
     let mut tab = SymbolTable::new();
 
     let a0 = tab.intern("a");
@@ -140,5 +139,6 @@ fn interning() {
     assert_eq!(a0, a1);
     assert_ne!(a0, b);
 }
+# interning_test();
 ```
 
