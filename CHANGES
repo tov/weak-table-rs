@@ -1,0 +1,7 @@
+
+- No fp
+- Using hashbrown internally
+- shrink_to_fit no longer leaves extra space.
+- cargo fmt
+- default capacity is now 0.
+- Capacity can go down due to hashbrown.
