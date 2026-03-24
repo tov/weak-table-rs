@@ -168,38 +168,52 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     /// without reallocating.
     ///
     /// See caveats on [`Self::capacity`].
+    #[inline]
     pub(crate) fn try_reserve(
         &mut self,
         additional: usize,
     ) -> Result<(), hashbrown::TryReserveError> {
-        let orig_capacity = self.table.capacity();
-        let orig_len = self.table.len();
-
         // Check whether our existing capacity can handle this insertion.
-        if orig_len + additional <= orig_capacity {
+        if self.table.len().saturating_add(additional) <= self.table.capacity() {
             return Ok(());
         }
 
-        // TODO: Split the rest of this into a #[cold] function.
+        self.gc_and_try_grow(additional)
+    }
+
+    /// Cold path for try_reserve: Remove expired entries, and then grow if
+    /// necessary to ensure that we have enough room to expand _comfortably_ to
+    /// hold `additional` elements.
+    #[cold]
+    fn gc_and_try_grow(&mut self, additional: usize) -> Result<(), hashbrown::TryReserveError> {
+        // Note that removing expired entries can lower the capacity of the
+        // table.  See notes on `capacity()` above.
 
         // Remove all expired entries, and see whether doing so gave us enough
-        // capacity to accommodate the request.  Make sure that in this case we
-        // leave extra space so that we do not need to garbage-collect too often.
+        // capacity to accommodate the request.
         self.remove_expired_inner();
-        let new_len = self.table.len();
+        let new_len = self.len();
+        let expected_len = new_len
+            .checked_add(additional)
+            .ok_or(hashbrown::TryReserveError::CapacityOverflow)?;
 
-        // XXXX Rethink these thresholds in light of the way that capacity can
-        // shrink.
-        if new_len + additional < grow_at_threshold(orig_capacity) {
+        let desired_capacity = desired_capacity_for(expected_len);
+
+        if self.capacity() >= desired_capacity {
+            // We have enough space to expand our length by a third without
+            // reallocating.  Don't reallocate yet.
             return Ok(());
         }
 
-        // We need to reallocate.
+        // We didn't free enough space by removing expired entries.
+        // Therefore, we need to reallocate.
+        //
+        // (Note that in practice, hashbrown will also round our requested
+        // capacity upward.)
+        let growth = desired_capacity - new_len;
 
-        // XXXX Rethink n_to_grow in light of the way that capacity can shrink.
-        let n_to_grow = (orig_capacity - new_len) + 1;
         self.table
-            .try_reserve(n_to_grow, Self::make_hasher(&self.hash_builder))?;
+            .try_reserve(growth, Self::make_hasher(&self.hash_builder))?;
         Ok(())
     }
 
@@ -625,13 +639,16 @@ where
     }
 }
 
-/// At what length threshold should a table of capacity `cap` grow?
+/// What minimum capacity should we try to have for a table with `len` elements,
+/// when we are deciding whether to reallocate?
 ///
 /// We check this threshold only when we have removed expired entries from a table,
 /// to see whether we should use the newly freed space, or whether we should
 /// expand in order to avoid repeated garbage-collection steps.
-fn grow_at_threshold(cap: usize) -> usize {
-    div_ceil(cap, 4) * 3
+///
+/// The returned value is always greater than `len`.
+fn desired_capacity_for(len: usize) -> usize {
+    div_ceil(len, 3) * 4 + 1
 }
 
 /// Return CEIL(a / b).
@@ -1070,5 +1087,28 @@ mod test {
 
         tab.remove_expired();
         assert_eq!(tab.len(), 50);
+    }
+
+    #[test]
+    fn div_ceil_test() {
+        assert_eq!(div_ceil(0, 99), 0);
+        assert_eq!(div_ceil(100, 99), 2);
+        assert_eq!(div_ceil(6, 3), 2);
+        assert_eq!(div_ceil(7, 3), 3);
+    }
+
+    #[test]
+    fn desired_capacity_test() {
+        assert_eq!(desired_capacity_for(0), 1);
+        assert_eq!(desired_capacity_for(1), 5);
+        assert_eq!(desired_capacity_for(3), 5);
+        assert_eq!(desired_capacity_for(4), 9);
+        assert_eq!(desired_capacity_for(10), 17);
+
+        for len in 0..200 {
+            let cap = desired_capacity_for(len);
+            assert!(cap > len);
+            assert!((len as f64) < (cap as f64) * 0.75);
+        }
     }
 }
