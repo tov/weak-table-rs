@@ -12,6 +12,7 @@ type InnerOccupiedEntry<'a, K, V> = inner::OccupiedEntry<'a, inner::WeakK<K>, in
 type InnerVacantEntry<'a, K, V> = inner::VacantEntry<'a, inner::WeakK<K>, inner::WeakV<V>>;
 
 /// Represents an entry in the table which may be occupied or vacant.
+#[allow(clippy::exhaustive_enums)]
 pub enum Entry<'a, K: 'a + WeakKey, V: 'a + WeakElement> {
     Occupied(OccupiedEntry<'a, K, V>),
     Vacant(VacantEntry<'a, K, V>),

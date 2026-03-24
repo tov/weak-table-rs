@@ -30,6 +30,7 @@ quickcheck! {
 }
 
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum Cmd<K, V> {
     Insert(K, V),
     Reinsert(usize, V),
