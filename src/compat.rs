@@ -24,14 +24,14 @@ mod lib {
 #[cfg(not(feature = "std"))]
 mod lib {
     extern crate alloc;
-    pub use alloc::*;
+    pub(crate) use alloc::*;
 }
 
 // Stuff from `std`/`alloc` that we use often.
 pub(crate) use lib::{rc, sync};
 
 #[cfg(test)]
-pub(crate) use lib::{string::String, vec::Vec};
+pub(crate) use lib::{string::String, vec, vec::Vec};
 
 // Stuff from `core` that we use often:
 pub(crate) use core::{
@@ -48,4 +48,4 @@ pub(crate) use core::{
 extern crate std;
 
 #[cfg(test)]
-pub(crate) use std::eprintln;
+pub(crate) use std::{eprintln, format};

@@ -641,7 +641,7 @@ fn div_ceil(a: usize, b: usize) -> usize {
     a.saturating_add(b - 1) / b
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod test {
     #![allow(clippy::unwrap_used)]
     use super::*;
