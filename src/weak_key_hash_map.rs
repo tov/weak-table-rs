@@ -735,6 +735,7 @@ impl<K: WeakElement, V, S> WeakKeyHashMap<K, V, S> {
 
 #[cfg(test)]
 mod test {
+    #![allow(clippy::print_stderr)]
     use super::{Entry, WeakKeyHashMap};
     use crate::compat::{
         eprintln,

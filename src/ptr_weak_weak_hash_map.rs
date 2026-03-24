@@ -342,6 +342,8 @@ impl<'a, K: WeakElement, V: WeakElement, S> IntoIterator for &'a PtrWeakWeakHash
 
 #[cfg(test)]
 mod test {
+    #![allow(clippy::print_stderr)]
+
     use super::{Entry, PtrWeakWeakHashMap};
     use crate::compat::{
         eprintln,
