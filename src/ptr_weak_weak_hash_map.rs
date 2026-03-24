@@ -68,21 +68,21 @@ where
     ///
     /// *O*(*n*) time
     pub fn remove_expired(&mut self) {
-        self.0.remove_expired()
+        self.0.remove_expired();
     }
 
     /// Reserves room for additional elements.
     ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
-        self.0.reserve(additional_capacity)
+        self.0.reserve(additional_capacity);
     }
 
     /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
     ///
     /// *O*(*n*) time
     pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit()
+        self.0.shrink_to_fit();
     }
 
     /// Returns an over-approximation of the number of elements.
@@ -122,7 +122,7 @@ where
     ///
     /// *O*(*n*) time
     pub fn clear(&mut self) {
-        self.0.clear()
+        self.0.clear();
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -163,7 +163,7 @@ where
     where
         F: FnMut(K::Strong, V::Strong) -> bool,
     {
-        self.0.retain(f)
+        self.0.retain(f);
     }
 
     /// Is this map a submap of the other, using the given value comparison.
@@ -300,7 +300,7 @@ where
     S: BuildHasher,
 {
     fn extend<T: IntoIterator<Item = (K::Strong, V::Strong)>>(&mut self, iter: T) {
-        self.0.extend(iter)
+        self.0.extend(iter);
     }
 }
 

@@ -259,7 +259,7 @@ pub(crate) trait MaybeHash {
 }
 
 impl MaybeHash for () {
-    #[allow(clippy::unused_unit)]
+    #[allow(clippy::unused_unit, clippy::semicolon_if_nothing_returned)]
     fn new(_hash: u64) -> Self {
         ()
     }

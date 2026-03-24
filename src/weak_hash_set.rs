@@ -59,21 +59,21 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// *O*(*n*) time
     pub fn remove_expired(&mut self) {
-        self.0.remove_expired()
+        self.0.remove_expired();
     }
 
     /// Reserves room for additional elements.
     ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
-        self.0.reserve(additional_capacity)
+        self.0.reserve(additional_capacity);
     }
 
     /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
     ///
     /// *O*(*n*) time
     pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit()
+        self.0.shrink_to_fit();
     }
 
     /// Returns an over-approximation of the number of elements.
@@ -106,7 +106,7 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// *O*(*n*) time
     pub fn clear(&mut self) {
-        self.0.clear()
+        self.0.clear();
     }
 
     // Non-ptr WeakHashSet should probably have `get` method.
@@ -178,7 +178,7 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     where
         F: FnMut(T::Strong) -> bool,
     {
-        self.0.retain(|k, _| f(k))
+        self.0.retain(|k, _| f(k));
     }
 
     /// Is self a subset of other?
@@ -288,7 +288,7 @@ where
 
 impl<T: WeakKey, S: BuildHasher> Extend<T::Strong> for WeakHashSet<T, S> {
     fn extend<I: IntoIterator<Item = T::Strong>>(&mut self, iter: I) {
-        self.0.extend(iter.into_iter().map(|k| (k, ())))
+        self.0.extend(iter.into_iter().map(|k| (k, ())));
     }
 }
 

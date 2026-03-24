@@ -927,7 +927,7 @@ mod test {
         let mut count = 0;
         for (k, v) in iter {
             count += 1;
-            assert_eq!(*v, k.as_ref() * k.as_ref())
+            assert_eq!(*v, k.as_ref() * k.as_ref());
         }
         assert_eq!(count, persist_keys.len());
 
@@ -937,7 +937,7 @@ mod test {
         check_size_hint_ok(len, intoiter.size_hint());
         for (k, v) in intoiter {
             count += 1;
-            assert_eq!(v, k.as_ref() * k.as_ref())
+            assert_eq!(v, k.as_ref() * k.as_ref());
         }
         assert_eq!(count, persist_keys.len());
     }

@@ -151,7 +151,7 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
     ///
     /// *O*(*n*) time
     pub fn remove_expired(&mut self) {
-        self.retain(|_, _| true)
+        self.retain(|_, _| true);
     }
 
     /// Reserves room for additional elements.

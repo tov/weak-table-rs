@@ -355,7 +355,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
             } else {
                 false
             }
-        })
+        });
     }
 
     /// Is this map a submap of the other under the given value comparison `cmp`?
