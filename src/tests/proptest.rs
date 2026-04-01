@@ -1,7 +1,12 @@
 //!  Property tests for the various map and set types.
+//!
+mod ptr_weak_key_hash_map;
+mod ptr_weak_weak_hash_map;
 mod weak_key_hash_map;
 mod weak_value_hash_map;
 mod weak_weak_hash_map;
+
+use std::sync::Arc;
 
 use quickcheck::{Arbitrary, Gen};
 
@@ -118,7 +123,7 @@ impl Arbitrary for ForgetStrategy {
     }
 }
 
-trait ExecuteMapCmd<K, V> {
+trait ExecuteMapCmd<K, V>: std::fmt::Debug {
     fn execute_command(&mut self, cmd: &MapCmd<K, V>) {
         use MapCmd::*;
         match *cmd {
@@ -155,4 +160,33 @@ trait ExecuteMapCmd<K, V> {
     fn shrink_to_fit(&mut self);
 
     fn clear(&mut self);
+}
+
+// Wrapper to allow using Arc<K> as a by-pointer key of a _strong_ hashmap or hashset.
+#[derive(Clone, Debug)]
+struct KeyByPtr<K>(std::sync::Arc<K>);
+
+impl<K> PartialEq for KeyByPtr<K> {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+impl<K> Eq for KeyByPtr<K> {}
+impl<K> std::hash::Hash for KeyByPtr<K> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let ptr = Arc::as_ptr(&self.0) as *const ();
+        ptr.hash(state);
+    }
+}
+impl<K> PartialOrd for KeyByPtr<K> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl<K> Ord for KeyByPtr<K> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let p1 = Arc::as_ptr(&self.0) as *const ();
+        let p2 = Arc::as_ptr(&other.0) as *const ();
+        p1.cmp(&p2)
+    }
 }
