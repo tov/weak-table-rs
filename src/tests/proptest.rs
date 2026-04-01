@@ -20,7 +20,7 @@ pub enum RemoveStrategy {
 
 #[derive(Clone, Debug)]
 #[non_exhaustive]
-pub enum Cmd<K, V> {
+pub enum MapCmd<K, V> {
     Insert(InsertStrategy, K, V),
     Reinsert(InsertStrategy, usize, V),
     RemoveInserted(RemoveStrategy, usize),
@@ -32,13 +32,13 @@ pub enum Cmd<K, V> {
 }
 
 #[derive(Clone, Debug)]
-pub struct Script<K, V>(Vec<Cmd<K, V>>);
+pub struct MapScript<K, V>(Vec<MapCmd<K, V>>);
 
 // TODO: consider migrating to something that uses arbitrary::Arbitrary, which
 // has a derive macro.
-impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
+impl<K: Arbitrary, V: Arbitrary> Arbitrary for MapCmd<K, V> {
     fn arbitrary(g: &mut Gen) -> Self {
-        use Cmd::*;
+        use MapCmd::*;
         let choice = u8::arbitrary(g);
 
         match choice % 13 {
@@ -63,13 +63,13 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for Cmd<K, V> {
     }
 }
 
-impl<K: Arbitrary, V: Arbitrary> Arbitrary for Script<K, V> {
+impl<K: Arbitrary, V: Arbitrary> Arbitrary for MapScript<K, V> {
     fn arbitrary(g: &mut Gen) -> Self {
-        Script(Vec::<Cmd<K, V>>::arbitrary(g))
+        MapScript(Vec::<MapCmd<K, V>>::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        Box::new(self.0.shrink().map(|v| Script(v)))
+        Box::new(self.0.shrink().map(|v| MapScript(v)))
     }
 }
 

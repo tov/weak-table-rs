@@ -9,9 +9,9 @@ use quickcheck::quickcheck;
 
 use weak_table::WeakKeyHashMap;
 
-use super::{Cmd, Cmd::*, InsertStrategy, RemoveStrategy, Script};
+use super::{InsertStrategy, MapCmd, MapCmd::*, MapScript, RemoveStrategy};
 
-fn test_script<K, V>(script: &Script<K, V>) -> bool
+fn test_script<K, V>(script: &MapScript<K, V>) -> bool
 where
     K: Clone + Debug + Eq + Hash + Ord,
     V: Clone + Debug + Eq + Ord,
@@ -22,11 +22,11 @@ where
 }
 
 quickcheck! {
-    fn prop_u8_u8(script: Script<u8, u8>) -> bool {
+    fn prop_u8_u8(script: MapScript<u8, u8>) -> bool {
         test_script(&script)
     }
 
-    fn prop_string_usize(script: Script<String, usize>) -> bool {
+    fn prop_string_usize(script: MapScript<String, usize>) -> bool {
         test_script(&script)
     }
 }
@@ -186,14 +186,14 @@ where
         }
     }
 
-    pub fn execute_script(&mut self, script: &Script<K, V>) {
+    pub fn execute_script(&mut self, script: &MapScript<K, V>) {
         //        eprintln!("\n*** Starting script ***");
         for cmd in &script.0 {
             self.execute_command(cmd);
         }
     }
 
-    pub fn execute_command(&mut self, cmd: &Cmd<K, V>) {
+    pub fn execute_command(&mut self, cmd: &MapCmd<K, V>) {
         //        eprintln!("Executing command: {:?}", cmd);
         match *cmd {
             Insert(strategy, ref k, ref v) => self.insert(strategy, k, v, true),
