@@ -26,6 +26,7 @@ pub enum InsertStrategy {
 pub enum RemoveStrategy {
     ViaEntry,
     ViaRemove,
+    ViaRetain,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -106,9 +107,10 @@ impl Arbitrary for InsertStrategy {
 impl Arbitrary for RemoveStrategy {
     fn arbitrary(g: &mut Gen) -> Self {
         let choice: u8 = u8::arbitrary(g);
-        match choice % 2 {
+        match choice % 3 {
             0 => RemoveStrategy::ViaEntry,
             1 => RemoveStrategy::ViaRemove,
+            2 => RemoveStrategy::ViaRetain,
             _ => unreachable!(),
         }
     }

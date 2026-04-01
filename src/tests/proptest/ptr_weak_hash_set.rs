@@ -78,6 +78,8 @@ where
         {
             let weak2: PtrWeakHashSet<Weak<K>> = self.strong.iter().map(|v| v.0.clone()).collect();
             assert_eq!(&weak2, &self.weak);
+            assert!(weak2.is_subset(&self.weak));
+            assert!(self.weak.is_subset(&weak2));
 
             let weak3 = weak2.clone();
             assert_eq!(&weak3, &self.weak);
@@ -92,6 +94,7 @@ where
                 assert!(self.weak.contains(&k.0));
             }
         }
+
         // Use a few other iterator types to construct a version of the strong
         // table.
         {
@@ -161,7 +164,23 @@ where
 
     fn remove_inserted(&mut self, strategy: RemoveStrategy, index: usize) {
         if let Some(key) = self.nth_key_mod_len(index) {
-            self.remove_other(strategy, &key);
+            let old_w = match strategy {
+                RemoveStrategy::ViaRemove | RemoveStrategy::ViaEntry => self.weak.remove(&key),
+                RemoveStrategy::ViaRetain => {
+                    let mut removed: bool = false;
+                    self.weak.retain(|k| {
+                        if Arc::ptr_eq(&k, &key) {
+                            removed = true;
+                            false
+                        } else {
+                            true
+                        }
+                    });
+                    removed
+                }
+            };
+            let old_s = self.strong.remove(&KeyByPtr(key));
+            assert_eq!(old_s, old_w);
         }
     }
 

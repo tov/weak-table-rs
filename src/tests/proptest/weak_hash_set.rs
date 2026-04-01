@@ -159,8 +159,22 @@ where
         }
     }
 
-    fn remove_other(&mut self, _strategy: RemoveStrategy, key: &K) {
-        let old_w = self.weak.remove(key);
+    fn remove_other(&mut self, strategy: RemoveStrategy, key: &K) {
+        let old_w = match strategy {
+            RemoveStrategy::ViaRemove | RemoveStrategy::ViaEntry => self.weak.remove(key),
+            RemoveStrategy::ViaRetain => {
+                let mut removed: bool = false;
+                self.weak.retain(|k| {
+                    if k.as_ref() == key {
+                        removed = true;
+                        false
+                    } else {
+                        true
+                    }
+                });
+                removed
+            }
+        };
         let old_s = self.strong.remove(key);
         assert_eq!(old_s, old_w);
     }

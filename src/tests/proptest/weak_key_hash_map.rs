@@ -96,6 +96,7 @@ where
             for (k, v) in self.strong.iter() {
                 assert_eq!(self.weak.get(k.as_ref()), Some(v));
                 assert_eq!(self.weak.get_both(k.as_ref()), Some((k.clone(), v)));
+                assert!(self.weak.contains_key(k.as_ref()));
             }
             let mut weak2: WeakKeyHashMap<Weak<K>, V> = self.weak.clone();
             for (k, v) in self.strong.clone().iter_mut() {
@@ -255,6 +256,18 @@ where
                 }
             }
             RemoveStrategy::ViaRemove => self.weak.remove(key),
+            RemoveStrategy::ViaRetain => {
+                let mut removed: Option<V> = None;
+                self.weak.retain(|k, v| {
+                    if k.as_ref() == key {
+                        removed = Some(v.clone());
+                        false
+                    } else {
+                        true
+                    }
+                });
+                removed
+            }
         };
         let old_s = self.strong.remove(key);
         assert_eq!(old_s, old_w);

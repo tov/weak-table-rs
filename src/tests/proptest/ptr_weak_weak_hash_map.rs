@@ -230,6 +230,18 @@ where
                     }
                 }
                 RemoveStrategy::ViaRemove => self.weak.remove(&key),
+                RemoveStrategy::ViaRetain => {
+                    let mut removed = None;
+                    self.weak.retain(|k, v| {
+                        if Arc::ptr_eq(&k, &key) {
+                            removed = Some(v.clone());
+                            false
+                        } else {
+                            true
+                        }
+                    });
+                    removed
+                }
             };
             let old_s = self.strong.remove(&KeyByPtr(key.clone()));
             assert_eq!(old_s, old_w);

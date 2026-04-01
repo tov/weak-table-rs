@@ -88,6 +88,7 @@ where
         {
             for (k, v) in self.strong.iter() {
                 assert_eq!(self.weak.get(k), Some(v.clone()));
+                assert!(self.weak.contains_key(k));
             }
         }
 
@@ -217,6 +218,18 @@ where
                 }
             }
             RemoveStrategy::ViaRemove => self.weak.remove(key),
+            RemoveStrategy::ViaRetain => {
+                let mut removed = None;
+                self.weak.retain(|k, v| {
+                    if k == key {
+                        removed = Some(v.clone());
+                        false
+                    } else {
+                        true
+                    }
+                });
+                removed
+            }
         };
         let old_s = self.strong.remove(key);
         assert_eq!(old_s, old_w);
