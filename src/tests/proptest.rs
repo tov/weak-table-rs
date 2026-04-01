@@ -1,7 +1,9 @@
 //!  Property tests for the various map and set types.
 //!
+mod ptr_weak_hash_set;
 mod ptr_weak_key_hash_map;
 mod ptr_weak_weak_hash_map;
+mod weak_hash_set;
 mod weak_key_hash_map;
 mod weak_value_hash_map;
 mod weak_weak_hash_map;
