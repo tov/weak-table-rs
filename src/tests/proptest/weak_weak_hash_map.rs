@@ -1,10 +1,10 @@
 use crate as weak_table2;
 use crate::tests::proptest::ForgetStrategy;
 
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::rc::{Rc, Weak};
+use crate::compat::{
+    rc::{Rc, Weak},
+    *,
+};
 
 use quickcheck::quickcheck;
 
@@ -51,7 +51,7 @@ where
     pub fn with_capacity(capacity: usize) -> Self {
         Tester {
             weak: WeakWeakHashMap::with_capacity(capacity),
-            strong: HashMap::new(),
+            strong: HashMap::default(),
             log: Vec::new(),
             retain_keys: Vec::new(),
             retain_values: Vec::new(),

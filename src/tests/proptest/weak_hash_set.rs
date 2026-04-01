@@ -1,11 +1,11 @@
 use crate as weak_table2;
 
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::rc::{Rc, Weak};
+use core::marker::PhantomData;
 
+use crate::compat::{
+    rc::{Rc, Weak},
+    *,
+};
 use quickcheck::quickcheck;
 
 use weak_table2::WeakHashSet;
@@ -47,7 +47,7 @@ where
     pub fn with_capacity(capacity: usize) -> Self {
         Tester {
             weak: WeakHashSet::with_capacity(capacity),
-            strong: HashSet::new(),
+            strong: HashSet::default(),
             log: Vec::new(),
             _phantom: PhantomData,
         }
@@ -127,7 +127,7 @@ where
 impl<K, V> ExecuteMapCmd<K, V> for Tester<K, V>
 where
     K: Clone + Debug + Eq + Hash + Ord,
-    V: std::fmt::Debug,
+    V: Debug,
 {
     fn insert(&mut self, strategy: InsertStrategy, key: &K, _value: &V, log: bool) {
         let key_ptr = Rc::new(key.clone());

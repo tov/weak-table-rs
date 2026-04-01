@@ -1,11 +1,11 @@
 use crate as weak_table2;
 use crate::tests::proptest::KeyByPtr;
 
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::sync::{Arc, Weak};
+use crate::compat::{
+    sync::{Arc, Weak},
+    *,
+};
+use core::marker::PhantomData;
 
 use quickcheck::quickcheck;
 
@@ -48,7 +48,7 @@ where
     pub fn with_capacity(capacity: usize) -> Self {
         Tester {
             weak: PtrWeakHashSet::with_capacity(capacity),
-            strong: HashSet::new(),
+            strong: HashSet::default(),
             log: Vec::new(),
             _phantom: PhantomData,
         }
@@ -147,7 +147,7 @@ where
 impl<K, V> ExecuteMapCmd<K, V> for Tester<K, V>
 where
     K: Clone + Debug + Eq + Hash + Ord,
-    V: std::fmt::Debug,
+    V: Debug,
 {
     fn insert(&mut self, strategy: InsertStrategy, key: &K, value: &V, log: bool) {
         self.insert_impl(strategy, Arc::new(key.clone()), value, log);

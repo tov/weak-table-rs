@@ -31,7 +31,7 @@ mod lib {
 pub(crate) use lib::{rc, sync};
 
 #[cfg(test)]
-pub(crate) use lib::{string::String, vec, vec::Vec};
+pub(crate) use lib::{boxed::Box, string::String, vec, vec::Vec};
 
 // Stuff from `core` that we use often:
 pub(crate) use core::{
@@ -49,3 +49,8 @@ extern crate std;
 
 #[cfg(test)]
 pub(crate) use std::{eprintln, format};
+
+#[cfg(test)]
+pub(crate) type HashMap<K, V> = hashbrown::HashMap<K, V, RandomState>;
+#[cfg(test)]
+pub(crate) type HashSet<K> = hashbrown::HashSet<K, RandomState>;

@@ -1,9 +1,9 @@
 use crate as weak_table2;
 
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::{Arc, Weak};
+use crate::compat::{
+    sync::{Arc, Weak},
+    *,
+};
 
 use quickcheck::quickcheck;
 
@@ -46,7 +46,7 @@ where
     pub fn with_capacity(capacity: usize) -> Self {
         Tester {
             weak: PtrWeakKeyHashMap::with_capacity(capacity),
-            strong: HashMap::new(),
+            strong: HashMap::default(),
             log: Vec::new(),
         }
     }

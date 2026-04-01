@@ -1,8 +1,11 @@
 #![allow(missing_docs)]
 use crate as weak_table;
 
-use std::ops::Deref;
-use std::rc::{Rc, Weak};
+use crate::compat::{
+    rc::{Rc, Weak},
+    *,
+};
+use weak_table::WeakHashSet;
 
 #[derive(Clone, Debug)]
 pub struct Symbol(Rc<str>);
