@@ -9,7 +9,7 @@ use quickcheck::quickcheck;
 
 use weak_table::WeakKeyHashMap;
 
-use super::{InsertStrategy, MapCmd, MapCmd::*, MapScript, RemoveStrategy};
+use super::{ExecuteMapCmd, InsertStrategy, MapScript, RemoveStrategy};
 
 fn test_script<K, V>(script: &MapScript<K, V>) -> bool
 where
@@ -186,29 +186,21 @@ where
         }
     }
 
-    pub fn execute_script(&mut self, script: &MapScript<K, V>) {
-        //        eprintln!("\n*** Starting script ***");
-        for cmd in &script.0 {
-            self.execute_command(cmd);
+    fn nth_key_mod_len(&self, n: usize) -> Option<K> {
+        if self.log.is_empty() {
+            None
+        } else {
+            Some(self.log[n % self.log.len()].clone())
         }
     }
+}
 
-    pub fn execute_command(&mut self, cmd: &MapCmd<K, V>) {
-        //        eprintln!("Executing command: {:?}", cmd);
-        match *cmd {
-            Insert(strategy, ref k, ref v) => self.insert(strategy, k, v, true),
-            Reinsert(strategy, index, ref v) => self.reinsert(strategy, index, v),
-            RemoveInserted(strategy, index) => self.remove_inserted(strategy, index),
-            RemoveOther(strategy, ref k) => self.remove_other(strategy, k),
-            ForgetInserted(index) => self.forget_inserted(index),
-            Reserve(n) => self.reserve(n),
-            ShrinkToFit => self.shrink_to_fit(),
-            Clear => self.clear(),
-        }
-        //        eprintln!("Table state: {:?}", self.weak);
-    }
-
-    pub fn insert(&mut self, strategy: InsertStrategy, key: &K, value: &V, log: bool) {
+impl<K, V> ExecuteMapCmd<K, V> for Tester<K, V>
+where
+    K: Clone + Debug + Eq + Hash + Ord,
+    V: Clone + Debug + Eq + Ord,
+{
+    fn insert(&mut self, strategy: InsertStrategy, key: &K, value: &V, log: bool) {
         let key_ptr = Rc::new(key.clone());
         match strategy {
             InsertStrategy::ViaEntry => {
@@ -240,19 +232,19 @@ where
         }
     }
 
-    pub fn reinsert(&mut self, strategy: InsertStrategy, index: usize, value: &V) {
+    fn reinsert(&mut self, strategy: InsertStrategy, index: usize, value: &V) {
         if let Some(key) = self.nth_key_mod_len(index) {
             self.insert(strategy, &key, value, false);
         }
     }
 
-    pub fn remove_inserted(&mut self, strategy: RemoveStrategy, index: usize) {
+    fn remove_inserted(&mut self, strategy: RemoveStrategy, index: usize) {
         if let Some(key) = self.nth_key_mod_len(index) {
             self.remove_other(strategy, &key);
         }
     }
 
-    pub fn remove_other(&mut self, strategy: RemoveStrategy, key: &K) {
+    fn remove_other(&mut self, strategy: RemoveStrategy, key: &K) {
         let old_w = match strategy {
             RemoveStrategy::ViaEntry => {
                 let key_ptr = Rc::new(key.clone());
@@ -268,29 +260,21 @@ where
         assert_eq!(old_s, old_w);
     }
 
-    pub fn forget_inserted(&mut self, index: usize) {
+    fn forget_inserted(&mut self, index: usize) {
         if let Some(key) = self.nth_key_mod_len(index) {
             self.strong.remove(&key);
         }
     }
 
-    pub fn reserve(&mut self, n: usize) {
+    fn reserve(&mut self, n: usize) {
         self.weak.reserve(n);
     }
 
-    pub fn shrink_to_fit(&mut self) {
+    fn shrink_to_fit(&mut self) {
         self.weak.shrink_to_fit();
     }
-    pub fn clear(&mut self) {
+    fn clear(&mut self) {
         self.weak.clear();
         self.strong.clear();
-    }
-
-    fn nth_key_mod_len(&self, n: usize) -> Option<K> {
-        if self.log.is_empty() {
-            None
-        } else {
-            Some(self.log[n % self.log.len()].clone())
-        }
     }
 }

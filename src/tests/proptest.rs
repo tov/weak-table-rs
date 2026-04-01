@@ -95,3 +95,42 @@ impl Arbitrary for RemoveStrategy {
         }
     }
 }
+
+trait ExecuteMapCmd<K, V> {
+    fn execute_command(&mut self, cmd: &MapCmd<K, V>) {
+        use MapCmd::*;
+        match *cmd {
+            Insert(strategy, ref k, ref v) => self.insert(strategy, k, v, true),
+            Reinsert(strategy, index, ref v) => self.reinsert(strategy, index, v),
+            RemoveInserted(strategy, index) => self.remove_inserted(strategy, index),
+            RemoveOther(strategy, ref k) => self.remove_other(strategy, k),
+            ForgetInserted(index) => self.forget_inserted(index),
+            Reserve(n) => self.reserve(n),
+            ShrinkToFit => self.shrink_to_fit(),
+            Clear => self.clear(),
+        }
+    }
+
+    fn execute_script(&mut self, script: &MapScript<K, V>) {
+        //        eprintln!("\n*** Starting script ***");
+        for cmd in &script.0 {
+            self.execute_command(cmd);
+        }
+    }
+
+    fn insert(&mut self, strategy: InsertStrategy, key: &K, value: &V, log: bool);
+
+    fn reinsert(&mut self, strategy: InsertStrategy, index: usize, value: &V);
+
+    fn remove_inserted(&mut self, strategy: RemoveStrategy, index: usize);
+
+    fn remove_other(&mut self, strategy: RemoveStrategy, key: &K);
+
+    fn forget_inserted(&mut self, index: usize);
+
+    fn reserve(&mut self, n: usize);
+
+    fn shrink_to_fit(&mut self);
+
+    fn clear(&mut self);
+}
