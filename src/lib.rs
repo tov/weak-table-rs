@@ -12,6 +12,9 @@ pub mod weak_key_hash_map;
 pub mod weak_value_hash_map;
 pub mod weak_weak_hash_map;
 
+#[cfg(test)]
+mod tests;
+
 mod by_ptr;
 mod compat;
 mod inner;

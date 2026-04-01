@@ -1,7 +1,6 @@
 #![allow(missing_docs)]
-extern crate weak_table;
+use crate as weak_table;
 
-use weak_table::WeakHashSet;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 

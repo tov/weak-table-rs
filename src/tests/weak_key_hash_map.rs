@@ -1,5 +1,4 @@
-#![allow(missing_docs, clippy::missing_docs_in_private_items)]
-#![allow(clippy::print_stderr)]
+use crate as weak_table2;
 
 use std::collections::HashMap;
 use std::fmt::Debug;
