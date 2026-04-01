@@ -1,5 +1,7 @@
 //!  Property tests for the various map and set types.
 mod weak_key_hash_map;
+mod weak_value_hash_map;
+mod weak_weak_hash_map;
 
 use quickcheck::{Arbitrary, Gen};
 
@@ -18,6 +20,14 @@ pub enum RemoveStrategy {
     ViaRemove,
 }
 
+#[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
+pub enum ForgetStrategy {
+    ForgetKey,
+    ForgetValue,
+    ForgetBoth,
+}
+
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum MapCmd<K, V> {
@@ -25,7 +35,7 @@ pub enum MapCmd<K, V> {
     Reinsert(InsertStrategy, usize, V),
     RemoveInserted(RemoveStrategy, usize),
     RemoveOther(RemoveStrategy, K),
-    ForgetInserted(usize),
+    ForgetInserted(ForgetStrategy, usize),
     Reserve(usize),
     ShrinkToFit,
     Clear,
@@ -54,7 +64,7 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for MapCmd<K, V> {
             ),
             5..=6 => RemoveInserted(RemoveStrategy::arbitrary(g), usize::arbitrary(g)),
             7 => RemoveOther(RemoveStrategy::arbitrary(g), K::arbitrary(g)),
-            8..=9 => ForgetInserted(usize::arbitrary(g)),
+            8..=9 => ForgetInserted(ForgetStrategy::arbitrary(g), usize::arbitrary(g)),
             10 => Reserve(usize::arbitrary(g) % 32),
             11 => ShrinkToFit,
             12 => Clear,
@@ -96,6 +106,18 @@ impl Arbitrary for RemoveStrategy {
     }
 }
 
+impl Arbitrary for ForgetStrategy {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let choice: u8 = u8::arbitrary(g);
+        match choice % 3 {
+            0 => ForgetStrategy::ForgetKey,
+            1 => ForgetStrategy::ForgetValue,
+            2 => ForgetStrategy::ForgetBoth,
+            _ => unreachable!(),
+        }
+    }
+}
+
 trait ExecuteMapCmd<K, V> {
     fn execute_command(&mut self, cmd: &MapCmd<K, V>) {
         use MapCmd::*;
@@ -104,7 +126,7 @@ trait ExecuteMapCmd<K, V> {
             Reinsert(strategy, index, ref v) => self.reinsert(strategy, index, v),
             RemoveInserted(strategy, index) => self.remove_inserted(strategy, index),
             RemoveOther(strategy, ref k) => self.remove_other(strategy, k),
-            ForgetInserted(index) => self.forget_inserted(index),
+            ForgetInserted(strategy, index) => self.forget_inserted(strategy, index),
             Reserve(n) => self.reserve(n),
             ShrinkToFit => self.shrink_to_fit(),
             Clear => self.clear(),
@@ -126,7 +148,7 @@ trait ExecuteMapCmd<K, V> {
 
     fn remove_other(&mut self, strategy: RemoveStrategy, key: &K);
 
-    fn forget_inserted(&mut self, index: usize);
+    fn forget_inserted(&mut self, strategy: ForgetStrategy, index: usize);
 
     fn reserve(&mut self, n: usize);
 

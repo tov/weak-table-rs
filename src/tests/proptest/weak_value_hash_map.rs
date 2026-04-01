@@ -1,4 +1,4 @@
-use crate as weak_table;
+use crate as weak_table2;
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -7,8 +7,8 @@ use std::rc::{Rc, Weak};
 
 use quickcheck::quickcheck;
 
-use weak_table::weak_key_hash_map::Entry;
-use weak_table::WeakKeyHashMap;
+use weak_table2::weak_value_hash_map::Entry;
+use weak_table2::WeakValueHashMap;
 
 use super::{ExecuteMapCmd, ForgetStrategy, InsertStrategy, MapScript, RemoveStrategy};
 
@@ -33,8 +33,8 @@ quickcheck! {
 }
 #[derive(Clone, Debug)]
 pub struct Tester<K: Hash + Eq, V> {
-    weak: WeakKeyHashMap<Weak<K>, V>,
-    strong: HashMap<Rc<K>, V>,
+    weak: WeakValueHashMap<K, Weak<V>>,
+    strong: HashMap<K, Rc<V>>,
     log: Vec<K>,
 }
 
@@ -45,7 +45,7 @@ where
 {
     pub fn with_capacity(capacity: usize) -> Self {
         Tester {
-            weak: WeakKeyHashMap::with_capacity(capacity),
+            weak: WeakValueHashMap::with_capacity(capacity),
             strong: HashMap::new(),
             log: Vec::new(),
         }
@@ -73,7 +73,7 @@ where
 
         // Construct new versions of weak table in several ways; make sure they are the same.
         {
-            let weak2: WeakKeyHashMap<Weak<K>, V> = self
+            let weak2: WeakValueHashMap<K, Weak<V>> = self
                 .strong
                 .iter()
                 .map(|(k, v)| (k.clone(), v.clone()))
@@ -84,26 +84,10 @@ where
             assert_eq!(&weak3, &self.weak);
         }
 
-        // Use index functionality to test for matches.
-        {
-            let mut weak2 = self.weak.clone();
-            for (k, v) in self.strong.iter() {
-                assert_eq!(&self.weak[k], v);
-                assert_eq!(&mut weak2[k], v);
-            }
-        }
         // Use get functionality to test for matches.
         {
             for (k, v) in self.strong.iter() {
-                assert_eq!(self.weak.get(k.as_ref()), Some(v));
-                assert_eq!(self.weak.get_both(k.as_ref()), Some((k.clone(), v)));
-            }
-            let mut weak2: WeakKeyHashMap<Weak<K>, V> = self.weak.clone();
-            for (k, v) in self.strong.clone().iter_mut() {
-                assert_eq!(weak2.get_mut(k.as_ref()), Some(v));
-            }
-            for (k, v) in self.strong.clone().iter_mut() {
-                assert_eq!(weak2.get_both_mut(k.as_ref()), Some((k.clone(), v)));
+                assert_eq!(self.weak.get(k), Some(v.clone()));
             }
         }
 
@@ -114,53 +98,31 @@ where
                 let ent = weak2.entry(k.clone());
                 assert_eq!(ent.key(), k);
                 match ent {
-                    Entry::Occupied(mut occ) => {
+                    Entry::Occupied(occ) => {
                         assert_eq!(occ.key(), k);
                         assert_eq!(occ.get(), v);
-                        assert_eq!(occ.get_mut(), v);
-                        assert_eq!(occ.into_mut(), v);
+                        assert_eq!(occ.get_strong(), v.clone());
                     }
-                    Entry::Vacant(_) => panic!("entry not present"),
+                    Entry::Vacant(_) => {
+                        panic!("entry not present")
+                    }
                 }
             }
         }
 
         // Check key and value iterators; make sure they match.
         {
-            let mut k1: Vec<Rc<K>> = self.weak.keys().collect();
-            let mut k2: Vec<Rc<K>> = self.strong.keys().cloned().collect();
+            let mut k1: Vec<K> = self.weak.keys().cloned().collect();
+            let mut k2: Vec<K> = self.strong.keys().cloned().collect();
             k1.sort();
             k2.sort();
             assert_eq!(k1, k2);
 
-            let mut v1: Vec<V> = self.weak.values().cloned().collect();
-            let mut v2: Vec<V> = self.strong.values().cloned().collect();
+            let mut v1: Vec<Rc<V>> = self.weak.values().collect();
+            let mut v2: Vec<Rc<V>> = self.strong.values().cloned().collect();
             v1.sort();
             v2.sort();
             assert_eq!(v1, v2);
-        }
-
-        // Check mutable iterators, make sure they match.
-        {
-            let mut weak2 = self.weak.clone();
-            let mut v1: Vec<V> = weak2.values_mut().map(|v| v.clone()).collect();
-            let mut v2: Vec<V> = self.strong.values().cloned().collect();
-            v1.sort();
-            v2.sort();
-            assert_eq!(v1, v2);
-
-            let mut e1: Vec<(Rc<K>, V)> = weak2
-                .iter_mut()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect();
-            let mut e2: Vec<(Rc<K>, V)> = self
-                .strong
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect();
-            e1.sort();
-            e2.sort();
-            assert_eq!(e1, e2);
         }
 
         // Use a few other iterator types to construct a version of the strong
@@ -177,7 +139,7 @@ where
         }
 
         // Construct version of strong table, make sure it is the same.
-        let copy = self.weak.iter().map(|(k, v)| (k, v.clone())).collect();
+        let copy = self.weak.iter().map(|(k, v)| (k.clone(), v)).collect();
         if self.strong == copy {
             //            eprintln!("Tester::check: succeeded: {:?}", self.weak);
             true
@@ -202,32 +164,32 @@ where
     V: Clone + Debug + Eq + Ord,
 {
     fn insert(&mut self, strategy: InsertStrategy, key: &K, value: &V, log: bool) {
-        let key_ptr = Rc::new(key.clone());
+        let val_ptr = Rc::new(value.clone());
         match strategy {
             InsertStrategy::ViaEntry => {
-                let ent = self.weak.entry(key_ptr.clone());
-                assert_eq!(ent.key(), &key_ptr);
+                let ent = self.weak.entry(key.clone());
+                assert_eq!(ent.key(), key);
                 match ent {
                     Entry::Occupied(mut occ) => {
-                        assert_eq!(occ.key(), &key_ptr);
-                        occ.insert(value.clone());
+                        assert_eq!(occ.key(), key);
+                        occ.insert(val_ptr.clone());
                     }
                     Entry::Vacant(vac) => {
-                        assert_eq!(vac.key(), &key_ptr);
-                        vac.insert(value.clone());
+                        assert_eq!(vac.key(), key);
+                        vac.insert(val_ptr.clone());
                     }
                 }
             }
             InsertStrategy::ViaInsert => {
-                let _ = self.weak.insert(key_ptr.clone(), value.clone());
+                let _ = self.weak.insert(key.clone(), val_ptr.clone());
             }
             InsertStrategy::ViaExtend => {
-                let lst = [(key_ptr.clone(), value.clone())];
+                let lst = [(key.clone(), val_ptr.clone())];
                 self.weak.extend(lst);
             }
         }
         self.strong.remove(key);
-        self.strong.insert(key_ptr, value.clone());
+        self.strong.insert(key.clone(), val_ptr.clone());
         if log {
             self.log.push(key.clone());
         }
@@ -248,8 +210,7 @@ where
     fn remove_other(&mut self, strategy: RemoveStrategy, key: &K) {
         let old_w = match strategy {
             RemoveStrategy::ViaEntry => {
-                let key_ptr = Rc::new(key.clone());
-                let ent = self.weak.entry(key_ptr);
+                let ent = self.weak.entry(key.clone());
                 match ent {
                     Entry::Occupied(occ) => Some(occ.remove()),
                     Entry::Vacant(_) => None,
