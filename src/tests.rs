@@ -9,5 +9,5 @@
 #![allow(unreachable_pub)]
 #![allow(clippy::enum_variant_names)]
 
+mod proptest;
 mod symbols;
-mod weak_key_hash_map;
