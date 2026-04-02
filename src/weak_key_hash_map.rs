@@ -736,11 +736,15 @@ impl<K: WeakElement, V, S> WeakKeyHashMap<K, V, S> {
 #[cfg(test)]
 mod test {
     #![allow(clippy::print_stderr)]
+
     use super::{Entry, WeakKeyHashMap};
-    use crate::compat::{
-        eprintln,
-        rc::{Rc, Weak},
-        String, Vec,
+    use crate::{
+        compat::{
+            eprintln,
+            rc::{Rc, Weak},
+            RandomState, String, Vec,
+        },
+        util,
     };
 
     #[test]
@@ -764,6 +768,69 @@ mod test {
 
         assert_eq!(map.len(), 0);
         assert!(!map.contains_key("five"));
+    }
+
+    #[test]
+    fn access_hasher() {
+        let bh = RandomState::new();
+
+        let map: WeakKeyHashMap<Weak<str>, usize> = WeakKeyHashMap::with_hasher(bh.clone());
+
+        assert_eq!(
+            util::hash_one(&bh, "hello world"),
+            util::hash_one(map.hasher(), "hello world")
+        );
+    }
+
+    #[test]
+    fn load_factor() {
+        let mut rcs: Vec<Rc<u32>> = (0..50).map(Rc::new).collect();
+        let weakmap: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), *n.as_ref())).collect();
+        rcs.retain(|n| **n % 3 != 0);
+
+        let load = weakmap.load_factor();
+        assert!(load < 1.0);
+        assert!(load > 0.0);
+    }
+
+    #[test]
+    fn is_submap() {
+        let mut rcs: Vec<Rc<u32>> = (0..50).map(Rc::new).collect();
+        let weakmap: WeakKeyHashMap<Weak<u32>, u32> = rcs
+            .iter()
+            .take(25)
+            .map(|n| (n.clone(), *n.as_ref()))
+            .collect();
+        let mut weakmap2 = weakmap.clone();
+
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(weakmap2.is_submap(&weakmap));
+
+        weakmap2.extend(rcs.iter().skip(25).map(|n| (n, n.as_ref())));
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+
+        weakmap2[&0] = 12;
+        assert!(!weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+
+        let _ = rcs.remove(0);
+        assert!(weakmap.is_submap(&weakmap2));
+    }
+
+    #[test]
+    fn entry_methods() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), *n.as_ref())).collect();
+
+        let seven = Rc::new(7);
+        let ptr = weakmap.entry(seven.clone()).or_insert(14);
+        assert_eq!(*ptr, 14);
+        *ptr = 21;
+
+        assert_eq!(weakmap.get(&7), Some(&21));
     }
 
     // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
