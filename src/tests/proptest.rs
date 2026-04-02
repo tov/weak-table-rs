@@ -1,5 +1,14 @@
-//!  Property tests for the various map and set types.
-//!
+//! Property tests for the various map and set types.
+//
+// TODO: There is a lot of duplicate code in these modules; it would be neat to
+// see about consolidating them into a more unified logic.
+//
+// TODO: Property tests are good at making sure that mucking around with containers
+// preserves their associated invariants, but not so good at making
+// sure that each operation actually handles its job correctly in all respects.
+// They are not a substitute for unit tests, even though that's how we're using
+// them here.
+
 mod ptr_weak_hash_set;
 mod ptr_weak_key_hash_map;
 mod ptr_weak_weak_hash_map;
