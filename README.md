@@ -18,9 +18,9 @@ This crate defines several kinds of weak hash maps and sets.
 - For a hash map where the keys and values are both held by weak pointers and the keys are
   compared by pointer, see
   [`PtrWeakWeakHashMap`](struct.PtrWeakWeakHashMap.html).
+
 - For a hash set where the elements are held by weak pointers and compared by element value, see
   [`WeakHashSet`](struct.WeakHashSet.html).
-
 - For a hash set where the elements are held by weak pointers and compared by pointer, see
   [`PtrWeakHashSet`](struct.PtrWeakHashSet.html).
 
@@ -37,9 +37,12 @@ This crate supports Rust version 1.46 and later.
 functionality dependent on the `std` library, enabled by default.
 Optionally, the following dependency may be enabled:
 
-  - `ahash`: use `ahash`’s hasher rather than the `std` hasher
+  - `ahash`: use `ahash`’s hasher **by default** rather than the `std` hasher.
+    (This feature may be disabled in the future for
+    [security reasons][ahash-issue].)
 
-If the `std` feature is disabled (for no_std) then the `ahash` dependency **must** be enabled.
+If the `std` feature is disabled (for no_std)
+then the `ahash` dependency **must** be enabled.
 
 
 ### Asymptotic complexity
@@ -53,6 +56,14 @@ given in big-*O* notation, the following parameters are used consistently:
 - *p*: the length of the probe sequence for the key in question
 
 Note that *p* ∈ *O*(*n*), but we expect it to be *O*(1).
+
+Time complexities for insertion operations are [_amortized_][amortized].
+(This means that when we say that insertions run in *O*(*p*) time,
+we do not preclude the possibility that _some_ insertions (ones where the
+table needs to be resized) will take longer:
+we only guarantee that such insertions are infrequent enough that the average
+insertion will take only *O*(*p*).)
+
 
 ### Examples
 
@@ -142,3 +153,5 @@ fn interning_test() {
 # interning_test();
 ```
 
+[amortized]: XXXX
+[ahash-issue]: XXXX
