@@ -153,5 +153,6 @@ fn interning_test() {
 # interning_test();
 ```
 
-[amortized]: XXXX
-[ahash-issue]: XXXX
+[ahash-issue]: https://github.com/tov/weak-table-rs/issues/23
+[amortized]: https://en.wikipedia.org/wiki/Amortized_analysis
+
