@@ -13,11 +13,14 @@ The format is based on [Keep a Changelog] and this project adheres to
 ### Added
 
 - High-coverage unit tests for the hash table backend.
+- Property tests for all of the exposed map and set types.
+- Benchmarks based on `criterion`.
 
 ### Changed (visible)
 
 - All hash-tables now use a new backend based on [`hashbrown`]
   for improved speed and correctness.
+  (Benchmarks report a speedup around 30-50%.)
 - The Minimum Supported Rust Version is now 1.65.
   (This is necessary to use `hashbrown`.)
 - The default capacity for new tables is now zero.
@@ -35,6 +38,8 @@ The format is based on [Keep a Changelog] and this project adheres to
 - The output of `Debug` is now slightly different.
 - Because of `hashbrown` internals, capacity calculations can behave
   differently.
+- Tests have been moved to a `tests` submodule, so that they can
+  share code.
 
 ### Fixed
 
