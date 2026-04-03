@@ -31,7 +31,7 @@ impl<T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
 where
     T::Strong: Deref,
 {
-    /// Creates an empty `PtrWeakHashSet` with the given capacity and hasher.
+    /// Creates an empty `PtrWeakHashSet` with the given hasher.
     ///
     /// *O*(*n*) time
     pub fn with_hasher(hash_builder: S) -> Self {
@@ -71,6 +71,9 @@ where
 
     /// Reserves room for additional elements.
     ///
+    /// This method ensures that at least `additional_capacity` insertions
+    /// may be performed without reallocating.
+    ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
         self.0.reserve(additional_capacity);
@@ -85,7 +88,10 @@ where
 
     /// Returns an over-approximation of the number of elements.
     ///
-    /// *O*(1) time
+    /// (This is an over-approximation because it includes expired elements.)
+    ///
+    /// (This is an over-approximation because it includes expired elements.)
+    ///    /// *O*(1) time
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -131,7 +137,9 @@ where
         self.0.insert(key, ()).is_some()
     }
 
-    /// Removes the entry with the given key, if it exists, and returns the value.
+    /// Removes the entry with the given key, if it exists.
+    ///
+    /// Returns true if an entry was removed.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn remove(&mut self, key: &T::Strong) -> bool {
@@ -194,6 +202,9 @@ impl<T: WeakElement> Iterator for IntoIter<T> {
 }
 
 /// A draining iterator over the elements of a set.
+///
+/// Once this iterator is dropped, all elements are removed from the set,
+/// whether the iterator itself was drained or not.
 pub struct Drain<'a, T: 'a>(base::Drain<'a, ByPtr<T>, ()>);
 
 impl<'a, T: WeakElement> Iterator for Drain<'a, T> {

@@ -24,7 +24,7 @@ impl<T: WeakKey> WeakHashSet<T, RandomState> {
 }
 
 impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
-    /// Creates an empty `WeakHashSet` with the given capacity and hasher.
+    /// Creates an empty `WeakHashSet` with the given hasher.
     ///
     /// *O*(*n*) time
     pub fn with_hasher(hash_builder: S) -> Self {
@@ -64,6 +64,9 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
 
     /// Reserves room for additional elements.
     ///
+    /// This method ensures that at least `additional_capacity` insertions
+    /// may be performed without reallocating.
+    ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
         self.0.reserve(additional_capacity);
@@ -78,7 +81,10 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
 
     /// Returns an over-approximation of the number of elements.
     ///
-    /// *O*(1) time
+    /// (This is an over-approximation because it includes expired elements.)
+    ///
+    /// (This is an over-approximation because it includes expired elements.)
+    ///    /// *O*(1) time
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -158,7 +164,9 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.insert(key, ()).is_some()
     }
 
-    /// Removes the entry with the given key, if it exists, and returns the value.
+    /// Removes the entry with the given key, if it exists.
+    ///
+    /// Returns true if an entry was removed.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn remove<Q>(&mut self, key: &Q) -> bool
@@ -209,7 +217,7 @@ impl<'a, T: WeakElement> Iterator for Iter<'a, T> {
     }
 }
 
-/// An iterator over the elements of a set.
+/// A consuming iterator over the elements of a set.
 pub struct IntoIter<T>(base::IntoIter<T, ()>);
 
 impl<T: WeakElement> Iterator for IntoIter<T> {
@@ -225,6 +233,9 @@ impl<T: WeakElement> Iterator for IntoIter<T> {
 }
 
 /// A draining iterator over the elements of a set.
+///
+/// Once this iterator is dropped, all elements are removed from the set,
+/// whether the iterator itself was drained or not.
 pub struct Drain<'a, T: 'a>(base::Drain<'a, T, ()>);
 
 impl<'a, T: WeakElement> Iterator for Drain<'a, T> {

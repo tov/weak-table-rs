@@ -33,7 +33,7 @@ impl<K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S>
 where
     K::Strong: Deref,
 {
-    /// Creates an empty `PtrWeakWeakHashMap` with the given capacity and hasher.
+    /// Creates an empty `PtrWeakWeakHashMap` with the given hasher.
     ///
     /// *O*(*n*) time
     pub fn with_hasher(hash_builder: S) -> Self {
@@ -73,6 +73,9 @@ where
 
     /// Reserves room for additional elements.
     ///
+    /// This method ensures that at least `additional_capacity` insertions
+    /// may be performed without reallocating.
+    ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
         self.0.reserve(additional_capacity);
@@ -87,7 +90,10 @@ where
 
     /// Returns an over-approximation of the number of elements.
     ///
-    /// *O*(1) time
+    /// (This is an over-approximation because it includes expired elements.)
+    ///
+    /// (This is an over-approximation because it includes expired elements.)
+    ///    /// *O*(1) time
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -126,6 +132,8 @@ where
     }
 
     /// Returns a reference to the value corresponding to the key.
+    ///
+    /// Returns `None` if no matching key is found.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn get(&self, key: &K::Strong) -> Option<V::Strong> {

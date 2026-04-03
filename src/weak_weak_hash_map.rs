@@ -16,7 +16,7 @@ pub enum Entry<'a, K: 'a + WeakKey, V: 'a + WeakElement> {
     Vacant(VacantEntry<'a, K, V>),
 }
 
-/// An occupied entry, which can be removed or viewed.
+/// An occupied entry, which can be removed, modified, or viewed.
 pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a + WeakElement>(
     inner::OccupiedEntry<'a, inner::WeakK<K>, inner::WeakV<V>>,
 );
@@ -76,6 +76,9 @@ impl<'a, K: WeakElement, V: WeakElement> Iterator for Values<'a, K, V> {
 
 #[derive(Debug)]
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
+///
+/// Once this iterator is dropped, all values are removed from the map,
+/// whether the iterator itself was drained or not.
 pub struct Drain<'a, K: 'a, V: 'a>(inner::Drain<'a, inner::WeakK<K>, inner::WeakV<V>>);
 
 impl<'a, K: WeakElement, V: WeakElement> Iterator for Drain<'a, K, V> {
@@ -90,7 +93,7 @@ impl<'a, K: WeakElement, V: WeakElement> Iterator for Drain<'a, K, V> {
     }
 }
 
-/// An iterator that consumes the values of a weak hash map, leaving it empty.
+/// An iterator that consumes a weak hash map, leaving it empty.
 pub struct IntoIter<K, V>(inner::IntoIter<inner::WeakK<K>, inner::WeakV<V>>);
 
 impl<K: WeakElement, V: WeakElement> Iterator for IntoIter<K, V> {
@@ -122,7 +125,7 @@ impl<K: WeakKey, V: WeakElement> WeakWeakHashMap<K, V, RandomState> {
 }
 
 impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
-    /// Creates an empty `WeakWeakHashMap` with the given capacity and hasher.
+    /// Creates an empty `WeakWeakHashMap` with the given hasher.
     ///
     /// *O*(*n*) time
     pub fn with_hasher(hash_builder: S) -> Self {
@@ -159,6 +162,9 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
 
     /// Reserves room for additional elements.
     ///
+    /// This method ensures that at least `additional_capacity` insertions
+    /// may be performed without reallocating.
+    ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
         self.0
@@ -175,7 +181,10 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
 
     /// Returns an over-approximation of the number of elements.
     ///
-    /// *O*(1) time
+    /// (This is an over-approximation because it includes expired elements.)
+    ///
+    /// (This is an over-approximation because it includes expired elements.)
+    ///    /// *O*(1) time
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -219,6 +228,8 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
     }
 
     /// Returns a reference to the value corresponding to the key.
+    ///
+    /// Returns `None` if no matching key is found.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn get<Q>(&self, key: &Q) -> Option<V::Strong>
@@ -426,7 +437,7 @@ impl<'a, K: WeakKey, V: WeakElement> Entry<'a, K, V> {
     }
 
     /// Ensures a value is in the entry by inserting the result of the
-    /// default function if empty, and returns a mutable reference to
+    /// `default` function if empty, and returns a mutable reference to
     /// the value in the entry.
     ///
     /// *O*(1) time
@@ -456,7 +467,7 @@ impl<'a, K: WeakKey, V: WeakElement> OccupiedEntry<'a, K, V> {
         self.0.get().0
     }
 
-    /// Takes ownership of the key and value from the map.
+    /// Takes ownership of the key and value, removing them from the map.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn remove_entry(self) -> (K::Strong, V::Strong) {
@@ -478,6 +489,8 @@ impl<'a, K: WeakKey, V: WeakElement> OccupiedEntry<'a, K, V> {
     }
 
     /// Replaces the value in the entry with the given value.
+    ///
+    /// Returns the previous value.
     ///
     /// *O*(1) time
     pub fn insert(&mut self, value: V::Strong) -> V::Strong {
@@ -501,7 +514,7 @@ impl<'a, K: WeakKey, V: WeakElement> VacantEntry<'a, K, V> {
         self.0.key()
     }
 
-    /// Returns ownership of the key.
+    /// Returns an owned reference to the key.
     ///
     /// *O*(1) time
     pub fn into_key(self) -> K::Strong {

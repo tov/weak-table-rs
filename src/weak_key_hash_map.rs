@@ -16,7 +16,7 @@ pub enum Entry<'a, K: 'a + WeakKey, V: 'a> {
     Vacant(VacantEntry<'a, K, V>),
 }
 
-/// An occupied entry, which can be removed or viewed.
+/// An occupied entry, which can be removed, modified, or viewed.
 pub struct OccupiedEntry<'a, K: 'a + WeakKey, V: 'a>(
     inner::OccupiedEntry<'a, inner::WeakK<K>, inner::Owned<V>>,
 );
@@ -108,6 +108,9 @@ impl<'a, K: WeakElement, V> Iterator for ValuesMut<'a, K, V> {
 
 #[derive(Debug)]
 /// An iterator that consumes the values of a weak hash map, leaving it empty.
+///
+/// Once this iterator is dropped, all values are removed from the map,
+/// whether the iterator itself was drained or not.
 pub struct Drain<'a, K: 'a, V: 'a>(inner::Drain<'a, inner::WeakK<K>, inner::Owned<V>>);
 
 impl<'a, K: WeakElement, V> Iterator for Drain<'a, K, V> {
@@ -122,7 +125,7 @@ impl<'a, K: WeakElement, V> Iterator for Drain<'a, K, V> {
     }
 }
 
-/// An iterator that consumes the values of a weak hash map, leaving it empty.
+/// An iterator that consumes a weak hash map, leaving it empty.
 pub struct IntoIter<K, V>(inner::IntoIter<inner::WeakK<K>, inner::Owned<V>>);
 
 impl<K: WeakElement, V> Iterator for IntoIter<K, V> {
@@ -154,7 +157,7 @@ impl<K: WeakKey, V> WeakKeyHashMap<K, V, RandomState> {
 }
 
 impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
-    /// Creates an empty `WeakKeyHashMap` with the given capacity and hasher.
+    /// Creates an empty `WeakKeyHashMap` with the given hasher.
     ///
     /// *O*(*n*) time
     pub fn with_hasher(hash_builder: S) -> Self {
@@ -191,6 +194,9 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
 
     /// Reserves room for additional elements.
     ///
+    /// This method ensures that at least `additional_capacity` insertions
+    /// may be performed without reallocating.
+    ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
         self.0
@@ -206,6 +212,8 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
     }
 
     /// Returns an over-approximation of the number of elements.
+    ///
+    /// (This is an over-approximation because it includes expired elements.)
     ///
     /// *O*(1) time
     pub fn len(&self) -> usize {
@@ -249,6 +257,8 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
     }
 
     /// Returns a reference to the value corresponding to the key.
+    ///
+    /// Returns `None` if no matching key is found.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn get<Q>(&self, key: &Q) -> Option<&V>
@@ -294,6 +304,8 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
 
     /// Returns a mutable reference to the value corresponding to the key.
     ///
+    /// Returns `None` if no matching key is found.
+    ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
     where
@@ -317,7 +329,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
 
     /// Unconditionally inserts the value, returning the old value if already present.
     ///
-    /// Unlike `std::collections::HashMap`, this replaced the key even if occupied.
+    /// Unlike `std::collections::HashMap`, this replaces the key even the entry was occupied.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn insert(&mut self, key: K::Strong, value: V) -> Option<V> {
@@ -512,7 +524,7 @@ impl<'a, K: WeakKey, V> Entry<'a, K, V> {
     }
 
     /// Ensures a value is in the entry by inserting the result of the
-    /// default function if empty, and returns a mutable reference to
+    /// `default` function if empty, and returns a mutable reference to
     /// the value in the entry.
     ///
     /// *O*(1) time
@@ -542,7 +554,7 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
         self.0.get().0
     }
 
-    /// Takes ownership of the key and value from the map.
+    /// Takes ownership of the key and value, removing them from the map.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn remove_entry(self) -> (K::Strong, V) {
@@ -560,7 +572,7 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     ///
     /// *O*(1) time
     pub fn get_mut(&mut self) -> &mut V {
-        // TODO: It would be better to use a retain method on inner::OccupiedEntry, but I've
+        // TODO: It would be better to use a get_mut method on inner::OccupiedEntry, but I've
         // run into lifetime issues there. See "TODO get_mut" in inner/table.rs
         &mut self.0.inner.get_mut().1.val
     }
@@ -573,6 +585,8 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     }
 
     /// Replaces the value in the entry with the given value.
+    ///
+    /// Returns the previous value.
     ///
     /// *O*(1) time
     pub fn insert(&mut self, mut value: V) -> V {
@@ -597,7 +611,7 @@ impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
         self.0.key()
     }
 
-    /// Returns ownership of the key.
+    /// Returns an owned reference to the key.
     ///
     /// *O*(1) time
     pub fn into_key(self) -> K::Strong {
