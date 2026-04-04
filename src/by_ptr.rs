@@ -27,6 +27,7 @@ where
 {
     type Key = *const <K::Strong as Deref>::Target;
 
+    #[inline]
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
     where
         F: FnOnce(&Self::Key) -> R,

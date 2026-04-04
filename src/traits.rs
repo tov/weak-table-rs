@@ -73,11 +73,13 @@ pub trait WeakKey: WeakElement {
         F: FnOnce(&Self::Key) -> R;
 
     /// Hashes the key `view` into the given `Hasher`.
+    #[inline]
     fn hash<H: Hasher>(view: &Self::Strong, h: &mut H) {
         Self::with_key(view, |k| k.hash(h));
     }
 
     /// Returns whether the key `view` equals the given `key`.
+    #[inline]
     fn equals<Q>(view: &Self::Strong, key: &Q) -> bool
     where
         Q: ?Sized + Eq,
@@ -106,6 +108,7 @@ impl<T: ?Sized> WeakElement for rc::Weak<T> {
 impl<T: ?Sized + Eq + Hash> WeakKey for rc::Weak<T> {
     type Key = T;
 
+    #[inline]
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
     where
         F: FnOnce(&Self::Key) -> R,
@@ -133,6 +136,7 @@ impl<T: ?Sized> WeakElement for sync::Weak<T> {
 impl<T: ?Sized + Eq + Hash> WeakKey for sync::Weak<T> {
     type Key = T;
 
+    #[inline]
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
     where
         F: FnOnce(&Self::Key) -> R,
