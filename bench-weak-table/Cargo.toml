@@ -13,6 +13,9 @@ rust-version = "1.65.0"
 
 publish = false
 
+[lib]
+bench = false
+
 [features]
 
 [dependencies]
