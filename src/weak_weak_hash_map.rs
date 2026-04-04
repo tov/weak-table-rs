@@ -407,7 +407,9 @@ where
     S: BuildHasher + Default,
 {
     fn from_iter<T: IntoIterator<Item = (K::Strong, V::Strong)>>(iter: T) -> Self {
-        let mut result = WeakWeakHashMap::with_hasher(Default::default());
+        let iter = iter.into_iter();
+        let min_size = iter.size_hint().0;
+        let mut result = WeakWeakHashMap::with_capacity_and_hasher(min_size, Default::default());
         result.extend(iter);
         result
     }
@@ -420,6 +422,9 @@ where
     S: BuildHasher,
 {
     fn extend<T: IntoIterator<Item = (K::Strong, V::Strong)>>(&mut self, iter: T) {
+        let iter = iter.into_iter();
+        let min_size = iter.size_hint().0;
+        self.reserve(min_size);
         for (key, value) in iter {
             self.insert(key, value);
         }
