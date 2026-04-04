@@ -28,7 +28,6 @@ hashbrown = { version = "0.16.1", default-features = false, features = ["inline-
 [dev-dependencies]
 quickcheck = "1"
 rand = "0.8.4"
-criterion = "0.8.2"
 
 [lints.rust]
 unsafe_code = "warn"

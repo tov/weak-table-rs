@@ -1,6 +1,6 @@
-
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion, Throughput};
 use std::collections::VecDeque;
+use std::hint::black_box;
 use std::rc::{Rc, Weak};
 use weak_table::WeakHashSet;
 
