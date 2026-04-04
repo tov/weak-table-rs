@@ -337,6 +337,9 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         }
     }
 
+    // TODO: We can probably save 3-4% on insert() if we don't use entry() to
+    // implement it.
+
     /* TODO retain:
 
     This implementation doesn't work, for lifetime and invariance reasons.
