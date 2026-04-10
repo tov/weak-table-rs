@@ -28,10 +28,10 @@ mod lib {
 }
 
 // Stuff from `std`/`alloc` that we use often.
-pub(crate) use lib::{rc, sync};
+pub(crate) use lib::{boxed::Box, rc, sync, vec};
 
 #[cfg(test)]
-pub(crate) use lib::{boxed::Box, string::String, vec, vec::Vec};
+pub(crate) use lib::{string::String, vec::Vec};
 
 // Stuff from `core` that we use often:
 pub(crate) use core::{
