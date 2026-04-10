@@ -450,7 +450,8 @@ impl<'a, K, V: WeakElement> Entry<'a, K, V> {
     }
 
     /// Ensures a value is in the entry by inserting the result of the
-    /// default function if empty.
+    /// `default` function if empty, and returns a strong reference to
+    /// the value in the entry.
     ///
     /// *O*(1) time
     pub fn or_insert_with<F: FnOnce() -> V::Strong>(self, default: F) -> V::Strong {
