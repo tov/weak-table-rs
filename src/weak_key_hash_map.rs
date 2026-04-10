@@ -576,6 +576,21 @@ impl<'a, K: WeakKey, V> Entry<'a, K, V> {
             Entry::Vacant(vacant) => vacant.insert_entry(value),
         }
     }
+
+    /// If this entry is occupied, uses `f` to modify its value in place.
+    ///
+    /// (Otherwise, if the entry is vacant, does nothing.)
+    ///
+    /// *O*(1) time
+    pub fn and_modify<F>(mut self, f: F) -> Self
+    where
+        F: FnOnce(&mut V),
+    {
+        if let Entry::Occupied(occupied) = &mut self {
+            f(occupied.get_mut());
+        }
+        self
+    }
 }
 
 impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
