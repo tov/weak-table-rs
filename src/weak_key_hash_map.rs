@@ -554,6 +554,22 @@ impl<'a, K: WeakKey, V> Entry<'a, K, V> {
         }
     }
 
+    /// Ensures that a value is in the entry by inserting the result of calling the
+    /// `default` function on this entry's key if the function is empty, and
+    /// returns a mutable reference to the value in the entry.
+    pub fn or_insert_with_key<F>(self, default: F) -> &'a mut V
+    where
+        F: FnOnce(&K::Strong) -> V,
+    {
+        match self {
+            Entry::Occupied(occupied) => occupied.into_mut(),
+            Entry::Vacant(vacant) => {
+                let value = default(vacant.key());
+                vacant.insert(value)
+            }
+        }
+    }
+
     /// Returns a reference to this entry's key.
     ///
     /// *O*(1) time

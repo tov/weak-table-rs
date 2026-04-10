@@ -461,6 +461,22 @@ impl<'a, K, V: WeakElement> Entry<'a, K, V> {
         }
     }
 
+    /// Ensures that a value is in the entry by inserting the result of calling the
+    /// `default` function on this entry's key if the function is empty, and
+    /// returns a strong reference to the value in the entry.
+    pub fn or_insert_with_key<F>(self, default: F) -> V::Strong
+    where
+        F: FnOnce(&K) -> V::Strong,
+    {
+        match self {
+            Entry::Occupied(occupied) => occupied.get_strong(),
+            Entry::Vacant(vacant) => {
+                let value = default(vacant.key());
+                vacant.insert(value)
+            }
+        }
+    }
+
     /// Returns a reference to this entry's key.
     ///
     /// *O*(1) time
