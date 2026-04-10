@@ -544,6 +544,13 @@ impl<'a, K: WeakKey, V: WeakElement> VacantEntry<'a, K, V> {
     pub fn insert(self, value: V::Strong) -> V::Strong {
         V::clone(self.0.insert(value).get().1)
     }
+
+    /// Inserts the key and value into the map, returning an `OccupiedEntry`.
+    ///
+    /// *O*(1) time
+    pub fn insert_entry(self, value: V::Strong) -> OccupiedEntry<'a, K, V> {
+        OccupiedEntry(self.0.insert(value))
+    }
 }
 
 impl<K: WeakElement, V: WeakElement, S> Debug for WeakWeakHashMap<K, V, S>

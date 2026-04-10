@@ -645,6 +645,13 @@ impl<'a, K: WeakKey, V> VacantEntry<'a, K, V> {
         let occupied = self.0.insert(value);
         occupied.into_mut()
     }
+
+    /// Inserts the key and value into the map, returning an `OccupiedEntry`.
+    ///
+    /// *O*(1) time
+    pub fn insert_entry(self, value: V) -> OccupiedEntry<'a, K, V> {
+        OccupiedEntry(self.0.insert(value))
+    }
 }
 
 impl<K: WeakElement, V: Debug, S> Debug for WeakKeyHashMap<K, V, S>
