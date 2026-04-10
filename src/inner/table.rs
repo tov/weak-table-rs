@@ -169,10 +169,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     ///
     /// See caveats on [`Self::capacity`].
     #[inline]
-    pub(crate) fn try_reserve(
-        &mut self,
-        additional: usize,
-    ) -> Result<(), hashbrown::TryReserveError> {
+    pub(crate) fn try_reserve(&mut self, additional: usize) -> Result<(), crate::TryReserveError> {
         // Check whether our existing capacity can handle this insertion.
         if self.table.len().saturating_add(additional) <= self.table.capacity() {
             return Ok(());
@@ -185,7 +182,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     /// necessary to ensure that we have enough room to expand _comfortably_ to
     /// hold `additional` elements.
     #[cold]
-    fn gc_and_try_grow(&mut self, additional: usize) -> Result<(), hashbrown::TryReserveError> {
+    fn gc_and_try_grow(&mut self, additional: usize) -> Result<(), crate::TryReserveError> {
         // Note that removing expired entries can lower the capacity of the
         // table.  See notes on `capacity()` above.
 
@@ -195,7 +192,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         let new_len = self.len();
         let expected_len = new_len
             .checked_add(additional)
-            .ok_or(hashbrown::TryReserveError::CapacityOverflow)?;
+            .ok_or(crate::TryReserveError::CapacityOverflow)?;
 
         let desired_capacity = desired_capacity_for(expected_len);
 
@@ -213,8 +210,8 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         let growth = desired_capacity - new_len;
 
         self.table
-            .try_reserve(growth, Self::make_hasher(&self.hash_builder))?;
-        Ok(())
+            .try_reserve(growth, Self::make_hasher(&self.hash_builder))
+            .map_err(crate::TryReserveError::from_hashbrown)
     }
 
     /// Remove expired entries from this table, and reallocate it if appropriate

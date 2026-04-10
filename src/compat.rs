@@ -35,13 +35,18 @@ pub(crate) use lib::{boxed::Box, string::String, vec, vec::Vec};
 
 // Stuff from `core` that we use often:
 pub(crate) use core::{
+    alloc::Layout,
     borrow::Borrow,
-    fmt::{self, Debug, Formatter},
+    fmt::{self, Debug, Display, Formatter},
     hash::{BuildHasher, Hash, Hasher},
     iter::{self, FromIterator},
     mem,
     ops::{self, Deref, Index, IndexMut},
 };
+
+// core:error::Error did not exist before 1.81, which is earlier than our MSRV.
+#[cfg(feature = "std")]
+pub(crate) use std::error::Error;
 
 // When testing, we need the `eprintln` macro from `std`:
 #[cfg(test)]
