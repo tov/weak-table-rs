@@ -1,6 +1,7 @@
 //! A hash set where the elements are held by weak pointers and compared by value.
 
 use crate::compat::*;
+use crate::inner;
 
 use super::traits::*;
 use super::weak_key_hash_map as base;
@@ -281,6 +282,51 @@ impl<T: WeakKey, S> WeakHashSet<T, S> {
     /// *O*(1) time (and *O*(*n*) time to dispose of the result)
     pub fn drain(&mut self) -> Drain<'_, T> {
         Drain(self.0.drain())
+    }
+
+    /// Gets an iterator that removes and returns elements matching a given predicate.
+    ///
+    /// Expired elements are also removed.
+    ///
+    /// If this iterator is dropped before it is completed, then no further
+    /// elements are removed.
+    /// (This is in contrast to the behavior of [`drain`](Self::drain)).
+    ///
+    /// *O*(1) time
+    pub fn extract_if<'a, F>(&'a mut self, mut f: F) -> ExtractIf<'a, T, F>
+    where
+        F: FnMut(T::Strong) -> bool + 'a,
+    {
+        ExtractIf {
+            inner: self.0 .0.extract_if(move |e| {
+                if let Some(k) = e.0.val.view() {
+                    f(k)
+                } else {
+                    true
+                }
+            }),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+/// An iterator that removes members that match a given predicate.
+pub struct ExtractIf<'a, T: WeakElement, F> {
+    /// The underlying iterator.
+    inner: inner::ExtractIf<'a, inner::WeakK<T>, inner::Owned<()>>,
+    /// A marker so that F does not appear unused.
+    _phantom: PhantomData<F>,
+}
+
+impl<'a, T: WeakKey, F> Iterator for ExtractIf<'a, T, F> {
+    type Item = T::Strong;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|(k, ())| k)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
     }
 }
 

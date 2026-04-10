@@ -815,6 +815,50 @@ impl<K: WeakElement, V, S> WeakKeyHashMap<K, V, S> {
     pub fn drain(&mut self) -> Drain<'_, K, V> {
         Drain(self.0.drain())
     }
+
+    /// Gets an iterator that removes and returns elements matching a given predicate.
+    ///
+    /// Expired elements are also removed.
+    ///
+    /// If this iterator is dropped before it is completed, then no further
+    /// elements are removed.
+    /// (This is in contrast to the behavior of [`drain`](Self::drain)).
+    ///
+    /// *O*(1) time
+    pub fn extract_if<'a, F>(&'a mut self, mut f: F) -> ExtractIf<'a, K, V, F>
+    where
+        F: FnMut(K::Strong, &mut V) -> bool + 'a,
+    {
+        ExtractIf {
+            inner: self.0.extract_if(move |e| {
+                if let Some(k) = e.0.val.view() {
+                    f(k, &mut e.1.val)
+                } else {
+                    true
+                }
+            }),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+/// An iterator that removes members that match a given predicate.
+pub struct ExtractIf<'a, K: WeakElement, V, F> {
+    /// The underlying iterator.
+    inner: inner::ExtractIf<'a, inner::WeakK<K>, inner::Owned<V>>,
+    /// A marker so that F does not appear unused.
+    _phantom: PhantomData<F>,
+}
+
+impl<'a, K: WeakKey, V, F> Iterator for ExtractIf<'a, K, V, F> {
+    type Item = (K::Strong, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
 }
 
 #[cfg(test)]
@@ -945,5 +989,24 @@ mod test {
         }
 
         assert_eq!(count, rcs.len());
+    }
+
+    #[test]
+    fn extract_if() {
+        let rcs: Vec<Rc<u32>> = (0..50).map(Rc::new).collect();
+        let mut weakmap: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|k| (k.clone(), *k.as_ref())).collect();
+        let even_numbers: crate::compat::HashSet<u32> = (0..50).filter(|n| n % 2 == 0).collect();
+
+        let evens: Vec<_> = weakmap
+            .extract_if(|k, v| {
+                debug_assert!(k.as_ref() == v);
+                *v *= 2;
+                even_numbers.contains(k.as_ref())
+            })
+            .collect();
+
+        assert_eq!(weakmap.iter().count(), 25);
+        assert_eq!(evens.len(), 25);
     }
 }

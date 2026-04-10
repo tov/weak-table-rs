@@ -615,6 +615,49 @@ impl<'a, K: Element, V: Element> Iterator for Drain<'a, K, V> {
     }
 }
 
+impl<K: Element, V: Element, S> Table<K, V, S> {
+    /// Return an iterator that removes and returns elements if they match a predicate.
+    ///
+    /// All elements matching the predicate will be removed,
+    /// but elements will only be returned if they have not expired.
+    ///
+    /// If the iterator is dropped before it completes, then unvisited elements
+    /// will not be removed.
+    pub(crate) fn extract_if<'a, F>(&'a mut self, f: F) -> ExtractIf<'a, K, V>
+    where
+        F: FnMut(&mut (K, V)) -> bool + 'a,
+    {
+        let iter = Box::new(
+            self.table
+                .extract_if(f)
+                .filter_map(|(k, v)| Some((k.into_owned()?, v.into_owned()?))),
+        );
+
+        ExtractIf { iter }
+    }
+}
+
+/// An iterator that extracts elements if they match a predicate.
+pub(crate) struct ExtractIf<'a, K: Element, V: Element> {
+    /// An underlying iterator.
+    ///
+    /// This is a [`raw::ExtractIf`]`<'a, K, V, F>`, where `F``
+    /// is an unnameable type.
+    iter: Box<dyn Iterator<Item = (K::Owned, V::Owned)> + 'a>,
+}
+
+impl<'a, K: Element, V: Element> Iterator for ExtractIf<'a, K, V> {
+    type Item = (K::Owned, V::Owned);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, self.iter.size_hint().1)
+    }
+}
+
 impl<'a, K: Element, V: Element> fmt::Debug for OccupiedEntry<'a, K, V>
 where
     K::Owned: fmt::Debug,
@@ -1110,5 +1153,29 @@ mod test {
             assert!(cap > len);
             assert!((len as f64) < (cap as f64) * 0.75);
         }
+    }
+
+    #[test]
+    fn extract_if() {
+        let numbers: Vec<Rc<u8>> = (0..50).map(Rc::new).collect();
+        let mut tab: WkKeyMap = WkKeyMap::new(0, RandomState::default());
+        for n in numbers.iter() {
+            tab.entry(n.clone()).unwrap_vacant().insert(**n);
+        }
+
+        let div3: Vec<(Rc<u8>, u8)> = tab
+            .extract_if(|(k, v)| {
+                if k.as_ref().unwrap().as_ref() % 3 == 0 {
+                    true
+                } else {
+                    v.val *= 2;
+                    false
+                }
+            })
+            .collect();
+
+        assert_eq!(div3.len() + tab.iter().count(), numbers.len());
+        assert!(div3.iter().all(|(_k, v)| v % 3 == 0));
+        assert!(tab.iter().all(|(k, v)| *k % 3 != 0 && *v == *k * 2));
     }
 }

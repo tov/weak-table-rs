@@ -7,7 +7,7 @@ use super::traits::*;
 use super::weak_key_hash_map as base;
 
 pub use super::weak_key_hash_map::{
-    Drain, Entry, IntoIter, Iter, IterMut, Keys, Values, ValuesMut,
+    Drain, Entry, ExtractIf, IntoIter, Iter, IterMut, Keys, Values, ValuesMut,
 };
 pub use super::PtrWeakKeyHashMap;
 
@@ -287,6 +287,22 @@ where
     /// *O*(1) time (and *O*(*n*) time to dispose of the result)
     pub fn drain(&mut self) -> Drain<'_, ByPtr<K>, V> {
         self.0.drain()
+    }
+
+    /// Gets an iterator that removes and returns elements matching a given predicate.
+    ///
+    /// Expired elements are also removed.
+    ///
+    /// If this iterator is dropped before it is completed, then no further
+    /// elements are removed.
+    /// (This is in contrast to the behavior of [`drain`](Self::drain)).
+    ///
+    /// *O*(1) time
+    pub fn extract_if<'a, F>(&'a mut self, f: F) -> ExtractIf<'a, ByPtr<K>, V, F>
+    where
+        F: FnMut(K::Strong, &mut V) -> bool + 'a,
+    {
+        self.0.extract_if(f)
     }
 }
 

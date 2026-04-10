@@ -40,6 +40,7 @@ pub(crate) use core::{
     fmt::{self, Debug, Display, Formatter},
     hash::{BuildHasher, Hash, Hasher},
     iter::{self, FromIterator},
+    marker::PhantomData,
     mem,
     ops::{self, Deref, Index, IndexMut},
 };

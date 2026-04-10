@@ -668,4 +668,48 @@ impl<K, V: WeakElement, S> WeakValueHashMap<K, V, S> {
     pub fn drain(&mut self) -> Drain<'_, K, V> {
         Drain(self.0.drain())
     }
+
+    /// Gets an iterator that removes and returns elements matching a given predicate.
+    ///
+    /// Expired elements are also removed.
+    ///
+    /// If this iterator is dropped before it is completed, then no further
+    /// elements are removed.
+    /// (This is in contrast to the behavior of [`drain`](Self::drain)).
+    ///
+    /// *O*(1) time
+    pub fn extract_if<'a, F>(&'a mut self, mut f: F) -> ExtractIf<'a, K, V, F>
+    where
+        F: FnMut(&K, V::Strong) -> bool + 'a,
+    {
+        ExtractIf {
+            inner: self.0.extract_if(move |e| {
+                if let Some(v) = e.1.val.view() {
+                    f(&e.0.val, v)
+                } else {
+                    true
+                }
+            }),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+/// An iterator that removes members that match a given predicate.
+pub struct ExtractIf<'a, K, V: WeakElement, F> {
+    /// The underlying iterator.
+    inner: inner::ExtractIf<'a, inner::Owned<K>, inner::WeakV<V>>,
+    /// A marker so that F does not appear unused.
+    _phantom: PhantomData<F>,
+}
+
+impl<'a, K: WeakKey, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
+    type Item = (K, V::Strong);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
 }
