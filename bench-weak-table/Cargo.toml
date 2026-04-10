@@ -19,7 +19,7 @@ bench = false
 [features]
 
 [dependencies]
-weak-table2 = { version = "0.3.3-pre1", path = ".." }
+weak-table = { path = ".." }
 
 [dev-dependencies]
 criterion = "0.8.2"
