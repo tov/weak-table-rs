@@ -563,6 +563,19 @@ impl<'a, K: WeakKey, V> Entry<'a, K, V> {
             Entry::Vacant(ref vacant) => vacant.key(),
         }
     }
+
+    /// Inserts a value into this entry, and returns an [`OccupiedEntry`].
+    ///
+    /// *O*(1) time
+    pub fn insert_entry(self, value: V) -> OccupiedEntry<'a, K, V> {
+        match self {
+            Entry::Occupied(mut occupied) => {
+                occupied.insert(value);
+                occupied
+            }
+            Entry::Vacant(vacant) => vacant.insert_entry(value),
+        }
+    }
 }
 
 impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
