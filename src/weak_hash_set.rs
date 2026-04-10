@@ -196,6 +196,17 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.remove(key).is_some()
     }
 
+    /// Removes the entry with the given key, if it exists, and return the key.
+    ///
+    /// expected *O*(1) time; worst-case *O*(*p*) time
+    pub fn take<Q>(&mut self, key: &Q) -> Option<T::Strong>
+    where
+        Q: ?Sized + Eq + Hash,
+        T::Key: Borrow<Q>,
+    {
+        self.0.remove_entry(key).map(|(k, ())| k)
+    }
+
     /// Removes all mappings not satisfying the given predicate.
     ///
     /// Also removes any expired mappings.
