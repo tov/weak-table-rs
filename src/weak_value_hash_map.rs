@@ -286,6 +286,18 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S> {
         self.0.find_entry(key).map(|occupied| occupied.remove().1)
     }
 
+    /// Removes the entry with the given key, if it exists, and returns both the
+    /// key and value.
+    ///
+    /// expected *O*(1) time; worst-case *O*(*p*) time
+    pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V::Strong)>
+    where
+        Q: ?Sized + Hash + Eq,
+        K: Borrow<Q>,
+    {
+        Some(self.0.find_entry(key)?.remove())
+    }
+
     /// Removes all mappings not satisfying the given predicate.
     ///
     /// Also removes any expired mappings.
