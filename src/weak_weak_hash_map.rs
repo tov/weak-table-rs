@@ -439,6 +439,18 @@ where
     }
 }
 
+impl<K: WeakKey, V: WeakElement, const N: usize> From<[(K::Strong, V::Strong); N]>
+    for WeakWeakHashMap<K, V, RandomState>
+{
+    /// Converts an array of key-value pairs into a map.
+    ///
+    /// If any entries in the array have equal keys,
+    /// all but one of the corresponding values will be dropped.
+    fn from(value: [(K::Strong, V::Strong); N]) -> Self {
+        Self::from_iter(value)
+    }
+}
+
 impl<K, V, S> Extend<(K::Strong, V::Strong)> for WeakWeakHashMap<K, V, S>
 where
     K: WeakKey,

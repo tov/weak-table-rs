@@ -372,6 +372,16 @@ where
     }
 }
 
+impl<T: WeakKey, const N: usize> From<[T::Strong; N]> for WeakHashSet<T, RandomState> {
+    /// Converts an array of elements into a set.
+    ///
+    /// If any entries in the array are equal,
+    /// all but one of the corresponding values will be dropped.
+    fn from(value: [T::Strong; N]) -> Self {
+        Self::from_iter(value)
+    }
+}
+
 impl<T: WeakKey, S: BuildHasher> Extend<T::Strong> for WeakHashSet<T, S> {
     fn extend<I: IntoIterator<Item = T::Strong>>(&mut self, iter: I) {
         self.0.extend(iter.into_iter().map(|k| (k, ())));

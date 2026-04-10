@@ -337,6 +337,20 @@ where
     }
 }
 
+impl<T, const N: usize> From<[T::Strong; N]> for PtrWeakHashSet<T, RandomState>
+where
+    T: WeakElement,
+    T::Strong: Deref,
+{
+    /// Converts an array of elements into a set.
+    ///
+    /// If any entries in the array are equal,
+    /// all but one of the corresponding values will be dropped.
+    fn from(value: [T::Strong; N]) -> Self {
+        Self::from_iter(value)
+    }
+}
+
 impl<T, S> Extend<T::Strong> for PtrWeakHashSet<T, S>
 where
     T: WeakElement,

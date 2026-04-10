@@ -329,6 +329,22 @@ where
     }
 }
 
+impl<K, V, const N: usize> From<[(K::Strong, V::Strong); N]>
+    for PtrWeakWeakHashMap<K, V, RandomState>
+where
+    K: WeakElement,
+    K::Strong: Deref,
+    V: WeakElement,
+{
+    /// Converts an array of key-value pairs into a map.
+    ///
+    /// If any entries in the array have equal keys,
+    /// all but one of the corresponding values will be dropped.
+    fn from(value: [(K::Strong, V::Strong); N]) -> Self {
+        Self::from_iter(value)
+    }
+}
+
 impl<K, V, S> Extend<(K::Strong, V::Strong)> for PtrWeakWeakHashMap<K, V, S>
 where
     K: WeakElement,
