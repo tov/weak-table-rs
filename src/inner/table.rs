@@ -400,6 +400,38 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
             None
         }
     }
+
+    /// For each provided key, return a reference to the key, and a mutable
+    /// reference to the value, of the corresponding entry in the table.
+    ///
+    /// Only implemented for owned values.
+    ///
+    /// An entry will be None if it exists but is expired.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the keys correspond to  overlapping entries.
+    pub(crate) fn get_disjoint_mut<Q, const N: usize>(
+        &mut self,
+        ks: [&Q; N],
+    ) -> [Option<(K::Ref<'_>, &mut T)>; N]
+    where
+        Q: Hash + Eq + ?Sized,
+        K::Key: Borrow<Q>,
+    {
+        let hashes: [u64; N] = ks.map(|query| hash_one(&self.hash_builder, query));
+
+        self.table
+            .get_disjoint_mut(hashes, |idx, (k, _)| k.eq_borrow(ks[idx]))
+            .map(|ent| {
+                let (k, v) = ent?;
+                if let Some(k_ref) = k.as_ref() {
+                    Some((k_ref, &mut v.val))
+                } else {
+                    None
+                }
+            })
+    }
 }
 
 impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
@@ -954,6 +986,44 @@ mod test {
         if let Some(high) = hint.1 {
             assert!(actual <= high);
         }
+    }
+
+    #[test]
+    fn disjoint_mut() {
+        let mut tab = WkKeyMap::new(0, RandomState::default());
+        let mut persist_keys = vec![];
+        for n in 0..=15 {
+            let k = Rc::new(n);
+            tab.entry(k.clone()).unwrap_vacant().insert(0);
+            persist_keys.push(k);
+        }
+
+        let [three, seven, ten, fifty_five] = tab.get_disjoint_mut([&3, &7, &10, &55]);
+        *three.unwrap().1 = 3;
+        *seven.unwrap().1 = 7;
+        *ten.unwrap().1 = 10;
+        assert!(fifty_five.is_none());
+
+        assert_eq!(tab.find(&3).unwrap().1, &3);
+        assert_eq!(tab.find(&7).unwrap().1, &7);
+        assert_eq!(tab.find(&10).unwrap().1, &10);
+
+        // we never set this one.
+        assert_eq!(tab.find(&12).unwrap().1, &0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn disjoint_mut_panic() {
+        let mut tab = WkKeyMap::new(0, RandomState::default());
+        let mut persist_keys = vec![];
+        for n in 0..=15 {
+            let k = Rc::new(n);
+            tab.entry(k.clone()).unwrap_vacant().insert(0);
+            persist_keys.push(k);
+        }
+
+        let _only_one_present = tab.get_disjoint_mut([&5, &5, &5, &5]);
     }
 
     #[test]

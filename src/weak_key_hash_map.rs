@@ -339,6 +339,60 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
         self.0.find_mut(key)
     }
 
+    /// Looks up mutable references to the values corresponding to several keys
+    /// at a time.
+    ///
+    /// (Because of borrowing rules, Rust doesn't allow you to call `get_mut()` again
+    /// while the result of a previous `get_mut()` is still live.  This method exists
+    /// to work around that limitation.)
+    ///
+    /// Only one mutable reference can exist to any given value at a time.
+    /// Therefore, all keys must refer to different values, or this
+    /// method will panic.
+    ///
+    /// expected *O*(1 `N^2`) time; worst-case *O*(*p* `N^2`) time,
+    /// where N is the length of the array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any keys refer to the same value.
+    pub fn get_disjoint_mut<Q, const N: usize>(&mut self, ks: [&Q; N]) -> [Option<&mut V>; N]
+    where
+        Q: Hash + Eq + ?Sized,
+        K::Key: Borrow<Q>,
+    {
+        self.0.get_disjoint_mut(ks).map(|e| e.map(|(_k, v)| v))
+    }
+
+    /// Looks up mutable references to the values corresponding to several keys
+    /// at a time.  Returns those references along with their keys as stored in
+    /// the table.
+    ///
+    /// (Because of borrowing rules, Rust doesn't allow you to call `get_mut()` again
+    /// while the result of a previous `get_mut()` is still live.  This method exists
+    /// to work around that limitation.)
+    ///
+    /// Only one mutable reference can exist to any given value at a time.
+    /// Therefore, all keys must refer to different values, or this
+    /// method will panic.
+    ///
+    /// expected *O*(1 `N^2`) time; worst-case *O*(*p* `N^2`) time,
+    /// where N is the length of the array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any keys refer to the same value.
+    pub fn get_both_disjoint_mut<Q, const N: usize>(
+        &mut self,
+        ks: [&Q; N],
+    ) -> [Option<(K::Strong, &mut V)>; N]
+    where
+        Q: Hash + Eq + ?Sized,
+        K::Key: Borrow<Q>,
+    {
+        self.0.get_disjoint_mut(ks)
+    }
+
     /// Unconditionally inserts the value, returning the old value if already present.
     ///
     /// Unlike `std::collections::HashMap`, this replaces the key even the entry was occupied.

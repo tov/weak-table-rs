@@ -167,7 +167,35 @@ where
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn get_mut(&mut self, key: &K::Strong) -> Option<&mut V> {
-        self.0.get_mut(&(key.deref() as *const _))
+        let p = key.deref() as *const _;
+        self.0.get_mut(&p)
+    }
+
+    /// Looks up mutable references to the values corresponding to several keys
+    /// at a time.
+    ///
+    /// (Because of borrowing rules, Rust doesn't allow you to call `get_mut()` again
+    /// while the result of a previous `get_mut()` is still live.  This method exists
+    /// to work around that limitation.)
+    ///
+    /// Only one mutable reference can exist to any given value at a time.
+    /// Therefore, all keys must refer to different values, or this
+    /// method will panic.
+    ///
+    /// expected *O*(1 `N^2`) time; worst-case *O*(*p* `N^2`) time,
+    /// where N is the length of the array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any keys refer to the same value.
+    pub fn get_disjoint_mut<const N: usize>(&mut self, ks: [&K::Strong; N]) -> [Option<&mut V>; N] {
+        let ks: [*const <K::Strong as Deref>::Target; N] = ks.map(|k| (*k).deref() as *const _);
+        let ks_refs = crate::util::each_ref(&ks);
+
+        self.0
+             .0
+            .get_disjoint_mut(ks_refs)
+            .map(|ent| ent.map(|(_k, v)| v))
     }
 
     /// Unconditionally inserts the value, returning the old value if already present. Does not
