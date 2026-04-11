@@ -18,6 +18,7 @@ mod tests;
 mod by_ptr;
 mod compat;
 mod inner;
+mod macros;
 mod size_policy;
 mod util;
 

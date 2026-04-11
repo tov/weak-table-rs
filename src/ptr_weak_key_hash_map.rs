@@ -1,13 +1,14 @@
 //! A hash map where the keys are held by weak pointers and compared by pointer.
 
 use crate::compat::*;
+use crate::macros::*;
 
 use super::by_ptr::*;
 use super::traits::*;
 use super::weak_key_hash_map as base;
 
 pub use super::weak_key_hash_map::{
-    Drain, Entry, ExtractIf, IntoIter, Iter, IterMut, Keys, Values, ValuesMut,
+    Drain, Entry, ExtractIf, IntoIter, IntoKeys, IntoValues, Iter, IterMut, Keys, Values, ValuesMut,
 };
 pub use super::PtrWeakKeyHashMap;
 
@@ -326,6 +327,8 @@ where
     pub fn drain(&mut self) -> Drain<'_, ByPtr<K>, V> {
         self.0.drain()
     }
+
+    ptr_into_kv_methods! {}
 
     /// Gets an iterator that removes and returns elements matching a given predicate.
     ///

@@ -2,12 +2,15 @@
 //! pointer.
 
 use crate::compat::*;
+use crate::macros::*;
 
 use super::by_ptr::*;
 use super::traits::*;
 use super::weak_weak_hash_map as base;
 
-pub use super::weak_weak_hash_map::{Drain, Entry, ExtractIf, IntoIter, Iter, Keys, Values};
+pub use super::weak_weak_hash_map::{
+    Drain, Entry, ExtractIf, IntoIter, IntoKeys, IntoValues, Iter, Keys, Values,
+};
 pub use super::PtrWeakWeakHashMap;
 
 impl<K: WeakElement, V: WeakElement> PtrWeakWeakHashMap<K, V, RandomState>
@@ -277,6 +280,8 @@ where
     pub fn drain(&mut self) -> Drain<'_, ByPtr<K>, V> {
         self.0.drain()
     }
+
+    ptr_into_kv_methods! {}
 
     /// Gets an iterator that removes and returns elements matching a given predicate.
     ///

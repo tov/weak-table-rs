@@ -4,6 +4,7 @@
 use super::size_policy::*;
 use super::traits::*;
 use super::*;
+use crate::macros::*;
 
 pub use super::WeakWeakHashMap;
 
@@ -107,6 +108,8 @@ impl<K: WeakElement, V: WeakElement> Iterator for IntoIter<K, V> {
         self.0.size_hint()
     }
 }
+
+into_kv_types!(K::Strong, V::Strong where {K: WeakElement, V:WeakElement});
 
 impl<K: WeakKey, V: WeakElement> WeakWeakHashMap<K, V, RandomState> {
     /// Creates an empty `WeakWeakHashMap`.
@@ -711,6 +714,8 @@ impl<K: WeakElement, V: WeakElement, S> WeakWeakHashMap<K, V, S> {
     pub fn drain(&mut self) -> Drain<'_, K, V> {
         Drain(self.0.drain())
     }
+
+    into_kv_methods! {}
 
     /// Gets an iterator that removes and returns elements matching a given predicate.
     ///

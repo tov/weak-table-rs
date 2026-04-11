@@ -1,5 +1,7 @@
 //! A hash map where the values are held by weak pointers.
 
+use crate::macros::*;
+
 use super::size_policy::*;
 use super::traits::*;
 use super::*;
@@ -106,6 +108,8 @@ impl<K, V: WeakElement> Iterator for IntoIter<K, V> {
         self.0.size_hint()
     }
 }
+
+into_kv_types!(K, V::Strong where {V: WeakElement});
 
 impl<K: Eq + Hash, V: WeakElement> WeakValueHashMap<K, V, RandomState> {
     /// Creates an empty `WeakValueHashMap`.
@@ -702,6 +706,8 @@ impl<K, V: WeakElement, S> WeakValueHashMap<K, V, S> {
     pub fn drain(&mut self) -> Drain<'_, K, V> {
         Drain(self.0.drain())
     }
+
+    into_kv_methods! {}
 
     /// Gets an iterator that removes and returns elements matching a given predicate.
     ///

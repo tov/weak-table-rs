@@ -265,6 +265,7 @@ where
     pub fn drain(&mut self) -> Drain<'_, T> {
         Drain(self.0.drain())
     }
+
     /// Gets an iterator that removes and returns elements matching a given predicate.
     ///
     /// Expired elements are also removed.
