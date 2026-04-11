@@ -224,6 +224,30 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
             .shrink_to_fit(Self::make_hasher(&self.hash_builder));
     }
 
+    /// Shrink the storage used for the table, but not below `min_capacity`.
+    ///
+    /// Does nothing if the table is already "small enough".
+    /// Otherwise, removes expired entries and tries to shrink the table.
+    pub(crate) fn shrink_to(&mut self, min_capacity: usize) {
+        if self.capacity() <= min_capacity {
+            // The table is already small enough.
+            return;
+        }
+
+        self.remove_expired_inner();
+        if self.capacity() <= min_capacity {
+            // HashTable::shrink_to would panic; instead, use shrink_to_fit.
+            // (We check this twice because remove_expired_inner can _lower_ the
+            // capacity.)
+            self.shrink_to_fit();
+        } else {
+            // TODO: Should we allow some additional space, as `weak-table` did?
+            // It seems to violate the contract of `shrink_to_fit` though.
+            self.table
+                .shrink_to(min_capacity, Self::make_hasher(&self.hash_builder));
+        }
+    }
+
     /// Return an [`Entry`] corresponding to the occupied or unoccupied slot
     /// of the provided `key`.
     ///
@@ -1247,5 +1271,33 @@ mod test {
         assert_eq!(div3.len() + tab.iter().count(), numbers.len());
         assert!(div3.iter().all(|(_k, v)| v % 3 == 0));
         assert!(tab.iter().all(|(k, v)| *k % 3 != 0 && *v == *k * 2));
+    }
+
+    #[test]
+    fn shrink_to() {
+        let numbers: Vec<Rc<u8>> = (0..50).map(Rc::new).collect();
+        let mut tab: WkKeyMap = WkKeyMap::new(1000, RandomState::default());
+        for n in numbers.iter() {
+            tab.entry(n.clone()).unwrap_vacant().insert(**n);
+        }
+        let cap_orig = tab.capacity();
+        assert!(cap_orig >= 1000);
+
+        for n in 0..200 {
+            let mut t2 = tab.clone();
+            t2.shrink_to(n);
+            assert!(t2.capacity() >= n);
+            assert_eq!(t2.iter().count(), 50);
+            assert!(t2.capacity() < cap_orig);
+        }
+
+        for n in (cap_orig - 10)..(cap_orig + 10) {
+            let mut t2 = tab.clone();
+            t2.shrink_to(n);
+            assert_eq!(t2.iter().count(), 50);
+        }
+
+        tab.shrink_to(9999);
+        assert_eq!(tab.capacity(), cap_orig);
     }
 }

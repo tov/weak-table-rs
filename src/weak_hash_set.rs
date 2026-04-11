@@ -93,6 +93,16 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.shrink_to_fit();
     }
 
+    /// Shrinks capacity to hold no fewer than `min_capacity` elements.
+    ///
+    /// May remove expired items if necessary.
+    /// Does nothing if the current capacity is already at `min_capacity` or below.
+    ///
+    /// *O*(*n*) time
+    pub fn shrink_to(&mut self, min_capacity: usize) {
+        self.0.shrink_to(min_capacity);
+    }
+
     /// Returns an over-approximation of the number of elements.
     ///
     /// (This is an over-approximation because it includes expired elements.)
