@@ -129,8 +129,13 @@ where
         self.0.contains_key(key)
     }
 
-    /// Unconditionally inserts the value, returning the old value if already present. Does not
-    /// replace the key.
+    /// Unconditionally inserts `key` into this HashSet,
+    /// replacing any previous entry with the same key.
+    ///
+    /// Returns true if the key was absent before, and false otherwise.
+    ///
+    /// (Note that unlike `HashSet::insert`, this insert method always replaces
+    /// the key.)
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn insert(&mut self, key: T::Strong) -> bool {
