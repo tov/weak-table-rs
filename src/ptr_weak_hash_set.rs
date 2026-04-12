@@ -2,6 +2,7 @@
 
 use crate::compat::*;
 use crate::inner;
+use crate::macros::*;
 
 use super::by_ptr::ByPtr;
 use super::ptr_weak_key_hash_map as base;
@@ -198,6 +199,14 @@ where
     {
         self.0.domain_is_subset(&other.0)
     }
+
+    /// Helper: return true if 'self' contains 'item'.
+    fn contains_strong(&self, item: &T::Strong) -> bool {
+        self.contains(item)
+    }
+
+    set_op_methods! {PtrWeakHashSet}
+    set_relationships! {PtrWeakHashSet}
 }
 
 /// An iterator over the elements of a set.
@@ -312,6 +321,9 @@ impl<'a, T: WeakKey, F> Iterator for ExtractIf<'a, T, F> {
     }
 }
 
+set_op_types! {PtrWeakHashSet where {T: WeakElement, T::Strong: Deref}}
+set_operators! {PtrWeakHashSet where {T: WeakElement, T::Strong: Deref}}
+
 impl<T, S, S1> PartialEq<PtrWeakHashSet<T, S1>> for PtrWeakHashSet<T, S>
 where
     T: WeakElement,
@@ -407,5 +419,21 @@ where
     /// *O*(1) time
     fn into_iter(self) -> Self::IntoIter {
         Iter(self.0.keys())
+    }
+}
+
+/// Helper: Given two references to sets, return them in ascending order of
+/// len().
+fn sort_by_size<'a, T: WeakElement, S: BuildHasher>(
+    a: &'a PtrWeakHashSet<T, S>,
+    b: &'a PtrWeakHashSet<T, S>,
+) -> (&'a PtrWeakHashSet<T, S>, &'a PtrWeakHashSet<T, S>)
+where
+    T::Strong: Deref,
+{
+    if a.len() < b.len() {
+        (a, b)
+    } else {
+        (b, a)
     }
 }

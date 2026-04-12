@@ -2,6 +2,7 @@
 
 use crate::compat::*;
 use crate::inner;
+use crate::macros::*;
 
 use super::traits::*;
 use super::weak_key_hash_map as base;
@@ -240,6 +241,14 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     {
         self.0.domain_is_subset(&other.0)
     }
+
+    /// Helper: return true if 'self' contains 'item'.
+    fn contains_strong(&self, item: &T::Strong) -> bool {
+        T::with_key(item, |k| self.contains(k))
+    }
+
+    set_op_methods! {WeakHashSet}
+    set_relationships! {WeakHashSet}
 }
 
 /// An iterator over the elements of a set.
@@ -351,6 +360,9 @@ impl<'a, T: WeakKey, F> Iterator for ExtractIf<'a, T, F> {
     }
 }
 
+set_op_types! {WeakHashSet where {T: WeakKey}}
+set_operators! {WeakHashSet where {T: WeakKey}}
+
 impl<T, S, S1> PartialEq<WeakHashSet<T, S1>> for WeakHashSet<T, S>
 where
     T: WeakKey,
@@ -428,6 +440,19 @@ impl<'a, T: WeakKey, S> IntoIterator for &'a WeakHashSet<T, S> {
     /// *O*(1) time
     fn into_iter(self) -> Self::IntoIter {
         Iter(self.0.keys())
+    }
+}
+
+/// Helper: Given two references to sets, return them in ascending order of
+/// len().
+fn sort_by_size<'a, T: WeakKey, S: BuildHasher>(
+    a: &'a WeakHashSet<T, S>,
+    b: &'a WeakHashSet<T, S>,
+) -> (&'a WeakHashSet<T, S>, &'a WeakHashSet<T, S>) {
+    if a.len() < b.len() {
+        (a, b)
+    } else {
+        (b, a)
     }
 }
 
