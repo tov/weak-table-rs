@@ -1054,6 +1054,91 @@ mod test {
         assert_eq!(weakmap.get(&7), Some(&21));
     }
 
+    #[test]
+    fn or_insert_with() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), **n)).collect();
+        let seven = Rc::new(7);
+        let eight = Rc::new(8);
+
+        // Absent key case:
+        let ptr: &mut u32 = weakmap.entry(seven.clone()).or_insert_with(|| 14);
+        assert_eq!(*ptr, 14);
+        let ptr: &mut u32 = weakmap.entry(eight.clone()).or_insert_with_key(|k| **k * 2);
+        assert_eq!(*ptr, 16);
+
+        // Present key case:
+        let one = Rc::new(1);
+        let ptr: &mut u32 = weakmap.entry(one.clone()).or_insert_with(|| 14);
+        assert_eq!(*ptr, 1);
+        let ptr: &mut u32 = weakmap.entry(one.clone()).or_insert_with_key(|k| **k * 2);
+        assert_eq!(*ptr, 1);
+    }
+
+    #[test]
+    fn entry_insert_entry() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), **n)).collect();
+
+        let one = Rc::new(1);
+        let ten = Rc::new(10);
+
+        let e1: super::OccupiedEntry<'_, Weak<u32>, u32> =
+            weakmap.entry(one.clone()).insert_entry(1001);
+        assert_eq!(e1.key(), &one);
+        assert_eq!(e1.get(), &1001);
+
+        let e2: super::OccupiedEntry<'_, Weak<u32>, u32> =
+            weakmap.entry(ten.clone()).insert_entry(1010);
+        assert_eq!(e2.key(), &ten);
+        assert_eq!(e2.get(), &1010);
+
+        assert_eq!(weakmap.get(&1), Some(&1001));
+        assert_eq!(weakmap.get(&10), Some(&1010));
+    }
+
+    #[test]
+    fn entry_and_modify() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), **n)).collect();
+
+        let one = Rc::new(1);
+        let ten = Rc::new(10);
+
+        let e = weakmap.entry(one.clone()).and_modify(|v| *v *= 2);
+        assert!(matches!(e, Entry::Occupied(e) if e.get() == &2));
+
+        let e = weakmap.entry(ten.clone()).and_modify(|v| *v *= 2);
+        assert!(matches!(e, Entry::Vacant(_)));
+    }
+
+    #[test]
+    fn vacant_insert_entry() {
+        let mut weakmap: WeakKeyHashMap<Weak<u32>, u32> = Default::default();
+        let five = Rc::new(5);
+
+        let Entry::Vacant(e) = weakmap.entry(five.clone()) else {
+            panic!("Not vacant");
+        };
+        let e: super::OccupiedEntry<'_, Weak<u32>, u32> = e.insert_entry(500);
+        assert_eq!(e.get(), &500);
+    }
+
+    #[test]
+    fn from_array() {
+        let a = [(Rc::new(5), 25), (Rc::new(7), 49), (Rc::new(9), 81)];
+        let v = a.to_vec();
+
+        let map: WeakKeyHashMap<Weak<u32>, u32> = WeakKeyHashMap::from(a);
+        assert_eq!(map.iter().count(), 3);
+        let mut v2: Vec<_> = map.iter().map(|(k, v)| (k, *v)).collect();
+        v2.sort();
+        assert_eq!(v, v2);
+    }
+
     // From https://github.com/tov/weak-table-rs/issues/1#issuecomment-461858060
     #[test]
     fn insert_and_check() {
