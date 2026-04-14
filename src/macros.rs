@@ -332,7 +332,7 @@ macro_rules! set_relationships {
         /// Returns true if this set has no members in common with `other`.
         pub fn is_disjoint(&self, other: &$settype<T, S>) -> bool {
             let (small, large) = sort_by_size(self, other);
-            small.iter().any(|t| large.contains_strong(&t))
+            ! small.iter().any(|t| large.contains_strong(&t))
         }
     }
 }
