@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+BASEDIR=$(git rev-parse --show-toplevel)
+
+cd "$BASEDIR"
+COVDIR="$BASEDIR/coverage"
+META="$BASEDIR/coverage.meta"
+
+rm -rf "${COVDIR:?}"
+mkdir "${COVDIR:?}"
+rm -rf "${META:?}"
+mkdir "${META:?}"
+
+export RUSTFLAGS="-C instrument-coverage"
+export LLVM_PROFILE_FILE="$META/coverage_meta/%p-%m.profraw"
+
+cargo test "$@"
+
+grcov "$META" \
+	--binary-path "$BASEDIR/target/debug/" \
+	-s "$BASEDIR" \
+	-o "$COVDIR" \
+        -t html \
+	--branch \
+	--ignore-not-existing \
+	--excl-start '^(pub(\((crate|super)\))? )?mod test' \
+	--excl-stop '^}' \
+	--ignore="*/tests/*" \
+	--ignore="*/examples/*"
+
+echo "Output in $COVDIR/html/index.html"
+

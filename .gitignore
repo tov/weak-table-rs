@@ -8,6 +8,8 @@ Cargo.lock
 
 /.idea/
 /cmake-build-*/
+/coverage/
+/coverage.meta/
 
 # Editor litter.
 *~
