@@ -9,7 +9,9 @@ use quickcheck::quickcheck;
 use weak_table::weak_key_hash_map::Entry;
 use weak_table::WeakKeyHashMap;
 
-use super::{ExecuteMapCmd, ForgetStrategy, InsertStrategy, MapScript, RemoveStrategy};
+use super::{
+    ExecuteMapCmd, ForgetStrategy, InsertStrategy, MapScript, ModifyStrategy, RemoveStrategy,
+};
 
 fn test_script<K, V>(script: &MapScript<K, V>) -> bool
 where
@@ -295,6 +297,59 @@ where
         };
         let old_s = self.strong.remove(key);
         assert_eq!(old_s, old_w);
+    }
+
+    fn modify_inserted(&mut self, strategy: ModifyStrategy, index: usize, value: &V) {
+        if let Some(key) = self.nth_key_mod_len(index) {
+            let key_ptr = match self.strong.get_key_value(&key) {
+                Some((k, _)) => k.clone(),
+                None => Rc::new(key.clone()),
+            };
+            let old_val_w = match strategy {
+                ModifyStrategy::Reinsert => self.weak.insert(key_ptr.clone(), value.clone()),
+                ModifyStrategy::Entry => match self.weak.entry(key_ptr.clone()) {
+                    Entry::Occupied(mut occupied) => Some(occupied.insert(value.clone())),
+                    Entry::Vacant(vacant_entry) => {
+                        let _ignore = vacant_entry.insert_entry(value.clone());
+                        None
+                    }
+                },
+                ModifyStrategy::GetDisjointMut => {
+                    if let [Some(p)] = self.weak.get_disjoint_mut([&key]) {
+                        let mut v = value.clone();
+                        mem::swap(p, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key_ptr.clone(), value.clone());
+                        None
+                    }
+                }
+                ModifyStrategy::GetBothDisjointMut => {
+                    if let [Some((kp, vp))] = self.weak.get_both_disjoint_mut([&key]) {
+                        assert_eq!(kp.as_ref(), &key);
+                        let mut v = value.clone();
+                        mem::swap(vp, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key_ptr.clone(), value.clone());
+                        None
+                    }
+                }
+                ModifyStrategy::GetMut => {
+                    if let Some(p) = self.weak.get_mut(&key) {
+                        let mut v = value.clone();
+                        mem::swap(p, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key_ptr.clone(), value.clone());
+                        None
+                    }
+                }
+            };
+
+            let old_val_s = self.strong.insert(key_ptr.clone(), value.clone());
+            assert_eq!(old_val_s, old_val_w);
+        }
     }
 
     fn forget_inserted(&mut self, _: ForgetStrategy, index: usize) {

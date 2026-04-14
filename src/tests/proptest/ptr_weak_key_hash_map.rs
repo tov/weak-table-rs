@@ -1,4 +1,5 @@
 use crate as weak_table2;
+use crate::tests::proptest::ModifyStrategy;
 
 use crate::compat::{
     sync::{Arc, Weak},
@@ -301,6 +302,44 @@ where
     fn remove_other(&mut self, _strategy: RemoveStrategy, _key: &K) {
         // This can't do anything meaningful: we need a copy of an inserted key
         // in order to remove that key.
+    }
+
+    fn modify_inserted(&mut self, strategy: ModifyStrategy, index: usize, value: &V) {
+        if let Some(key) = self.nth_key_mod_len(index) {
+            let old_val_w = match strategy {
+                ModifyStrategy::Reinsert => self.weak.insert(key.clone(), value.clone()),
+                ModifyStrategy::Entry => match self.weak.entry(key.clone()) {
+                    Entry::Occupied(mut occupied) => Some(occupied.insert(value.clone())),
+                    Entry::Vacant(vacant_entry) => {
+                        let _ignore = vacant_entry.insert_entry(value.clone());
+                        None
+                    }
+                },
+                ModifyStrategy::GetDisjointMut | ModifyStrategy::GetBothDisjointMut => {
+                    if let [Some(p)] = self.weak.get_disjoint_mut([&key]) {
+                        let mut v = value.clone();
+                        mem::swap(p, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key.clone(), value.clone());
+                        None
+                    }
+                }
+                ModifyStrategy::GetMut => {
+                    if let Some(p) = self.weak.get_mut(&key) {
+                        let mut v = value.clone();
+                        mem::swap(p, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key.clone(), value.clone());
+                        None
+                    }
+                }
+            };
+
+            let old_val_s = self.strong.insert(KeyByPtr(key.clone()), value.clone());
+            assert_eq!(old_val_s, old_val_w);
+        }
     }
 
     fn forget_inserted(&mut self, _: ForgetStrategy, index: usize) {

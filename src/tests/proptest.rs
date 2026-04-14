@@ -42,6 +42,16 @@ pub enum RemoveStrategy {
 
 #[derive(Clone, Copy, Debug)]
 #[non_exhaustive]
+pub enum ModifyStrategy {
+    Reinsert,
+    Entry,
+    GetMut,
+    GetDisjointMut,
+    GetBothDisjointMut,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
 pub enum ForgetStrategy {
     ForgetKey,
     ForgetValue,
@@ -55,6 +65,7 @@ pub enum MapCmd<K, V> {
     Reinsert(InsertStrategy, usize, V),
     RemoveInserted(RemoveStrategy, usize),
     RemoveOther(RemoveStrategy, K),
+    ModifyInserted(ModifyStrategy, usize, V),
     ForgetInserted(ForgetStrategy, usize),
     Reserve(usize, bool),
     ShrinkToFit(Option<usize>),
@@ -71,7 +82,7 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for MapCmd<K, V> {
         use MapCmd::*;
         let choice = u8::arbitrary(g);
 
-        match choice % 13 {
+        match choice % 14 {
             0..=3 => Insert(
                 InsertStrategy::arbitrary(g),
                 K::arbitrary(g),
@@ -92,6 +103,11 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for MapCmd<K, V> {
                 None
             }),
             12 => Clear,
+            13 => ModifyInserted(
+                ModifyStrategy::arbitrary(g),
+                usize::arbitrary(g),
+                V::arbitrary(g),
+            ),
             _ => unreachable!(),
         }
     }
@@ -134,6 +150,21 @@ impl Arbitrary for RemoveStrategy {
     }
 }
 
+impl Arbitrary for ModifyStrategy {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let choice: u8 = u8::arbitrary(g);
+
+        match choice % 5 {
+            0 => ModifyStrategy::Reinsert,
+            1 => ModifyStrategy::Entry,
+            2 => ModifyStrategy::GetDisjointMut,
+            3 => ModifyStrategy::GetMut,
+            4 => ModifyStrategy::GetBothDisjointMut,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl Arbitrary for ForgetStrategy {
     fn arbitrary(g: &mut Gen) -> Self {
         let choice: u8 = u8::arbitrary(g);
@@ -158,6 +189,7 @@ trait ExecuteMapCmd<K, V>: Debug {
             Reserve(n, try_reserve) => self.reserve(n, try_reserve),
             ShrinkToFit(min_capacity) => self.shrink(min_capacity),
             Clear => self.clear(),
+            ModifyInserted(strategy, index, ref v) => self.modify_inserted(strategy, index, v),
         }
     }
 
@@ -175,6 +207,17 @@ trait ExecuteMapCmd<K, V>: Debug {
     fn remove_inserted(&mut self, strategy: RemoveStrategy, index: usize);
 
     fn remove_other(&mut self, strategy: RemoveStrategy, key: &K);
+
+    fn modify_inserted(&mut self, strategy: ModifyStrategy, index: usize, value: &V) {
+        let strategy = match strategy {
+            ModifyStrategy::Reinsert => InsertStrategy::ViaInsert,
+            ModifyStrategy::Entry => InsertStrategy::ViaEntry,
+            ModifyStrategy::GetDisjointMut => InsertStrategy::ViaExtend,
+            ModifyStrategy::GetMut => InsertStrategy::ViaExtendRef,
+            ModifyStrategy::GetBothDisjointMut => InsertStrategy::ViaInsert,
+        };
+        self.reinsert(strategy, index, value);
+    }
 
     fn forget_inserted(&mut self, strategy: ForgetStrategy, index: usize);
 
