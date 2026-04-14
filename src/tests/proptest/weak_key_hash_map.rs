@@ -98,6 +98,10 @@ where
             for (k, v) in self.strong.iter() {
                 assert_eq!(self.weak.get(k.as_ref()), Some(v));
                 assert_eq!(self.weak.get_both(k.as_ref()), Some((k.clone(), v)));
+                assert!(Rc::ptr_eq(
+                    &self.weak.get_key(k.as_ref()).expect("Key suddenly absent"),
+                    k
+                ));
                 assert!(self.weak.contains_key(k.as_ref()));
             }
             let mut weak2: WeakKeyHashMap<Weak<K>, V> = self.weak.clone();

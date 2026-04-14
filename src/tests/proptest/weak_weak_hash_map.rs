@@ -96,7 +96,10 @@ where
             for (k, v) in self.strong.iter() {
                 assert_eq!(self.weak.get(k.as_ref()), Some(v.clone()));
                 assert_eq!(self.weak.get_both(k.as_ref()), Some((k.clone(), v.clone())));
-                assert_eq!(self.weak.get_key(k.as_ref()), Some(k.clone()));
+                assert!(Rc::ptr_eq(
+                    &self.weak.get_key(k.as_ref()).expect("Key suddenly absent"),
+                    k
+                ));
                 assert!(self.weak.contains_key(k.as_ref()));
             }
         }
