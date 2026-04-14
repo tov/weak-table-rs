@@ -151,7 +151,7 @@ impl<K, V, S> Table<K, V, S> {
     }
 }
 
-impl<K: Key, V: Element, S> Table<K, V, S> {
+impl<K: Element, V: Element, S> Table<K, V, S> {
     /// Remove all expired entries from this table.
     ///
     /// This is an internal helper and does not reallocate.
@@ -391,7 +391,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     */
 }
 
-impl<K: Element, V: Element, S> Table<K, V, S> {
+impl<K, V, S> Table<K, V, S> {
     /// Return an iterator over the non-expired entries in this Table, in an arbitrary order.
     pub(crate) fn iter(&self) -> Iter<'_, K, V> {
         Iter(self.table.iter())
@@ -457,7 +457,7 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
     }
 }
 
-impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
+impl<K, T, S> Table<K, super::Owned<T>, S> {
     /*
       See "TODO retain" note above.
 
@@ -523,7 +523,7 @@ impl<'a, K: Element, V: Element<CachedHash = ()>> OccupiedEntry<'a, K, V> {
     }
 }
 
-impl<'a, K: Key, T> OccupiedEntry<'a, K, super::Owned<T>> {
+impl<'a, K: Element, T> OccupiedEntry<'a, K, super::Owned<T>> {
     /* TODO get_mut:
 
        Because of lifetime issues, this implementation isn't viable.

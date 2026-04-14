@@ -58,7 +58,7 @@ pub(crate) fn each_ref<T, const N: usize>(array: &[T; N]) -> [&T; N] {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
+    use crate::compat::sync::Arc;
 
     use super::each_ref;
 

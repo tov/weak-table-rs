@@ -6,6 +6,8 @@ macro_rules! set_operation_tests {
 
         #[test]
         fn set_operations() {
+            use crate::compat::Vec;
+
             type Set = $container<Weak<u32>>;
             assert!($by_ptr == 0 || $by_ptr == 1);
             // If by_ptr is true, this is just vec of 100 distinct zeroes.

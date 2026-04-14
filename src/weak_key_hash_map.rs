@@ -963,7 +963,7 @@ mod test {
         compat::{
             eprintln,
             rc::{Rc, Weak},
-            RandomState, String, Vec,
+            RandomState, String, ToString as _, Vec,
         },
         util,
     };

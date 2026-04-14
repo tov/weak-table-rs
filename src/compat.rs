@@ -54,7 +54,7 @@ pub(crate) use std::error::Error;
 extern crate std;
 
 #[cfg(test)]
-pub(crate) use std::{eprintln, format};
+pub(crate) use std::{eprintln, format, string::ToString};
 
 #[cfg(test)]
 pub(crate) type HashMap<K, V> = hashbrown::HashMap<K, V, RandomState>;

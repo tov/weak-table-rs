@@ -757,7 +757,7 @@ impl<'a, K, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
 #[cfg(test)]
 mod test {
     use super::WeakValueHashMap;
-    use std::rc::Weak;
+    use crate::compat::rc::Weak;
 
     crate::tests::common::empty_constructor_tests! {WeakValueHashMap<u32, Weak<u32>>}
 }
