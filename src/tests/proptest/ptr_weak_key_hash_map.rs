@@ -136,6 +136,21 @@ where
             assert_eq!(v1, v2);
         }
 
+        // Check into_keys and into_values iterators; make sure they match.
+        {
+            let mut k1: Vec<KeyByPtr<K>> = self.weak.clone().into_keys().map(KeyByPtr).collect();
+            let mut k2: Vec<KeyByPtr<K>> = self.strong.clone().into_keys().collect();
+            k1.sort();
+            k2.sort();
+            assert_eq!(k1, k2);
+
+            let mut v1: Vec<_> = self.weak.clone().into_values().collect();
+            let mut v2: Vec<_> = self.strong.clone().into_values().collect();
+            v1.sort();
+            v2.sort();
+            assert_eq!(v1, v2);
+        }
+
         // Check mutable iterators, make sure they match.
         {
             let mut weak2 = self.weak.clone();
