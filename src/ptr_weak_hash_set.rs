@@ -437,3 +437,11 @@ where
         (b, a)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::PtrWeakHashSet;
+    use std::sync::Weak;
+
+    crate::tests::common::empty_constructor_tests! {PtrWeakHashSet<Weak<u8>>}
+}

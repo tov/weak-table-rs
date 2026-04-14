@@ -419,6 +419,8 @@ mod test {
         Vec,
     };
 
+    crate::tests::common::empty_constructor_tests! {PtrWeakWeakHashMap<Weak<u32>, Weak<u32>>}
+
     //    fn show_me(weakmap: &PtrWeakWeakHashMap<Weak<u32>, Weak<f32>>) {
     //        for (key, _) in weakmap {
     //            eprint!(" {:2}", *key);

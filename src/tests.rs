@@ -10,5 +10,6 @@
 #![allow(clippy::enum_variant_names)]
 #![allow(clippy::get_first)]
 
+pub(crate) mod common;
 mod proptest;
 mod symbols;

@@ -968,6 +968,8 @@ mod test {
         util,
     };
 
+    crate::tests::common::empty_constructor_tests! {WeakKeyHashMap<Weak<u8>, u32>}
+
     #[test]
     fn simple() {
         let mut map: WeakKeyHashMap<Weak<str>, usize> = WeakKeyHashMap::new();

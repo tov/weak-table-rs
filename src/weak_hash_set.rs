@@ -461,6 +461,8 @@ mod test {
     use super::*;
     use crate::compat::rc::{Rc, Weak};
 
+    crate::tests::common::empty_constructor_tests! {WeakHashSet<Weak<u8>>}
+
     // Regression check for https://github.com/tov/weak-table-rs/issues/22
     #[test]
     fn test_retain_regresion() {

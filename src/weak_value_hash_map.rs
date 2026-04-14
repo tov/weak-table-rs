@@ -753,3 +753,11 @@ impl<'a, K, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
         self.inner.size_hint()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::WeakValueHashMap;
+    use std::rc::Weak;
+
+    crate::tests::common::empty_constructor_tests! {WeakValueHashMap<u32, Weak<u32>>}
+}
