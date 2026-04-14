@@ -325,16 +325,12 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         match self.table.find_entry(hash, |(k, _)| k.eq_borrow(key)) {
             Ok(occupied_entry) => {
                 let (k, v) = occupied_entry.get();
-                if let (Some(k_handle), Some(v_handle)) = (k.handle(), v.handle()) {
-                    Some(OccupiedEntry {
-                        inner: occupied_entry,
-                        k_handle,
-                        v_handle,
-                    })
-                } else {
-                    // Key or value has expired.
-                    None
-                }
+                let (k_handle, v_handle) = (k.handle()?, v.handle()?);
+                Some(OccupiedEntry {
+                    inner: occupied_entry,
+                    k_handle,
+                    v_handle,
+                })
             }
             Err(_absent_entry) => {
                 // No entry present.
@@ -351,11 +347,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     {
         let hash = hash_one(&self.hash_builder, key);
         let (k, v) = self.table.find(hash, |(k, _)| k.eq_borrow(key))?;
-        if let (Some(k_ref), Some(v_ref)) = (k.as_ref(), v.as_ref()) {
-            Some((k_ref, v_ref))
-        } else {
-            None
-        }
+        Some((k.as_ref()?, v.as_ref()?))
     }
 
     // TODO: We can probably save 3-4% on insert() if we don't use entry() to
@@ -418,11 +410,7 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
     {
         let hash = hash_one(&self.hash_builder, key);
         let (k, v) = self.table.find_mut(hash, |(k, _)| k.eq_borrow(key))?;
-        if let Some(k_ref) = k.as_ref() {
-            Some((k_ref, &mut v.val))
-        } else {
-            None
-        }
+        Some((k.as_ref()?, &mut v.val))
     }
 
     /// For each provided key, return a reference to the key, and a mutable
@@ -449,11 +437,7 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
             .get_disjoint_mut(hashes, |idx, (k, _)| k.eq_borrow(ks[idx]))
             .map(|ent| {
                 let (k, v) = ent?;
-                if let Some(k_ref) = k.as_ref() {
-                    Some((k_ref, &mut v.val))
-                } else {
-                    None
-                }
+                Some((k.as_ref()?, &mut v.val))
             })
     }
 }
@@ -1034,6 +1018,12 @@ mod test {
 
         // we never set this one.
         assert_eq!(tab.find(&12).unwrap().1, &0);
+
+        // Drop 15, make sure that we no longer get an answer for it.
+        assert_eq!(persist_keys.pop(), Some(Rc::new(15)));
+        let [x, y] = tab.get_disjoint_mut([&1, &15]);
+        assert!(x.is_some());
+        assert!(y.is_none());
     }
 
     #[test]
@@ -1101,7 +1091,7 @@ mod test {
     }
 
     #[test]
-    fn drain() {
+    fn drain_and_drop() {
         let mut tab = WkKeyMap::new(0, RandomState::default());
         let mut persist_keys = vec![];
         for n in 0..100 {
@@ -1112,7 +1102,7 @@ mod test {
         let buckets = tab.table.num_buckets();
         assert_eq!(tab.len(), 100);
 
-        // Check a few as we drrain them, then drop the Drain iterator.
+        // Check a few as we drain them, then drop the Drain iterator.
         let drain = tab.drain();
         check_size_hint_ok(100, drain.size_hint());
         for (k, v) in drain.take(7) {
@@ -1122,6 +1112,22 @@ mod test {
         assert_eq!(tab.len(), 0);
         // drain does not release storage.
         assert_eq!(tab.table.num_buckets(), buckets);
+    }
+
+    #[test]
+    fn drain_completely() {
+        let mut persist_keys: Vec<_> = (0..=20).map(Rc::new).collect();
+        let mut tab = WkKeyMap::new(0, RandomState::default());
+        for n in &persist_keys {
+            tab.entry(n.clone()).unwrap_vacant().insert(**n);
+        }
+
+        persist_keys.truncate(10);
+
+        let mut drained: Vec<_> = tab.drain().map(|(k, _)| k).collect();
+        assert_eq!(drained.len(), 10);
+        drained.sort();
+        assert_eq!(drained, persist_keys);
     }
 
     #[test]
