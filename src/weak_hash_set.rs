@@ -43,21 +43,21 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         ))
     }
 
-    /// Returns a reference to the map's `BuildHasher`.
+    /// Returns a reference to the set's `BuildHasher`.
     ///
     /// *O*(1) time
     pub fn hasher(&self) -> &S {
         self.0.hasher()
     }
 
-    /// Returns the number of elements the map can hold without reallocating.
+    /// Returns the number of elements the set can hold without reallocating.
     ///
     /// *O*(1) time
     pub fn capacity(&self) -> usize {
         self.0.capacity()
     }
 
-    /// Removes all mappings whose keys have expired.
+    /// Removes all expired elements.
     ///
     /// *O*(*n*) time
     pub fn remove_expired(&mut self) {
@@ -116,8 +116,8 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
 
     /// Is the set empty?
     ///
-    /// Note that this may return false even if all keys in the set have
-    /// expired, if they haven't been collected yet.
+    /// This could answer `false` for an empty set whose elements have
+    /// expired but have yet to be collected.
     ///
     /// *O*(1) time
     pub fn is_empty(&self) -> bool {
@@ -133,7 +133,7 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.load_factor()
     }
 
-    /// Removes all associations from the map.
+    /// Removes all elements from the set.
     ///
     /// *O*(*n*) time
     pub fn clear(&mut self) {
@@ -142,7 +142,7 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
 
     // Non-ptr WeakHashSet should probably have `get` method.
 
-    /// Returns true if the map contains the specified key.
+    /// Returns true if the set contains the specified key.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn contains<Q>(&self, key: &Q) -> bool
@@ -181,8 +181,8 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.get_key(key)
     }
 
-    /// Unconditionally inserts `key` into this HashSet,
-    /// replacing any previous entry with the same key.
+    /// Unconditionally inserts `key` into this set,
+    /// replacing any previous matching entry.
     ///
     /// Returns true if the key was absent before, and false otherwise.
     ///
@@ -194,7 +194,7 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.insert(key, ()).is_some()
     }
 
-    /// Removes the entry with the given key, if it exists.
+    /// Removes the entry matching the given key, if it exists.
     ///
     /// Returns true if an entry was removed.
     ///
@@ -207,7 +207,7 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.remove(key).is_some()
     }
 
-    /// Removes the entry with the given key, if it exists, and return the key.
+    /// Removes the entry matching the given key, if it exists, and return the it.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn take<Q>(&mut self, key: &Q) -> Option<T::Strong>
@@ -218,9 +218,9 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.remove_entry(key).map(|(k, ())| k)
     }
 
-    /// Removes all mappings not satisfying the given predicate.
+    /// Removes all elements not satisfying the given predicate.
     ///
-    /// Also removes any expired mappings.
+    /// Also removes any expired elements.
     ///
     /// *O*(*n*) time
     pub fn retain<F>(&mut self, mut f: F)
@@ -300,14 +300,14 @@ impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
 }
 
 impl<T: WeakKey, S> WeakHashSet<T, S> {
-    /// Gets an iterator over the keys and values.
+    /// Gets an iterator over the elements of this set.
     ///
     /// *O*(1) time
     pub fn iter(&self) -> Iter<'_, T> {
         Iter(self.0.keys())
     }
 
-    /// Gets a draining iterator, which removes all the values but retains the storage.
+    /// Gets a draining iterator, which removes all the elements but retains the storage.
     ///
     /// *O*(1) time (and *O*(*n*) time to dispose of the result)
     pub fn drain(&mut self) -> Drain<'_, T> {

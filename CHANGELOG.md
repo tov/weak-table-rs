@@ -16,8 +16,6 @@ The format is based on [Keep a Changelog] and this project adheres to
 - Property tests for all of the exposed map and set types.
 - Benchmarks based on `criterion`.
 
-### Added
-
 - Added APIs to map types to match with stdlib `HashMap`:
   - `extract_if`
   - `get_disjoint_mut`, `get_both_disjoint_mut`
@@ -49,13 +47,7 @@ The format is based on [Keep a Changelog] and this project adheres to
   - `From<[T;N]>`
   - `Sub`
 
-### Changed (visible)
-  - Changed `load_factor()` to return a value closer to the table's
-    actual load factor.
-
 ### Fixed
-  - Fix a bug in `load_factor()` calculation where it would return
-    `inf` for a zero-capacity table.
 
 ### Changed (visible)
 
@@ -65,6 +57,8 @@ The format is based on [Keep a Changelog] and this project adheres to
 - The Minimum Supported Rust Version is now 1.65.
   (This is necessary to use `hashbrown`.)
 - The default capacity for new tables is now zero.
+- Changed `load_factor()` to return a value closer to the table's
+  actual load factor.
 
 ### Changed (internal)
 
@@ -87,6 +81,12 @@ The format is based on [Keep a Changelog] and this project adheres to
 - The `retain()` and `remove_expired()` methods no longer
   skip elements that changed position due to other elements having been
   removed. ([github#22])
+- Fix a bug in `load_factor()` calculation where it would return
+  `inf` for a zero-capacity table.
+
+### Documentation
+  - Cleaned up documentation that referred to sets as maps,
+    or claimed that they had separate keys and values.
 
 ## [0.3.2] - 2021-12-01
 
