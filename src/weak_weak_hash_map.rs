@@ -1,7 +1,6 @@
 //! A hash map where the keys and values are both held by weak pointers, and keys are compared by
 //! value.
 
-use super::size_policy::*;
 use super::traits::*;
 use super::*;
 use crate::macros::*;
@@ -110,52 +109,11 @@ impl<K: WeakElement, V: WeakElement> Iterator for IntoIter<K, V> {
 }
 
 into_kv_types!(K::Strong, V::Strong where {K: WeakElement, V:WeakElement});
-
-impl<K: WeakKey, V: WeakElement> WeakWeakHashMap<K, V, RandomState> {
-    /// Creates an empty `WeakWeakHashMap`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        Self::with_capacity(DEFAULT_INITIAL_CAPACITY)
-    }
-
-    /// Creates an empty `WeakWeakHashMap` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_and_hasher(capacity, Default::default())
-    }
+universal_hashless_members! {
+    WeakWeakHashMap ("`WeakWeakHashMap", a "map") inner::Table::new {K,V}
 }
 
 impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
-    /// Creates an empty `WeakWeakHashMap` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        Self::with_capacity_and_hasher(DEFAULT_INITIAL_CAPACITY, hash_builder)
-    }
-
-    /// Creates an empty `WeakWeakHashMap` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        WeakWeakHashMap(inner::Table::new(capacity, hash_builder))
-    }
-
-    /// Returns a reference to the map's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the map can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
     /// Removes all mappings whose keys have expired.
     ///
     /// *O*(*n*) time
@@ -204,35 +162,6 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
         self.0.shrink_to(min_capacity);
     }
 
-    /// Returns an over-approximation of the number of elements.
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Is the map empty?
-    ///
-    /// Note that this may return false even if all keys in the map have
-    /// expired, if they haven't been collected yet.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired keys.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        self.0.load_factor()
-    }
-
     /// Gets the requested entry.
     ///
     /// expected *O*(*n*) time; worst-case *O*(*nq*) time (where *n* is
@@ -243,13 +172,6 @@ impl<K: WeakKey, V: WeakElement, S: BuildHasher> WeakWeakHashMap<K, V, S> {
             inner::Entry::Occupied(occupied) => Entry::Occupied(OccupiedEntry(occupied)),
             inner::Entry::Vacant(vacant) => Entry::Vacant(VacantEntry(vacant)),
         }
-    }
-
-    /// Removes all associations from the map.
-    ///
-    /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -430,12 +352,6 @@ where
 }
 
 impl<K: WeakKey, V: WeakElement, S: BuildHasher> Eq for WeakWeakHashMap<K, V, S> where V::Strong: Eq {}
-
-impl<K: WeakKey, V: WeakElement, S: BuildHasher + Default> Default for WeakWeakHashMap<K, V, S> {
-    fn default() -> Self {
-        WeakWeakHashMap::with_hasher(Default::default())
-    }
-}
 
 impl<K, V, S> iter::FromIterator<(K::Strong, V::Strong)> for WeakWeakHashMap<K, V, S>
 where

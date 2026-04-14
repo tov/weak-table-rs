@@ -13,60 +13,17 @@ pub use super::weak_weak_hash_map::{
 };
 pub use super::PtrWeakWeakHashMap;
 
-impl<K: WeakElement, V: WeakElement> PtrWeakWeakHashMap<K, V, RandomState>
-where
-    K::Strong: Deref,
-{
-    /// Creates an empty `PtrWeakWeakHashMap`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        PtrWeakWeakHashMap(base::WeakWeakHashMap::new())
-    }
-
-    /// Creates an empty `PtrWeakWeakHashMap` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        PtrWeakWeakHashMap(base::WeakWeakHashMap::with_capacity(capacity))
-    }
+universal_hashless_members! {
+    PtrWeakWeakHashMap
+    ("`PtrWeakWeakHashMap", a "map")
+    crate::WeakWeakHashMap::with_capacity_and_hasher
+    {K, V}
 }
 
 impl<K: WeakElement, V: WeakElement, S: BuildHasher> PtrWeakWeakHashMap<K, V, S>
 where
     K::Strong: Deref,
 {
-    /// Creates an empty `PtrWeakWeakHashMap` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        PtrWeakWeakHashMap(base::WeakWeakHashMap::with_hasher(hash_builder))
-    }
-
-    /// Creates an empty `PtrWeakWeakHashMap` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        PtrWeakWeakHashMap(base::WeakWeakHashMap::with_capacity_and_hasher(
-            capacity,
-            hash_builder,
-        ))
-    }
-
-    /// Returns a reference to the map's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the map can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
     /// Removes all mappings whose keys have expired.
     ///
     /// *O*(*n*) time
@@ -114,47 +71,11 @@ where
         self.0.shrink_to(min_capacity);
     }
 
-    /// Returns an over-approximation of the number of elements.
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Is the map empty?
-    ///
-    /// Note that this may return false even if all keys in the map have
-    /// expired, if they haven't been collected yet.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired keys.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        self.0.load_factor()
-    }
-
     /// Gets the requested entry.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn entry(&mut self, key: K::Strong) -> Entry<'_, ByPtr<K>, V> {
         self.0.entry(key)
-    }
-
-    /// Removes all associations from the map.
-    ///
-    /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -320,16 +241,6 @@ where
     K::Strong: Deref,
     V::Strong: Eq,
 {
-}
-
-impl<K: WeakElement, V: WeakElement, S: BuildHasher + Default> Default
-    for PtrWeakWeakHashMap<K, V, S>
-where
-    K::Strong: Deref,
-{
-    fn default() -> Self {
-        PtrWeakWeakHashMap(base::WeakWeakHashMap::<ByPtr<K>, V, S>::default())
-    }
 }
 
 impl<K, V, S> FromIterator<(K::Strong, V::Strong)> for PtrWeakWeakHashMap<K, V, S>

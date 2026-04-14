@@ -9,54 +9,13 @@ use super::weak_key_hash_map as base;
 
 pub use super::WeakHashSet;
 
-impl<T: WeakKey> WeakHashSet<T, RandomState> {
-    /// Creates an empty `WeakHashSet`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        WeakHashSet(base::WeakKeyHashMap::new())
-    }
-
-    /// Creates an empty `WeakHashSet` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        WeakHashSet(base::WeakKeyHashMap::with_capacity(capacity))
-    }
+universal_hashless_members! {
+    WeakHashSet ("`WeakHashSet`", a "set")
+    base::WeakKeyHashMap::with_capacity_and_hasher
+    {T}
 }
 
 impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
-    /// Creates an empty `WeakHashSet` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        WeakHashSet(base::WeakKeyHashMap::with_hasher(hash_builder))
-    }
-
-    /// Creates an empty `WeakHashSet` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        WeakHashSet(base::WeakKeyHashMap::with_capacity_and_hasher(
-            capacity,
-            hash_builder,
-        ))
-    }
-
-    /// Returns a reference to the set's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the set can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
     /// Removes all expired elements.
     ///
     /// *O*(*n*) time
@@ -104,43 +63,7 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.shrink_to(min_capacity);
     }
 
-    /// Returns an over-approximation of the number of elements.
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Is the set empty?
-    ///
-    /// This could answer `false` for an empty set whose elements have
-    /// expired but have yet to be collected.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired elements.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        self.0.load_factor()
-    }
-
-    /// Removes all elements from the set.
-    ///
-    /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
-    }
-
-    // Non-ptr WeakHashSet should probably have `get` method.
+    // TODO: Non-ptr WeakHashSet should probably have `get` method.
 
     /// Returns true if the set contains the specified key.
     ///
@@ -375,12 +298,6 @@ where
 }
 
 impl<T: WeakKey, S: BuildHasher> Eq for WeakHashSet<T, S> where T::Key: Eq {}
-
-impl<T: WeakKey, S: BuildHasher + Default> Default for WeakHashSet<T, S> {
-    fn default() -> Self {
-        WeakHashSet(base::WeakKeyHashMap::<T, (), S>::default())
-    }
-}
 
 impl<T, S> FromIterator<T::Strong> for WeakHashSet<T, S>
 where

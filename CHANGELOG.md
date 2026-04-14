@@ -47,8 +47,6 @@ The format is based on [Keep a Changelog] and this project adheres to
   - `From<[T;N]>`
   - `Sub`
 
-### Fixed
-
 ### Changed (visible)
 
 - All hash-tables now use a new backend based on [`hashbrown`]
@@ -59,6 +57,9 @@ The format is based on [Keep a Changelog] and this project adheres to
 - The default capacity for new tables is now zero.
 - Changed `load_factor()` to return a value closer to the table's
   actual load factor.
+- Methods that do not require the element type to be WeakKey or
+  WeakElement no longer constrain their parameters in this way.
+
 
 ### Changed (internal)
 
@@ -75,6 +76,8 @@ The format is based on [Keep a Changelog] and this project adheres to
   differently.
 - Tests have been moved to a `tests` submodule, so that they can
   share code.
+- A great deal of common code has been extracted into macros,
+  to avoid the risk of copy-and-paste errors.
 
 ### Fixed
 

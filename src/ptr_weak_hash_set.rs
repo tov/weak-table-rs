@@ -10,60 +10,17 @@ use super::traits::*;
 
 pub use super::PtrWeakHashSet;
 
-impl<T: WeakElement> PtrWeakHashSet<T, RandomState>
-where
-    T::Strong: Deref,
-{
-    /// Creates an empty `PtrWeakHashSet`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::new())
-    }
-
-    /// Creates an empty `PtrWeakHashSet` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_capacity(capacity))
-    }
+universal_hashless_members! {
+    PtrWeakHashSet
+    ("`PtrWeakHashSet`", a "set")
+    super::PtrWeakKeyHashMap::with_capacity_and_hasher
+    {T}
 }
 
 impl<T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
 where
     T::Strong: Deref,
 {
-    /// Creates an empty `PtrWeakHashSet` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_hasher(hash_builder))
-    }
-
-    /// Creates an empty `PtrWeakHashSet` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_capacity_and_hasher(
-            capacity,
-            hash_builder,
-        ))
-    }
-
-    /// Returns a reference to the set's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the set can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
     /// Removes all expired elements.
     ///
     /// *O*(*n*) time
@@ -109,42 +66,6 @@ where
     /// *O*(*n*) time
     pub fn shrink_to(&mut self, min_capacity: usize) {
         self.0.shrink_to(min_capacity);
-    }
-
-    /// Returns an over-approximation of the number of elements.
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Is the set known to be empty?
-    ///
-    /// This could answer `false` for an empty set whose elements have
-    /// expired but have yet to be collected.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired elements.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        self.0.load_factor()
-    }
-
-    /// Removes all elements from the set.
-    ///
-    /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
     }
 
     /// Returns true if the set contains the specified key.
@@ -337,15 +258,6 @@ where
 }
 
 impl<T: WeakElement, S: BuildHasher> Eq for PtrWeakHashSet<T, S> where T::Strong: Deref {}
-
-impl<T: WeakElement, S: BuildHasher + Default> Default for PtrWeakHashSet<T, S>
-where
-    T::Strong: Deref,
-{
-    fn default() -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::<T, (), S>::default())
-    }
-}
 
 impl<T, S> FromIterator<T::Strong> for PtrWeakHashSet<T, S>
 where

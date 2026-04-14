@@ -337,3 +337,104 @@ macro_rules! set_relationships {
     }
 }
 pub(crate) use set_relationships;
+
+/// Declare members that every container has, which don't require constraining
+/// the members of the container.
+macro_rules! universal_hashless_members {
+    ($container:ident ($cname:expr, a $shortname:expr) $constructor:path { $($params:ident),* } ) => {
+        impl<$($params),*> $container<$($params),* , RandomState> {
+            #[doc=concat!("Creates an empty ", $cname, ".")]
+            ///
+            /// *O*(1) time
+            pub fn new() -> Self {
+                Self::with_capacity(crate::size_policy::DEFAULT_INITIAL_CAPACITY)
+            }
+
+            #[doc=concat!("Creates an empty ", $cname, " with the given capacity.")]
+            ///
+            /// *O*(*n*) time
+            pub fn with_capacity(capacity: usize) -> Self {
+                Self::with_capacity_and_hasher(capacity, Default::default())
+            }
+        }
+
+        impl<$($params),*, S: BuildHasher> $container<$($params),* , S> {
+            #[doc=concat!("Creates an empty ", $cname, " with the given hasher.")]
+            ///
+            /// *O*(*n*) time
+            pub fn with_hasher(hash_builder: S) -> Self {
+                Self::with_capacity_and_hasher(crate::size_policy::DEFAULT_INITIAL_CAPACITY, hash_builder)
+            }
+
+            #[doc=concat!("Creates an empty ", $cname, " with the given capacity and hasher.")]
+            ///
+            /// *O*(*n*) time
+            pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
+                Self($constructor(capacity, hash_builder))
+            }
+        }
+
+        impl<$($params),*, S: BuildHasher + Default> Default for $container<$($params),* , S> {
+            fn default() -> Self {
+                Self::with_hasher(Default::default())
+            }
+        }
+
+        impl<$($params),*, S> $container<$($params),* , S> {
+            #[doc=concat!("Returns a reference to the ",$shortname, "'s `BuildHasher`.")]
+            ///
+            ///
+            /// *O*(1) time
+            pub fn hasher(&self) -> &S {
+                self.0.hasher()
+            }
+
+            #[doc=concat!("Returns the number of elements the ",$shortname," can hold without reallocating.")]
+            ///
+            /// *O*(1) time
+            pub fn capacity(&self) -> usize {
+                self.0.capacity()
+            }
+
+
+            /// Returns an over-approximation of the number of elements.
+            ///
+            /// (This is an over-approximation because it includes expired elements.)
+            ///
+            /// *O*(1) time
+            pub fn len(&self) -> usize {
+                self.0.len()
+            }
+
+            #[doc=concat!("Is the ",$shortname," empty?")]
+            ///
+            ///
+            /// Note that this may return false even if all elements have
+            /// expired, if they haven't been collected yet.
+            ///
+            /// *O*(1) time
+            pub fn is_empty(&self) -> bool {
+                self.len() == 0
+            }
+
+
+            /// Returns proportion of buckets that are used.
+            ///
+            /// This is an over-approximation because of expired elements.
+            ///
+            /// *O*(1) time
+            pub fn load_factor(&self) -> f32 {
+                self.0.load_factor()
+            }
+
+
+            #[doc=concat!("Remove all elements from the ",$shortname,".")]
+            ///
+            /// *O*(*n*) time
+            pub fn clear(&mut self) {
+                self.0.clear();
+            }
+        }
+    }
+}
+pub(crate) use universal_hashless_members;

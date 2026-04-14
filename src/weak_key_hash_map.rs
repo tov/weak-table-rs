@@ -1,9 +1,9 @@
 //! A hash map where the keys are held by weak pointers and compared by key value.
 
 use super::inner;
-use super::size_policy::*;
 use super::traits::*;
 use super::*;
+use crate::macros::universal_hashless_members;
 use crate::macros::*;
 
 pub use super::WeakKeyHashMap;
@@ -143,51 +143,11 @@ impl<K: WeakElement, V> Iterator for IntoIter<K, V> {
 
 into_kv_types!(K::Strong, V where {K: WeakElement});
 
-impl<K: WeakKey, V> WeakKeyHashMap<K, V, RandomState> {
-    /// Creates an empty `WeakKeyHashMap`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        Self::with_capacity(DEFAULT_INITIAL_CAPACITY)
-    }
-
-    /// Creates an empty `WeakKeyHashMap` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_and_hasher(capacity, Default::default())
-    }
+universal_hashless_members! {
+    WeakKeyHashMap ("`WeakKeyHashMap`", a "map") inner::Table::new {K,V}
 }
 
 impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
-    /// Creates an empty `WeakKeyHashMap` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        Self::with_capacity_and_hasher(DEFAULT_INITIAL_CAPACITY, hash_builder)
-    }
-
-    /// Creates an empty `WeakKeyHashMap` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        WeakKeyHashMap(inner::Table::new(capacity, hash_builder))
-    }
-
-    /// Returns a reference to the map's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the map can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
     /// Removes all mappings whose keys have expired.
     ///
     /// *O*(*n*) time
@@ -236,34 +196,6 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
         self.0.shrink_to(min_capacity);
     }
 
-    /// Returns an over-approximation of the number of elements.
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///
-    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Is the map empty?
-    ///
-    /// Note that this may return false even if all keys in the map have
-    /// expired, if they haven't been collected yet.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired keys.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        self.0.load_factor()
-    }
-
     /// Gets the requested entry.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
@@ -273,14 +205,6 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
             inner::Entry::Vacant(vac) => Entry::Vacant(VacantEntry(vac)),
         }
     }
-
-    /// Removes all associations from the map.
-    ///
-    /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
-    }
-
     /// Returns a reference to the value corresponding to the key.
     ///
     /// Returns `None` if no matching key is found.
@@ -531,12 +455,6 @@ where
 }
 
 impl<K: WeakKey, V: Eq, S: BuildHasher> Eq for WeakKeyHashMap<K, V, S> {}
-
-impl<K: WeakKey, V, S: BuildHasher + Default> Default for WeakKeyHashMap<K, V, S> {
-    fn default() -> Self {
-        WeakKeyHashMap::with_hasher(Default::default())
-    }
-}
 
 impl<'a, K, V, S, Q> ops::Index<&'a Q> for WeakKeyHashMap<K, V, S>
 where
@@ -943,7 +861,7 @@ pub struct ExtractIf<'a, K: WeakElement, V, F> {
     _phantom: PhantomData<F>,
 }
 
-impl<'a, K: WeakKey, V, F> Iterator for ExtractIf<'a, K, V, F> {
+impl<'a, K: WeakElement, V, F> Iterator for ExtractIf<'a, K, V, F> {
     type Item = (K::Strong, V);
 
     fn next(&mut self) -> Option<Self::Item> {
