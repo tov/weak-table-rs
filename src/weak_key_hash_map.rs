@@ -1189,4 +1189,23 @@ mod test {
         assert_eq!(weakmap.iter().count(), 25);
         assert_eq!(evens.len(), 25);
     }
+
+    #[test]
+    fn failed_try_reserve() {
+        let rcs: Vec<Rc<u32>> = (0..1000).map(Rc::new).collect();
+        let mut map: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), **n)).collect();
+
+        // This one will cause an integer overflow in our code.
+        let e = map.try_reserve(usize::MAX - 500);
+        assert!(matches!(e, Err(crate::TryReserveError::CapacityOverflow)));
+        assert_eq!(
+            e.expect_err("Already checked").to_string(),
+            "Allocation failed: arithmetic overflow in capacity calculation"
+        );
+
+        // This one will cause an integer overflow in hashbrown.
+        let e = map.try_reserve(usize::MAX / 4);
+        assert!(matches!(e, Err(crate::TryReserveError::CapacityOverflow)));
+    }
 }

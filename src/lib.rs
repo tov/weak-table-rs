@@ -129,7 +129,7 @@ impl Display for TryReserveError {
                 "Allocation failed: arithmetic overflow in capacity calculation"
             ),
             TryReserveError::AllocError { .. } => {
-                write!(f, "Allocation failed: memory allocator returned an error. ")
+                write!(f, "Allocation failed: memory allocator returned an error")
             }
         }
     }

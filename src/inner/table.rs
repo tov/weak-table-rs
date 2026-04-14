@@ -1321,4 +1321,25 @@ mod test {
         tab.shrink_to(9999);
         assert_eq!(tab.capacity(), cap_orig);
     }
+
+    #[test]
+    fn try_reserve_error_conversion() {
+        let e = hashbrown::TryReserveError::CapacityOverflow;
+        let e = crate::TryReserveError::from_hashbrown(e);
+        assert!(matches!(e, crate::TryReserveError::CapacityOverflow));
+        assert_eq!(
+            e.to_string(),
+            "Allocation failed: arithmetic overflow in capacity calculation"
+        );
+
+        let e = hashbrown::TryReserveError::AllocError {
+            layout: Layout::from_size_align(16, 16).expect("Bad layout"),
+        };
+        let e = crate::TryReserveError::from_hashbrown(e);
+        assert!(matches!(e, crate::TryReserveError::AllocError { .. }));
+        assert_eq!(
+            e.to_string(),
+            "Allocation failed: memory allocator returned an error"
+        );
+    }
 }
