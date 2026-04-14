@@ -235,12 +235,11 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         }
 
         self.remove_expired_inner();
-        if self.capacity() <= min_capacity {
-            // HashTable::shrink_to would panic; instead, use shrink_to_fit.
-            // (We check this twice because remove_expired_inner can _lower_ the
-            // capacity.)
-            self.shrink_to_fit();
-        } else {
+        // We have to check this again because remove_expired_inner can _lower_
+        // the capacity by adding "deleted" markers to the hashtable.
+        // We can't call shrink_to() unconditionally because we don't want it to
+        // panic.
+        if self.capacity() > min_capacity {
             // TODO: Should we allow some additional space, as `weak-table` did?
             // It seems to violate the contract of `shrink_to_fit` though.
             self.table
