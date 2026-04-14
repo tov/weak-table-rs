@@ -178,6 +178,11 @@ where
                     });
                     removed
                 }
+                RemoveStrategy::ViaExtractIf => {
+                    let removed: Vec<_> = self.weak.extract_if(|k| Arc::ptr_eq(&k, &key)).collect();
+                    assert!(removed.len() <= 1);
+                    !removed.is_empty()
+                }
             };
             let old_s = self.strong.remove(&KeyByPtr(key));
             assert_eq!(old_s, old_w);

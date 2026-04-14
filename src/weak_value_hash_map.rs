@@ -743,7 +743,7 @@ pub struct ExtractIf<'a, K, V: WeakElement, F> {
     _phantom: PhantomData<F>,
 }
 
-impl<'a, K: WeakKey, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
+impl<'a, K, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
     type Item = (K, V::Strong);
 
     fn next(&mut self) -> Option<Self::Item> {
