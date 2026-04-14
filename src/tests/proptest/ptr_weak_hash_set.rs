@@ -165,7 +165,9 @@ where
     fn remove_inserted(&mut self, strategy: RemoveStrategy, index: usize) {
         if let Some(key) = self.nth_key_mod_len(index) {
             let old_w = match strategy {
-                RemoveStrategy::ViaRemove | RemoveStrategy::ViaEntry => self.weak.remove(&key),
+                RemoveStrategy::ViaRemove
+                | RemoveStrategy::ViaRemoveEntry
+                | RemoveStrategy::ViaEntry => self.weak.remove(&key),
                 RemoveStrategy::ViaRetain => {
                     let mut removed: bool = false;
                     self.weak.retain(|k| {

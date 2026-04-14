@@ -281,6 +281,10 @@ where
                 }
             }
             RemoveStrategy::ViaRemove => self.weak.remove(key),
+            RemoveStrategy::ViaRemoveEntry => self.weak.remove_entry(key).map(|(k, v)| {
+                assert_eq!(k.as_ref(), key);
+                v
+            }),
             RemoveStrategy::ViaRetain => {
                 let mut removed: Option<V> = None;
                 self.weak.retain(|k, v| {

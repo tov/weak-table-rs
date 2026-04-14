@@ -274,7 +274,9 @@ where
                         Entry::Vacant(_) => None,
                     }
                 }
-                RemoveStrategy::ViaRemove => self.weak.remove(&key),
+                RemoveStrategy::ViaRemove | RemoveStrategy::ViaRemoveEntry => {
+                    self.weak.remove(&key)
+                }
                 RemoveStrategy::ViaRetain => {
                     let mut removed = None;
                     self.weak.retain(|k, v| {

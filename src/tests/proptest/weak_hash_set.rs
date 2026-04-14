@@ -161,7 +161,9 @@ where
 
     fn remove_other(&mut self, strategy: RemoveStrategy, key: &K) {
         let old_w = match strategy {
-            RemoveStrategy::ViaRemove | RemoveStrategy::ViaEntry => self.weak.remove(key),
+            RemoveStrategy::ViaRemove
+            | RemoveStrategy::ViaRemoveEntry
+            | RemoveStrategy::ViaEntry => self.weak.remove(key),
             RemoveStrategy::ViaRetain => {
                 let mut removed: bool = false;
                 self.weak.retain(|k| {
