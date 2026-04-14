@@ -494,4 +494,19 @@ mod test {
             assert_eq!(retain_called_on, vec![rc_n]);
         }
     }
+
+    #[test]
+    fn test_take() {
+        let s = [Rc::new(1), Rc::new(2), Rc::new(3)];
+        let mut set: WeakHashSet<Weak<u32>> = s.clone().into();
+        assert_eq!(set.iter().count(), 3);
+
+        let v = set.take(&2);
+        assert_eq!(v, Some(Rc::new(2)));
+        assert_eq!(set.iter().count(), 2);
+        assert!(Rc::ptr_eq(&v.expect("absent suddenly!"), &s[1]));
+
+        let v = set.take(&2);
+        assert!(v.is_none());
+    }
 }
