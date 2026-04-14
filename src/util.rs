@@ -55,3 +55,22 @@ pub(crate) fn each_ref<T, const N: usize>(array: &[T; N]) -> [&T; N] {
     }
     */
 }
+
+#[cfg(test)]
+mod test {
+    use std::sync::Arc;
+
+    use super::each_ref;
+
+    #[test]
+    fn check_each_ref() {
+        let abc = [Arc::new(1), Arc::new(2), Arc::new(3)];
+        let abc_ref: [&Arc<_>; 3] = each_ref(&abc);
+        for (x, y) in abc.iter().zip(abc_ref) {
+            assert!(Arc::ptr_eq(x, y));
+        }
+
+        let empty: [u32; 0] = [];
+        let _empty_ref: [&u32; 0] = each_ref(&empty);
+    }
+}
