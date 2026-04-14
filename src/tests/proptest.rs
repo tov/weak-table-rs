@@ -54,8 +54,8 @@ pub enum MapCmd<K, V> {
     RemoveInserted(RemoveStrategy, usize),
     RemoveOther(RemoveStrategy, K),
     ForgetInserted(ForgetStrategy, usize),
-    Reserve(usize),
-    ShrinkToFit,
+    Reserve(usize, bool),
+    ShrinkToFit(Option<usize>),
     Clear,
 }
 
@@ -83,8 +83,12 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for MapCmd<K, V> {
             5..=6 => RemoveInserted(RemoveStrategy::arbitrary(g), usize::arbitrary(g)),
             7 => RemoveOther(RemoveStrategy::arbitrary(g), K::arbitrary(g)),
             8..=9 => ForgetInserted(ForgetStrategy::arbitrary(g), usize::arbitrary(g)),
-            10 => Reserve(usize::arbitrary(g) % 32),
-            11 => ShrinkToFit,
+            10 => Reserve(usize::arbitrary(g) % 32, bool::arbitrary(g)),
+            11 => ShrinkToFit(if bool::arbitrary(g) {
+                Some(usize::arbitrary(g) % 32)
+            } else {
+                None
+            }),
             12 => Clear,
             _ => unreachable!(),
         }
@@ -146,8 +150,8 @@ trait ExecuteMapCmd<K, V>: Debug {
             RemoveInserted(strategy, index) => self.remove_inserted(strategy, index),
             RemoveOther(strategy, ref k) => self.remove_other(strategy, k),
             ForgetInserted(strategy, index) => self.forget_inserted(strategy, index),
-            Reserve(n) => self.reserve(n),
-            ShrinkToFit => self.shrink_to_fit(),
+            Reserve(n, try_reserve) => self.reserve(n, try_reserve),
+            ShrinkToFit(min_capacity) => self.shrink(min_capacity),
             Clear => self.clear(),
         }
     }
@@ -169,9 +173,9 @@ trait ExecuteMapCmd<K, V>: Debug {
 
     fn forget_inserted(&mut self, strategy: ForgetStrategy, index: usize);
 
-    fn reserve(&mut self, n: usize);
+    fn reserve(&mut self, n: usize, try_reserve: bool);
 
-    fn shrink_to_fit(&mut self);
+    fn shrink(&mut self, min_capacity: Option<usize>);
 
     fn clear(&mut self);
 }

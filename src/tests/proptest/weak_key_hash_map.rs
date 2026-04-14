@@ -294,13 +294,21 @@ where
         }
     }
 
-    fn reserve(&mut self, n: usize) {
-        self.weak.reserve(n);
+    fn reserve(&mut self, n: usize, try_reserve: bool) {
+        if try_reserve {
+            self.weak.try_reserve(n).expect("failed");
+        } else {
+            self.weak.reserve(n);
+        }
     }
 
-    fn shrink_to_fit(&mut self) {
-        self.weak.shrink_to_fit();
+    fn shrink(&mut self, min_capacity: Option<usize>) {
+        match min_capacity {
+            Some(n) => self.weak.shrink_to(n),
+            None => self.weak.shrink_to_fit(),
+        }
     }
+
     fn clear(&mut self) {
         self.weak.clear();
         self.strong.clear();
