@@ -16,6 +16,40 @@ The format is based on [Keep a Changelog] and this project adheres to
 - Property tests for all of the exposed map and set types.
 - Benchmarks based on `criterion`.
 
+### Added
+
+- Added APIs to map types to match with stdlib `HashMap`:
+  - `extract_if`
+  - `get_disjoint_mut`, `get_both_disjoint_mut`
+  - `into_keys`
+  - `into_values`
+  - `remove_entry`
+  - `shrink_to`
+  - `try_reserve`
+  - `From<[(K, V); N]>`
+  - `Entry::and_modify`
+  - `Entry::insert_entry`
+  - `Entry::or_insert_with_key`
+  - `VacantEntry::insert_entry`.
+
+- Added APIs to set types to match with stdlib `HashSet`:
+  - `difference`
+  - `extract_if`
+  - `intersection`
+  - `is_disjoint`
+  - `is_superset`
+  - `shrink_to`
+  - `symmetric_difference`
+  - `take`
+  - `try_reserve`
+  - `union`
+  - `BitAnd`
+  - `BitOr`
+  - `BitXor`
+  - `From<[T;N]>`
+  - `Sub`
+
+
 ### Changed (visible)
 
 - All hash-tables now use a new backend based on [`hashbrown`]
