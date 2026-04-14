@@ -5,7 +5,7 @@ macro_rules! empty_constructor_tests {
     {$container:ty} => {
         #[test]
         fn new_empty() {
-            let arry: [$container; _] = [
+            let arry: [$container; 5] = [
                 <$container>::new(),
                 Default::default(),
                 <$container>::with_capacity(0),
@@ -22,7 +22,7 @@ macro_rules! empty_constructor_tests {
 
         #[test]
         fn new_empty_with_capacity() {
-            let arry: [$container; _] = [
+            let arry: [$container; 2] = [
                 <$container>::with_capacity(128),
                 <$container>::with_capacity_and_hasher(128, Default::default()),
             ];
@@ -38,7 +38,7 @@ macro_rules! empty_constructor_tests {
         fn new_empty_with_hasher() {
             let h = crate::compat::RandomState::default();
             let hash_of_seventeen = crate::util::hash_one(&h, &17_u32);
-            let arry: [$container; _] = [
+            let arry: [$container; 2] = [
                 <$container>::with_hasher(h.clone()),
                 <$container>::with_capacity_and_hasher(0, h.clone())
             ];
