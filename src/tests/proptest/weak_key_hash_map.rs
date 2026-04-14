@@ -322,6 +322,21 @@ where
                         None
                     }
                 },
+                ModifyStrategy::EntryAndModify => {
+                    let mut prev = None;
+                    let newval = self
+                        .weak
+                        .entry(key_ptr.clone())
+                        .and_modify(|vp| {
+                            let mut v = value.clone();
+                            mem::swap(&mut v, vp);
+                            prev = Some(v);
+                        })
+                        .or_insert(value.clone());
+                    assert_eq!(newval, value);
+
+                    prev
+                }
                 ModifyStrategy::GetDisjointMut => {
                     if let [Some(p)] = self.weak.get_disjoint_mut([&key]) {
                         let mut v = value.clone();

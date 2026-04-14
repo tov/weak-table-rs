@@ -49,6 +49,7 @@ pub enum ModifyStrategy {
     GetMut,
     GetDisjointMut,
     GetBothDisjointMut,
+    EntryAndModify,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -156,12 +157,13 @@ impl Arbitrary for ModifyStrategy {
     fn arbitrary(g: &mut Gen) -> Self {
         let choice: u8 = u8::arbitrary(g);
 
-        match choice % 5 {
+        match choice % 6 {
             0 => ModifyStrategy::Reinsert,
             1 => ModifyStrategy::Entry,
             2 => ModifyStrategy::GetDisjointMut,
             3 => ModifyStrategy::GetMut,
             4 => ModifyStrategy::GetBothDisjointMut,
+            5 => ModifyStrategy::EntryAndModify,
             _ => unreachable!(),
         }
     }
@@ -217,6 +219,7 @@ trait ExecuteMapCmd<K, V>: Debug {
             ModifyStrategy::GetDisjointMut => InsertStrategy::ViaExtend,
             ModifyStrategy::GetMut => InsertStrategy::ViaExtendRef,
             ModifyStrategy::GetBothDisjointMut => InsertStrategy::ViaInsert,
+            ModifyStrategy::EntryAndModify => InsertStrategy::ViaEntry,
         };
         self.reinsert(strategy, index, value);
     }
