@@ -261,7 +261,7 @@ impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
     ///
     /// *O*(1) time
     pub fn load_factor(&self) -> f32 {
-        (self.len() as f32 + 1.0) / self.capacity() as f32
+        self.0.load_factor()
     }
 
     /// Gets the requested entry.

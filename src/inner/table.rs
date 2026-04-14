@@ -127,6 +127,22 @@ impl<K, V, S> Table<K, V, S> {
         self.table.len()
     }
 
+    /// Return an over-approximation of the fraction of buckets in the table
+    /// that are in use.
+    ///
+    /// This is an over-approximation since it includes expired entries that
+    /// have not been removed.
+    ///
+    /// If the table's capacity is 0, this function (arbitrarily) returns 0.0
+    pub(crate) fn load_factor(&self) -> f32 {
+        let n_buckets = self.table.num_buckets();
+        if n_buckets == 0 {
+            0.0
+        } else {
+            self.len() as f32 / n_buckets as f32
+        }
+    }
+
     /// Remove all entries from this table.
     ///
     /// Does not reallocate.

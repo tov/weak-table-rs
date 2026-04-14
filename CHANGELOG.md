@@ -49,6 +49,13 @@ The format is based on [Keep a Changelog] and this project adheres to
   - `From<[T;N]>`
   - `Sub`
 
+### Changed (visible)
+  - Changed `load_factor()` to return a value closer to the table's
+    actual load factor.
+
+### Fixed
+  - Fix a bug in `load_factor()` calculation where it would return
+    `inf` for a zero-capacity table.
 
 ### Changed (visible)
 
