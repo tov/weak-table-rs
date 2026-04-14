@@ -441,7 +441,8 @@ where
 #[cfg(test)]
 mod test {
     use super::PtrWeakHashSet;
-    use std::sync::Weak;
+    use std::rc::{Rc, Weak};
 
     crate::tests::common::empty_constructor_tests! {PtrWeakHashSet<Weak<u8>>}
+    crate::tests::set_operations::set_operation_tests! {PtrWeakHashSet, 1}
 }
