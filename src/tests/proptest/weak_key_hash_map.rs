@@ -240,6 +240,10 @@ where
                 let lst = [(key_ptr.clone(), value.clone())];
                 self.weak.extend(lst);
             }
+            InsertStrategy::ViaExtendRef => {
+                let lst = [(&key_ptr, value)];
+                self.weak.extend(lst);
+            }
         }
         self.strong.remove(key);
         self.strong.insert(key_ptr, value.clone());

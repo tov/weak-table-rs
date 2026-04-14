@@ -200,7 +200,7 @@ where
             InsertStrategy::ViaInsert => {
                 let _ = self.weak.insert(key_ptr.clone(), value.clone());
             }
-            InsertStrategy::ViaExtend => {
+            InsertStrategy::ViaExtend | InsertStrategy::ViaExtendRef => {
                 let lst = [(key_ptr.clone(), value.clone())];
                 self.weak.extend(lst);
             }

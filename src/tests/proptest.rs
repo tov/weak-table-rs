@@ -28,6 +28,7 @@ pub enum InsertStrategy {
     ViaEntry,
     ViaInsert,
     ViaExtend,
+    ViaExtendRef,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -109,10 +110,12 @@ impl<K: Arbitrary, V: Arbitrary> Arbitrary for MapScript<K, V> {
 impl Arbitrary for InsertStrategy {
     fn arbitrary(g: &mut Gen) -> Self {
         let choice: u8 = u8::arbitrary(g);
-        match choice % 3 {
+        match choice % 4 {
             0 => InsertStrategy::ViaEntry,
             1 => InsertStrategy::ViaInsert,
             2 => InsertStrategy::ViaExtend,
+            3 => InsertStrategy::ViaExtendRef,
+
             _ => unreachable!(),
         }
     }

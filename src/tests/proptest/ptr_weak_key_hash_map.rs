@@ -234,6 +234,10 @@ where
                 let lst = [(key_ptr.clone(), value.clone())];
                 self.weak.extend(lst);
             }
+            InsertStrategy::ViaExtendRef => {
+                let lst = [(&key_ptr, value)];
+                self.weak.extend(lst);
+            }
         }
         let strong_key = KeyByPtr(key_ptr.clone());
         self.strong.remove(&strong_key);
