@@ -440,3 +440,59 @@ macro_rules! universal_hashless_members {
     }
 }
 pub(crate) use universal_hashless_members;
+
+/// Declare members that all of our containers have,
+/// and that depend on the K,V parameters being appropriately constrained,
+/// but which don't take or return any elements.
+macro_rules! universal_key_independent_members {
+    {$elts:expr} => {
+        #[doc=concat!("Removes all ", $elts, " whose keys have expired.")]
+        ///
+        /// *O*(*n*) time
+        pub fn remove_expired(&mut self) {
+            self.0.remove_expired();
+        }
+
+        /// Reserves room for additional elements.
+        ///
+        /// This method ensures that at least `additional_capacity` insertions
+        /// may be performed without reallocating.
+        ///
+        /// *O*(*n*) time
+        pub fn reserve(&mut self, additional_capacity: usize) {
+            self.try_reserve(additional_capacity)
+                .expect("Unable to reserve additional capacity");
+        }
+
+        #[doc=concat!("Tries to reserve room for additional ", $elts, ".")]
+        ///
+        /// If this method succeeds, then at least `additional_capacity` insertions
+        /// may be performed without reallocating further.
+        ///
+        /// *O*(*n*) time
+        pub fn try_reserve(
+            &mut self,
+            additional_capacity: usize,
+        ) -> Result<(), crate::TryReserveError> {
+            self.0.try_reserve(additional_capacity)
+        }
+
+        #[doc=concat!("Shrinks the capacity to the minimum to hold the current number of ", $elts, ".")]
+        ///
+        /// *O*(*n*) time
+        pub fn shrink_to_fit(&mut self) {
+            self.0.shrink_to_fit();
+        }
+
+        #[doc=concat!("Shrinks the capacity to hold no fewer than `min_capacity` ", $elts, ".")]
+        ///
+        /// May remove expired items if necessary.
+        /// Does nothing if the current capacity is already at `min_capacity` or below.
+        ///
+        /// *O*(*n*) time
+        pub fn shrink_to(&mut self, min_capacity: usize) {
+            self.0.shrink_to(min_capacity);
+        }
+    }
+}
+pub(crate) use universal_key_independent_members;
