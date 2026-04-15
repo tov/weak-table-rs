@@ -1065,4 +1065,17 @@ mod test {
         let vec: VecDebugAsMap<_, _> = map.iter().collect();
         assert_eq!(format!("{map:?}"), format!("{vec:?}"));
     }
+
+    #[test]
+    fn debug_entry() {
+        let three = Rc::new(3);
+        let mut map = WeakKeyHashMap::<Weak<u32>, u32>::new();
+        map.insert(three.clone(), 9);
+        let e1 = map.entry(three.clone());
+        assert_eq!(format!("{e1:?}"), "OccupiedEntry { key: 3, val: 9 }");
+
+        let four = Rc::new(4);
+        let e2 = map.entry(four.clone());
+        assert_eq!(format!("{e2:?}"), "VacantEntry { key: 4 }");
+    }
 }
