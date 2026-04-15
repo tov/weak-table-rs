@@ -832,10 +832,11 @@ mod test {
     use super::{Entry, WeakKeyHashMap};
     use crate::{
         compat::{
-            eprintln,
+            eprintln, format,
             rc::{Rc, Weak},
             RandomState, String, ToString as _, Vec,
         },
+        tests::util::VecDebugAsMap,
         util,
     };
 
@@ -1078,5 +1079,14 @@ mod test {
         // This one will cause an integer overflow in hashbrown.
         let e = map.try_reserve(usize::MAX / 4);
         assert!(matches!(e, Err(crate::TryReserveError::CapacityOverflow)));
+    }
+
+    #[test]
+    fn debug_map() {
+        let rcs: Vec<Rc<u32>> = (0..20).map(Rc::new).collect();
+        let map: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), **n * 7)).collect();
+        let vec: VecDebugAsMap<_, _> = map.iter().collect();
+        assert_eq!(format!("{map:?}"), format!("{vec:?}"));
     }
 }

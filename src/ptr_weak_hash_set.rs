@@ -255,7 +255,7 @@ where
     T::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_set().entries(self.0.iter()).finish()
+        f.debug_set().entries(self.iter()).finish()
     }
 }
 
@@ -305,8 +305,22 @@ where
 #[cfg(test)]
 mod test {
     use super::PtrWeakHashSet;
-    use crate::compat::rc::{Rc, Weak};
+    use crate::{
+        compat::{
+            format,
+            rc::{Rc, Weak},
+        },
+        tests::util::VecDebugAsSet,
+    };
 
     crate::tests::common::empty_constructor_tests! {PtrWeakHashSet<Weak<u8>>}
     crate::tests::set_operations::set_operation_tests! {PtrWeakHashSet, 1}
+
+    #[test]
+    fn test_debug() {
+        let s = [Rc::new(1), Rc::new(2)];
+        let set: PtrWeakHashSet<Weak<u32>> = s.clone().into();
+        let v: VecDebugAsSet<_> = set.iter().collect();
+        assert_eq!(format!("{v:?}"), format!("{set:?}"));
+    }
 }

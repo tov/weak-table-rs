@@ -279,10 +279,13 @@ mod test {
     #![allow(clippy::print_stderr)]
 
     use super::{Entry, PtrWeakWeakHashMap};
-    use crate::compat::{
-        eprintln,
-        rc::{Rc, Weak},
-        Vec,
+    use crate::{
+        compat::{
+            eprintln, format,
+            rc::{Rc, Weak},
+            Vec,
+        },
+        tests::util::VecDebugAsMap,
     };
 
     crate::tests::common::empty_constructor_tests! {PtrWeakWeakHashMap<Weak<u32>, Weak<u32>>}
@@ -327,5 +330,14 @@ mod test {
         }
 
         assert_eq!(count, rcs.len());
+    }
+
+    #[test]
+    fn debug_map() {
+        let rcs: Vec<Rc<u32>> = (0..20).map(Rc::new).collect();
+        let map: PtrWeakWeakHashMap<Weak<u32>, Weak<u32>> =
+            rcs.iter().map(|n| (n.clone(), n.clone())).collect();
+        let vec: VecDebugAsMap<_, _> = map.iter().collect();
+        assert_eq!(format!("{map:?}"), format!("{vec:?}"));
     }
 }

@@ -287,7 +287,7 @@ where
     T::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_set().entries(self.0.iter()).finish()
+        f.debug_set().entries(self.iter()).finish()
     }
 }
 
@@ -331,7 +331,10 @@ fn sort_by_size<'a, T: WeakKey, S: BuildHasher>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::compat::rc::{Rc, Weak};
+    use crate::{
+        compat::rc::{Rc, Weak},
+        tests::util::VecDebugAsSet,
+    };
 
     crate::tests::common::empty_constructor_tests! {WeakHashSet<Weak<u8>>}
     crate::tests::set_operations::set_operation_tests! {WeakHashSet, 0}
@@ -380,5 +383,13 @@ mod test {
 
         let v = set.take(&2);
         assert!(v.is_none());
+    }
+
+    #[test]
+    fn test_debug() {
+        let s = [Rc::new(1), Rc::new(2)];
+        let set: WeakHashSet<Weak<u32>> = s.clone().into();
+        let v: VecDebugAsSet<_> = set.iter().collect();
+        assert_eq!(format!("{v:?}"), format!("{set:?}"));
     }
 }

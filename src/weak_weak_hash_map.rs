@@ -635,7 +635,23 @@ impl<'a, K: WeakElement, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> 
 #[cfg(test)]
 mod test {
     use super::WeakWeakHashMap;
-    use crate::compat::rc::Weak;
+    use crate::{
+        compat::{
+            format,
+            rc::{Rc, Weak},
+            Vec,
+        },
+        tests::util::VecDebugAsMap,
+    };
 
     crate::tests::common::empty_constructor_tests! {WeakWeakHashMap<Weak<u32>, Weak<u32>>}
+
+    #[test]
+    fn debug_map() {
+        let rcs: Vec<Rc<u32>> = (0..20).map(Rc::new).collect();
+        let map: WeakWeakHashMap<Weak<u32>, Weak<u32>> =
+            rcs.iter().map(|n| (n.clone(), n.clone())).collect();
+        let vec: VecDebugAsMap<_, _> = map.iter().collect();
+        assert_eq!(format!("{map:?}"), format!("{vec:?}"));
+    }
 }
