@@ -902,6 +902,16 @@ mod test {
         *ptr = 21;
 
         assert_eq!(weakmap.get(&7), Some(&21));
+
+        let twelve = Rc::new(12);
+        let e = weakmap.entry(twelve.clone());
+        if let Entry::Vacant(v) = e {
+            let t2 = v.into_key();
+            assert_eq!(*t2, 12);
+        } else {
+            panic!();
+        }
+        assert!(!weakmap.contains_key(&12));
     }
 
     #[test]
