@@ -3,8 +3,7 @@
 use super::inner;
 use super::traits::*;
 use super::*;
-use crate::macros::universal_hashless_members;
-use crate::macros::*;
+use crate::common::*;
 
 pub use super::WeakKeyHashMap;
 

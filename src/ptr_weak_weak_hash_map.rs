@@ -1,8 +1,8 @@
 //! A hash map where the keys and values are both held by weak pointers, and keys are compared by
 //! pointer.
 
+use crate::common::*;
 use crate::compat::*;
-use crate::macros::*;
 
 use super::by_ptr::*;
 use super::traits::*;

@@ -1,4 +1,6 @@
-//! Macros used to expand into common types and functions, to limit duplicated code.
+//! Macros that expand into common types and functions.
+//!
+//! We use these to limit duplicated code.
 
 /// Declare IntoKeys and IntoValues iterator types for a map.
 macro_rules! into_kv_types {

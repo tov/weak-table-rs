@@ -1,6 +1,6 @@
 //! A hash map where the values are held by weak pointers.
 
-use crate::macros::*;
+use crate::common::*;
 
 use super::traits::*;
 use super::*;

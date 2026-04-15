@@ -16,9 +16,9 @@ pub mod weak_weak_hash_map;
 mod tests;
 
 mod by_ptr;
+mod common;
 mod compat;
 mod inner;
-mod macros;
 mod size_policy;
 mod util;
 

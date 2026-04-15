@@ -1,8 +1,8 @@
 //! A hash set where the elements are held by weak pointers and compared by pointer.
 
+use crate::common::*;
 use crate::compat::*;
 use crate::inner;
-use crate::macros::*;
 
 use super::by_ptr::ByPtr;
 use super::ptr_weak_key_hash_map as base;

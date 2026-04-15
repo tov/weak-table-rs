@@ -1,7 +1,7 @@
 //! A hash map where the keys are held by weak pointers and compared by pointer.
 
+use crate::common::*;
 use crate::compat::*;
-use crate::macros::*;
 
 use super::by_ptr::*;
 use super::traits::*;

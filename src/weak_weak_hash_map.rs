@@ -3,7 +3,7 @@
 
 use super::traits::*;
 use super::*;
-use crate::macros::*;
+use crate::common::*;
 
 pub use super::WeakWeakHashMap;
 
