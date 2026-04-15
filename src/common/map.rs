@@ -79,3 +79,41 @@ macro_rules! ptr_into_kv_methods {
     }
 }
 pub(crate) use ptr_into_kv_methods;
+
+/// Implement Debug for Entry, OccupiedEntry, and VacantEntry.
+macro_rules! debug_for_entry {
+    {where {$($wheres:tt)+}} => {
+
+        impl<'a, K, V> Debug for OccupiedEntry<'a, K, V>
+        where
+            $($wheres)+
+        {
+            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        impl<'a, K, V> Debug for VacantEntry<'a, K, V>
+        where
+            $($wheres)+
+
+        {
+            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        impl<'a, K, V> Debug for Entry<'a, K, V>
+        where
+            $($wheres)+
+        {
+            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+                match self {
+                    Entry::Occupied(occupied_entry) => occupied_entry.fmt(f),
+                    Entry::Vacant(vacant_entry) => vacant_entry.fmt(f),
+                }
+            }
+        }
+    }
+}
+pub(crate) use debug_for_entry;

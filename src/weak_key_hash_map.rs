@@ -669,34 +669,10 @@ where
     }
 }
 
-impl<'a, K: WeakKey, V: Debug> Debug for OccupiedEntry<'a, K, V>
-where
+debug_for_entry! {where {
+    K: WeakKey,
     K::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<'a, K: WeakKey, V> Debug for VacantEntry<'a, K, V>
-where
-    K::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<'a, K: WeakKey, V: Debug> Debug for Entry<'a, K, V>
-where
-    K::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Entry::Occupied(occupied_entry) => occupied_entry.fmt(f),
-            Entry::Vacant(vacant_entry) => vacant_entry.fmt(f),
-        }
-    }
+    V: Debug}
 }
 
 impl<K: WeakElement, V, S> IntoIterator for WeakKeyHashMap<K, V, S> {
