@@ -332,7 +332,7 @@ where
     T::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        f.debug_set().entries(self.0.iter()).finish()
     }
 }
 

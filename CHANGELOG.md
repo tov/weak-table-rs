@@ -86,6 +86,8 @@ The format is based on [Keep a Changelog] and this project adheres to
   removed. ([github#22])
 - Fix a bug in `load_factor()` calculation where it would return
   `inf` for a zero-capacity table.
+- Changed the output of Debug for WeakHashSet and PtrWeakHashSet
+  to display them as sets, not as maps to ().
 
 ### Documentation
   - Cleaned up documentation that referred to sets as maps,
