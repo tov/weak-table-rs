@@ -222,7 +222,7 @@ impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
     }
 }
 
-impl<T: WeakKey, S> WeakHashSet<T, S> {
+impl<T: WeakElement, S> WeakHashSet<T, S> {
     /// Gets an iterator over the elements of this set.
     ///
     /// *O*(1) time
@@ -271,7 +271,7 @@ pub struct ExtractIf<'a, T: WeakElement, F> {
     _phantom: PhantomData<F>,
 }
 
-impl<'a, T: WeakKey, F> Iterator for ExtractIf<'a, T, F> {
+impl<'a, T: WeakElement, F> Iterator for ExtractIf<'a, T, F> {
     type Item = T::Strong;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -327,7 +327,7 @@ impl<T: WeakKey, S: BuildHasher> Extend<T::Strong> for WeakHashSet<T, S> {
     }
 }
 
-impl<T: WeakKey, S> Debug for WeakHashSet<T, S>
+impl<T: WeakElement, S> Debug for WeakHashSet<T, S>
 where
     T::Strong: Debug,
 {
@@ -336,7 +336,7 @@ where
     }
 }
 
-impl<T: WeakKey, S> IntoIterator for WeakHashSet<T, S> {
+impl<T: WeakElement, S> IntoIterator for WeakHashSet<T, S> {
     type Item = T::Strong;
     type IntoIter = IntoIter<T>;
 
@@ -348,7 +348,7 @@ impl<T: WeakKey, S> IntoIterator for WeakHashSet<T, S> {
     }
 }
 
-impl<'a, T: WeakKey, S> IntoIterator for &'a WeakHashSet<T, S> {
+impl<'a, T: WeakElement, S> IntoIterator for &'a WeakHashSet<T, S> {
     type Item = T::Strong;
     type IntoIter = Iter<'a, T>;
 

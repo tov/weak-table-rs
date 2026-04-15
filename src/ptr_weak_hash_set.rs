@@ -178,10 +178,7 @@ impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
     }
 }
 
-impl<T: WeakElement, S> PtrWeakHashSet<T, S>
-where
-    T::Strong: Deref,
-{
+impl<T: WeakElement, S> PtrWeakHashSet<T, S> {
     /// Gets an iterator over the elements of this set.
     ///
     /// *O*(1) time
@@ -230,7 +227,7 @@ pub struct ExtractIf<'a, T: WeakElement, F> {
     _phantom: PhantomData<F>,
 }
 
-impl<'a, T: WeakKey, F> Iterator for ExtractIf<'a, T, F> {
+impl<'a, T: WeakElement, F> Iterator for ExtractIf<'a, T, F> {
     type Item = T::Strong;
 
     fn next(&mut self) -> Option<Self::Item> {

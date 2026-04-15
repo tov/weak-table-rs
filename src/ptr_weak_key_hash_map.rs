@@ -204,10 +204,7 @@ where
     }
 }
 
-impl<K: WeakElement, V, S> PtrWeakKeyHashMap<K, V, S>
-where
-    K::Strong: Deref,
-{
+impl<K: WeakElement, V, S> PtrWeakKeyHashMap<K, V, S> {
     /// Gets an iterator over the keys and values.
     ///
     /// *O*(1) time
