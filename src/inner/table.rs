@@ -995,10 +995,10 @@ mod test {
         let mut tab = WkKeyMap::new(0, RandomState::default());
         let seventeen = Rc::new(17);
         let vacant = tab.entry(seventeen.clone()).unwrap_vacant();
-        assert_eq!(format!("{:?}", &vacant), "VacantEntry { key: 17 }");
+        assert_eq!(format!("{:?}", vacant), "VacantEntry { key: 17 }");
         let occupied = vacant.insert(23);
         assert_eq!(
-            format!("{:?}", &occupied),
+            format!("{:?}", occupied),
             "OccupiedEntry { key: 17, val: 23 }"
         );
     }

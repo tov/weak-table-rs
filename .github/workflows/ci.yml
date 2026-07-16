@@ -3,46 +3,35 @@ on: [push, pull_request]
 name: CI
 
 jobs:
-  check:
-    name: Check
+  fmt:
+    name: Check formatting
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.experimental }}
-    strategy:
-      matrix:
-        rust:
-          - stable
-          - 1.65.0
-        features:
-          - --features=std
-          - --no-default-features --features=alloc,ahash
-        experimental: [false]
-        include:
-          - rust: nightly
-            features: --features=std
-            experimental: true
-          - rust: nightly
-            features: --no-default-features --features=alloc,ahash
-            experimental: true
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-      # Workaround for rust 1.65
-      - if: ${{ matrix.rust == '1.65.0' }}
-        uses: actions-rs/cargo@v1
+          toolchain: stable
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Cargo fmt
+        run: cargo fmt -- --check
+
+  docs:
+    name: Check documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
         with:
-          command: update
-          args: -p log --precise 0.4.28
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-targets ${{ matrix.features }}
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Generate internal documentation
+        run: RUSTDOCFLAGS="-Dwarnings" cargo doc --no-deps --document-private-items
+      - name: Generate public documentation
+        run: RUSTDOCFLAGS="-Dwarnings" cargo doc --no-deps
 
   test:
-    name: Test Suite
+    name: Check and test
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     strategy:
@@ -62,21 +51,15 @@ jobs:
             features: --no-default-features --features=alloc,ahash
             experimental: true
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
-      - if: ${{ matrix.rust == '1.65.0' }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -p log --precise 0.4.28
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: ${{ matrix.features }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Cargo check
+        run: cargo check --all-targets ${{ matrix.features }}
+      - name: Run tests
+        run: cargo test ${{ matrix.features }}
 
   clippy:
     name: Clippy
@@ -86,25 +69,16 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.65.0
         experimental: [false]
         include:
           - rust: nightly
             experimental: true
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
-      - run: rustup component add clippy
-      - if: ${{ matrix.rust == '1.65.0' }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -p log --precise 0.4.28
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Run clippy
+        run: cargo clippy --all-targets ${{ matrix.features }} -- -D warnings
