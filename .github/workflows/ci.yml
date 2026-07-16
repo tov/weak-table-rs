@@ -25,11 +25,9 @@ jobs:
             experimental: true
     steps:
       - uses: actions/checkout@v7
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
       # Workaround for rust 1.65
       - if: ${{ matrix.rust == '1.65.0' }}
         uses: actions-rs/cargo@v1
@@ -63,11 +61,9 @@ jobs:
             experimental: true
     steps:
       - uses: actions/checkout@v7
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
       - if: ${{ matrix.rust == '1.65.0' }}
         uses: actions-rs/cargo@v1
         with:
@@ -93,11 +89,10 @@ jobs:
             experimental: true
     steps:
       - uses: actions/checkout@v7
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
+          components: clippy
       - run: rustup component add clippy
       - if: ${{ matrix.rust == '1.65.0' }}
         uses: actions-rs/cargo@v1
