@@ -11,7 +11,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.46.0
+          - 1.65.0
         features:
           - --features=std
           - --no-default-features --features=alloc,ahash
@@ -43,7 +43,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.46.0
+          - 1.65.0
         features:
           - --features=std
           - --no-default-features --features=alloc,ahash
@@ -75,7 +75,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.46.0
+          - 1.65.0
         experimental: [false]
         include:
           - rust: nightly
