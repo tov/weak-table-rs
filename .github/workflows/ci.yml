@@ -3,6 +3,33 @@ on: [push, pull_request]
 name: CI
 
 jobs:
+  fmt:
+    name: Check formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Cargo fmt
+        run: cargo fmt -- --check
+
+    name: Check documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustdoc
+      - uses: Swatinem/rust-cache@v2
+      - name: Generate internal documentation
+        run: RUSTDOCFLAGS="-Dwarnings" cargo doc --no-deps --document-private-items
+      - name: Generate public documentation
+        run: RUSTDOCFLAGS="-Dwarnings" cargo doc --no-deps
+
   test:
     name: Check and test
     runs-on: ubuntu-latest
