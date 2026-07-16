@@ -3,8 +3,8 @@ on: [push, pull_request]
 name: CI
 
 jobs:
-  check:
-    name: Check
+  test:
+    name: Check and test
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     strategy:
@@ -31,33 +31,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Cargo check
         run: cargo check --all-targets ${{ matrix.features }}
-
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.experimental }}
-    strategy:
-      matrix:
-        rust:
-          - stable
-          - 1.65.0
-        features:
-          - --features=std
-          - --no-default-features --features=alloc,ahash
-        experimental: [false]
-        include:
-          - rust: nightly
-            features: --features=std
-            experimental: true
-          - rust: nightly
-            features: --no-default-features --features=alloc,ahash
-            experimental: true
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-      - uses: Swatinem/rust-cache@v2
       - name: Run tests
         run: cargo test ${{ matrix.features }}
 
