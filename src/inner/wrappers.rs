@@ -65,7 +65,7 @@ pub(crate) trait Element: Sized {
     /// | ------------ | ------------------ | ---------------------------------- |
     /// | Weak         | `&Weak<WeakPtr<T>>`| `Option<StrongPtr<T>>`             |
     /// | Owned        | `&Owned<T>`,       | `Some(&T)`                         |
-    fn as_ref<'a>(&'a self) -> Option<Self::Ref<'a>>;
+    fn as_ref(&self) -> Option<Self::Ref<'_>>;
 
     /// Return true if this is an expired weak pointer.
     fn is_expired(&self) -> bool;
@@ -307,7 +307,7 @@ where
         self.val.is_expired()
     }
 
-    fn as_ref<'a>(&'a self) -> Option<Self::Ref<'a>> {
+    fn as_ref(&self) -> Option<Self::Ref<'_>> {
         self.val.view()
     }
 
