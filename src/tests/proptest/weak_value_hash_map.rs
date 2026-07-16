@@ -126,6 +126,21 @@ where
             assert_eq!(v1, v2);
         }
 
+        // Check into_keys and into_values iterators; make sure they match.
+        {
+            let mut k1: Vec<_> = self.weak.clone().into_keys().collect();
+            let mut k2: Vec<_> = self.strong.clone().into_keys().collect();
+            k1.sort();
+            k2.sort();
+            assert_eq!(k1, k2);
+
+            let mut v1: Vec<_> = self.weak.clone().into_values().collect();
+            let mut v2: Vec<_> = self.strong.clone().into_values().collect();
+            v1.sort();
+            v2.sort();
+            assert_eq!(v1, v2);
+        }
+
         // Use a few other iterator types to construct a version of the strong
         // table.
         {
@@ -188,6 +203,10 @@ where
                 let lst = [(key.clone(), val_ptr.clone())];
                 self.weak.extend(lst);
             }
+            InsertStrategy::ViaExtendRef => {
+                let lst = [(key, &val_ptr)];
+                self.weak.extend(lst);
+            }
         }
         self.strong.remove(key);
         self.strong.insert(key.clone(), val_ptr.clone());
@@ -218,6 +237,10 @@ where
                 }
             }
             RemoveStrategy::ViaRemove => self.weak.remove(key),
+            RemoveStrategy::ViaRemoveEntry => self.weak.remove_entry(key).map(|(k, v)| {
+                assert_eq!(&k, key);
+                v
+            }),
             RemoveStrategy::ViaRetain => {
                 let mut removed = None;
                 self.weak.retain(|k, v| {
@@ -230,6 +253,11 @@ where
                 });
                 removed
             }
+            RemoveStrategy::ViaExtractIf => {
+                let removed: Vec<_> = self.weak.extract_if(|k, _| k == key).collect();
+                assert!(removed.len() <= 1);
+                removed.get(0).map(|(_, v)| v.clone())
+            }
         };
         let old_s = self.strong.remove(key);
         assert_eq!(old_s, old_w);
@@ -241,13 +269,21 @@ where
         }
     }
 
-    fn reserve(&mut self, n: usize) {
-        self.weak.reserve(n);
+    fn reserve(&mut self, n: usize, try_reserve: bool) {
+        if try_reserve {
+            self.weak.try_reserve(n).expect("failed");
+        } else {
+            self.weak.reserve(n);
+        }
     }
 
-    fn shrink_to_fit(&mut self) {
-        self.weak.shrink_to_fit();
+    fn shrink(&mut self, min_capacity: Option<usize>) {
+        match min_capacity {
+            Some(n) => self.weak.shrink_to(n),
+            None => self.weak.shrink_to_fit(),
+        }
     }
+
     fn clear(&mut self) {
         self.weak.clear();
         self.strong.clear();

@@ -16,6 +16,37 @@ The format is based on [Keep a Changelog] and this project adheres to
 - Property tests for all of the exposed map and set types.
 - Benchmarks based on `criterion`.
 
+- Added APIs to map types to match with stdlib `HashMap`:
+  - `extract_if`
+  - `get_disjoint_mut`, `get_both_disjoint_mut`
+  - `into_keys`
+  - `into_values`
+  - `remove_entry`
+  - `shrink_to`
+  - `try_reserve`
+  - `From<[(K, V); N]>`
+  - `Entry::and_modify`
+  - `Entry::insert_entry`
+  - `Entry::or_insert_with_key`
+  - `VacantEntry::insert_entry`.
+
+- Added APIs to set types to match with stdlib `HashSet`:
+  - `difference`
+  - `extract_if`
+  - `intersection`
+  - `is_disjoint`
+  - `is_superset`
+  - `shrink_to`
+  - `symmetric_difference`
+  - `take`
+  - `try_reserve`
+  - `union`
+  - `BitAnd`
+  - `BitOr`
+  - `BitXor`
+  - `From<[T;N]>`
+  - `Sub`
+
 ### Changed (visible)
 
 - All hash-tables now use a new backend based on [`hashbrown`]
@@ -24,6 +55,11 @@ The format is based on [Keep a Changelog] and this project adheres to
 - The Minimum Supported Rust Version is now 1.65.
   (This is necessary to use `hashbrown`.)
 - The default capacity for new tables is now zero.
+- Changed `load_factor()` to return a value closer to the table's
+  actual load factor.
+- Methods that do not require the element type to be WeakKey or
+  WeakElement no longer constrain their parameters in this way.
+
 
 ### Changed (internal)
 
@@ -40,12 +76,22 @@ The format is based on [Keep a Changelog] and this project adheres to
   differently.
 - Tests have been moved to a `tests` submodule, so that they can
   share code.
+- A great deal of common code has been extracted into macros,
+  to avoid the risk of copy-and-paste errors.
 
 ### Fixed
 
 - The `retain()` and `remove_expired()` methods no longer
   skip elements that changed position due to other elements having been
   removed. ([github#22])
+- Fix a bug in `load_factor()` calculation where it would return
+  `inf` for a zero-capacity table.
+- Changed the output of Debug for WeakHashSet and PtrWeakHashSet
+  to display them as sets, not as maps to ().
+
+### Documentation
+  - Cleaned up documentation that referred to sets as maps,
+    or claimed that they had separate keys and values.
 
 ## [0.3.2] - 2021-12-01
 

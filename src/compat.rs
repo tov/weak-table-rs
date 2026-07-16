@@ -28,27 +28,33 @@ mod lib {
 }
 
 // Stuff from `std`/`alloc` that we use often.
-pub(crate) use lib::{rc, sync};
+pub(crate) use lib::{boxed::Box, rc, sync, vec};
 
 #[cfg(test)]
-pub(crate) use lib::{boxed::Box, string::String, vec, vec::Vec};
+pub(crate) use lib::{string::String, vec::Vec};
 
 // Stuff from `core` that we use often:
 pub(crate) use core::{
+    alloc::Layout,
     borrow::Borrow,
-    fmt::{self, Debug, Formatter},
+    fmt::{self, Debug, Display, Formatter},
     hash::{BuildHasher, Hash, Hasher},
     iter::{self, FromIterator},
+    marker::PhantomData,
     mem,
     ops::{self, Deref, Index, IndexMut},
 };
+
+// core:error::Error did not exist before 1.81, which is earlier than our MSRV.
+#[cfg(feature = "std")]
+pub(crate) use std::error::Error;
 
 // When testing, we need the `eprintln` macro from `std`:
 #[cfg(test)]
 extern crate std;
 
 #[cfg(test)]
-pub(crate) use std::{eprintln, format};
+pub(crate) use std::{eprintln, format, string::ToString};
 
 #[cfg(test)]
 pub(crate) type HashMap<K, V> = hashbrown::HashMap<K, V, RandomState>;

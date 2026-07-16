@@ -129,6 +129,21 @@ where
             assert_eq!(v1, v2);
         }
 
+        // Check into_keys and into_values iterators; make sure they match.
+        {
+            let mut k1: Vec<KeyByPtr<K>> = self.weak.clone().into_keys().map(KeyByPtr).collect();
+            let mut k2: Vec<KeyByPtr<K>> = self.strong.clone().into_keys().collect();
+            k1.sort();
+            k2.sort();
+            assert_eq!(k1, k2);
+
+            let mut v1: Vec<_> = self.weak.clone().into_values().collect();
+            let mut v2: Vec<_> = self.strong.clone().into_values().collect();
+            v1.sort();
+            v2.sort();
+            assert_eq!(v1, v2);
+        }
+
         // Use a few other iterator types to construct a version of the strong
         // table.
         {
@@ -185,7 +200,7 @@ where
             InsertStrategy::ViaInsert => {
                 let _ = self.weak.insert(key_ptr.clone(), value.clone());
             }
-            InsertStrategy::ViaExtend => {
+            InsertStrategy::ViaExtend | InsertStrategy::ViaExtendRef => {
                 let lst = [(key_ptr.clone(), value.clone())];
                 self.weak.extend(lst);
             }
@@ -229,7 +244,9 @@ where
                         Entry::Vacant(_) => None,
                     }
                 }
-                RemoveStrategy::ViaRemove => self.weak.remove(&key),
+                RemoveStrategy::ViaRemove | RemoveStrategy::ViaRemoveEntry => {
+                    self.weak.remove(&key)
+                }
                 RemoveStrategy::ViaRetain => {
                     let mut removed = None;
                     self.weak.retain(|k, v| {
@@ -241,6 +258,12 @@ where
                         }
                     });
                     removed
+                }
+                RemoveStrategy::ViaExtractIf => {
+                    let removed: Vec<_> =
+                        self.weak.extract_if(|k, _| Arc::ptr_eq(&k, &key)).collect();
+                    assert!(removed.len() <= 1);
+                    removed.get(0).map(|(_, v)| v.clone())
                 }
             };
             let old_s = self.strong.remove(&KeyByPtr(key.clone()));
@@ -278,13 +301,21 @@ where
         }
     }
 
-    fn reserve(&mut self, n: usize) {
-        self.weak.reserve(n);
+    fn reserve(&mut self, n: usize, try_reserve: bool) {
+        if try_reserve {
+            self.weak.try_reserve(n).expect("failed");
+        } else {
+            self.weak.reserve(n);
+        }
     }
 
-    fn shrink_to_fit(&mut self) {
-        self.weak.shrink_to_fit();
+    fn shrink(&mut self, min_capacity: Option<usize>) {
+        match min_capacity {
+            Some(n) => self.weak.shrink_to(n),
+            None => self.weak.shrink_to_fit(),
+        }
     }
+
     fn clear(&mut self) {
         self.weak.clear();
         self.strong.clear();

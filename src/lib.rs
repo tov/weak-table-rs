@@ -16,6 +16,7 @@ pub mod weak_weak_hash_map;
 mod tests;
 
 mod by_ptr;
+mod common;
 mod compat;
 mod inner;
 mod size_policy;
@@ -89,3 +90,49 @@ pub struct WeakHashSet<T, S = RandomState>(WeakKeyHashMap<T, (), S>);
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
 pub struct PtrWeakHashSet<T, S = RandomState>(PtrWeakKeyHashMap<T, (), S>);
+
+/// An error that can occur during a `try_reserve` method.
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub enum TryReserveError {
+    /// The amount of memory that we would need to allocate
+    /// would have been greater than the maximum (typically `isize::MAX).
+    CapacityOverflow,
+
+    /// We were unable to allocate memory to grow the table or set.
+    AllocError {
+        /// The memory layout that we were unable to allocate.
+        layout: Layout,
+    },
+}
+
+impl TryReserveError {
+    /// Construct a TryReserveError from the hashbrown equivalent.
+    ///
+    /// (For implementation hiding purposes, this is not a public `From`
+    /// implementation.)
+    #[allow(clippy::needless_pass_by_value)]
+    pub(crate) fn from_hashbrown(error: hashbrown::TryReserveError) -> Self {
+        match error {
+            hashbrown::TryReserveError::CapacityOverflow => TryReserveError::CapacityOverflow,
+            hashbrown::TryReserveError::AllocError { layout } => {
+                TryReserveError::AllocError { layout }
+            }
+        }
+    }
+}
+impl Display for TryReserveError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            TryReserveError::CapacityOverflow => write!(
+                f,
+                "Allocation failed: arithmetic overflow in capacity calculation"
+            ),
+            TryReserveError::AllocError { .. } => {
+                write!(f, "Allocation failed: memory allocator returned an error")
+            }
+        }
+    }
+}
+#[cfg(feature = "std")]
+impl Error for TryReserveError {}

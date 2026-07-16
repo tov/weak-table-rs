@@ -1,61 +1,22 @@
 //! A hash set where the elements are held by weak pointers and compared by value.
 
+use crate::common::*;
 use crate::compat::*;
+use crate::inner;
 
 use super::traits::*;
 use super::weak_key_hash_map as base;
 
 pub use super::WeakHashSet;
 
-impl<T: WeakKey> WeakHashSet<T, RandomState> {
-    /// Creates an empty `WeakHashSet`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        WeakHashSet(base::WeakKeyHashMap::new())
-    }
-
-    /// Creates an empty `WeakHashSet` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        WeakHashSet(base::WeakKeyHashMap::with_capacity(capacity))
-    }
+universal_hashless_members! {
+    WeakHashSet ("`WeakHashSet`", a "set")
+    base::WeakKeyHashMap::with_capacity_and_hasher
+    {T}
 }
 
 impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
-    /// Creates an empty `WeakHashSet` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        WeakHashSet(base::WeakKeyHashMap::with_hasher(hash_builder))
-    }
-
-    /// Creates an empty `WeakHashSet` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        WeakHashSet(base::WeakKeyHashMap::with_capacity_and_hasher(
-            capacity,
-            hash_builder,
-        ))
-    }
-
-    /// Returns a reference to the map's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the map can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
-    /// Removes all mappings whose keys have expired.
+    /// Removes all expired elements.
     ///
     /// *O*(*n*) time
     pub fn remove_expired(&mut self) {
@@ -72,6 +33,19 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.reserve(additional_capacity);
     }
 
+    /// Tries to reserve room for additional elements.
+    ///
+    /// If this method succeeds, then at least `additional_capacity` insertions
+    /// may be performed without reallocating further.
+    ///
+    /// *O*(*n*) time
+    pub fn try_reserve(
+        &mut self,
+        additional_capacity: usize,
+    ) -> Result<(), crate::TryReserveError> {
+        self.0.try_reserve(additional_capacity)
+    }
+
     /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
     ///
     /// *O*(*n*) time
@@ -79,45 +53,19 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.shrink_to_fit();
     }
 
-    /// Returns an over-approximation of the number of elements.
+    /// Shrinks capacity to hold no fewer than `min_capacity` elements.
     ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Is the set empty?
-    ///
-    /// Note that this may return false even if all keys in the set have
-    /// expired, if they haven't been collected yet.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired elements.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        self.0.load_factor()
-    }
-
-    /// Removes all associations from the map.
+    /// May remove expired items if necessary.
+    /// Does nothing if the current capacity is already at `min_capacity` or below.
     ///
     /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
+    pub fn shrink_to(&mut self, min_capacity: usize) {
+        self.0.shrink_to(min_capacity);
     }
 
-    // Non-ptr WeakHashSet should probably have `get` method.
+    // TODO: Non-ptr WeakHashSet should probably have `get` method.
 
-    /// Returns true if the map contains the specified key.
+    /// Returns true if the set contains the specified key.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn contains<Q>(&self, key: &Q) -> bool
@@ -156,15 +104,20 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.get_key(key)
     }
 
-    /// Unconditionally inserts the value, returning the old value if already present. Does not
-    /// replace the key.
+    /// Unconditionally inserts `key` into this set,
+    /// replacing any previous matching entry.
+    ///
+    /// Returns true if the key was absent before, and false otherwise.
+    ///
+    /// (Note that unlike `HashSet::insert`, this insert method always replaces
+    /// the key.)
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn insert(&mut self, key: T::Strong) -> bool {
         self.0.insert(key, ()).is_some()
     }
 
-    /// Removes the entry with the given key, if it exists.
+    /// Removes the entry matching the given key, if it exists.
     ///
     /// Returns true if an entry was removed.
     ///
@@ -177,9 +130,20 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.remove(key).is_some()
     }
 
-    /// Removes all mappings not satisfying the given predicate.
+    /// Removes the entry matching the given key, if it exists, and return the it.
     ///
-    /// Also removes any expired mappings.
+    /// expected *O*(1) time; worst-case *O*(*p*) time
+    pub fn take<Q>(&mut self, key: &Q) -> Option<T::Strong>
+    where
+        Q: ?Sized + Eq + Hash,
+        T::Key: Borrow<Q>,
+    {
+        self.0.remove_entry(key).map(|(k, ())| k)
+    }
+
+    /// Removes all elements not satisfying the given predicate.
+    ///
+    /// Also removes any expired elements.
     ///
     /// *O*(*n*) time
     pub fn retain<F>(&mut self, mut f: F)
@@ -200,6 +164,14 @@ impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     {
         self.0.domain_is_subset(&other.0)
     }
+
+    /// Helper: return true if 'self' contains 'item'.
+    fn contains_strong(&self, item: &T::Strong) -> bool {
+        T::with_key(item, |k| self.contains(k))
+    }
+
+    set_op_methods! {WeakHashSet}
+    set_relationships! {WeakHashSet}
 }
 
 /// An iterator over the elements of a set.
@@ -250,21 +222,69 @@ impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
     }
 }
 
-impl<T: WeakKey, S> WeakHashSet<T, S> {
-    /// Gets an iterator over the keys and values.
+impl<T: WeakElement, S> WeakHashSet<T, S> {
+    /// Gets an iterator over the elements of this set.
     ///
     /// *O*(1) time
     pub fn iter(&self) -> Iter<'_, T> {
         Iter(self.0.keys())
     }
 
-    /// Gets a draining iterator, which removes all the values but retains the storage.
+    /// Gets a draining iterator, which removes all the elements but retains the storage.
     ///
     /// *O*(1) time (and *O*(*n*) time to dispose of the result)
     pub fn drain(&mut self) -> Drain<'_, T> {
         Drain(self.0.drain())
     }
+
+    /// Gets an iterator that removes and returns elements matching a given predicate.
+    ///
+    /// Expired elements are also removed.
+    ///
+    /// If this iterator is dropped before it is completed, then no further
+    /// elements are removed.
+    /// (This is in contrast to the behavior of [`drain`](Self::drain)).
+    ///
+    /// *O*(1) time
+    pub fn extract_if<'a, F>(&'a mut self, mut f: F) -> ExtractIf<'a, T, F>
+    where
+        F: FnMut(T::Strong) -> bool + 'a,
+    {
+        ExtractIf {
+            inner: self.0 .0.extract_if(move |e| {
+                if let Some(k) = e.0.val.view() {
+                    f(k)
+                } else {
+                    true
+                }
+            }),
+            _phantom: PhantomData,
+        }
+    }
 }
+
+/// An iterator that removes members that match a given predicate.
+pub struct ExtractIf<'a, T: WeakElement, F> {
+    /// The underlying iterator.
+    inner: inner::ExtractIf<'a, inner::WeakK<T>, inner::Owned<()>>,
+    /// A marker so that F does not appear unused.
+    _phantom: PhantomData<F>,
+}
+
+impl<'a, T: WeakElement, F> Iterator for ExtractIf<'a, T, F> {
+    type Item = T::Strong;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|(k, ())| k)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+set_op_types! {WeakHashSet where {T: WeakKey}}
+set_operators! {WeakHashSet where {T: WeakKey}}
 
 impl<T, S, S1> PartialEq<WeakHashSet<T, S1>> for WeakHashSet<T, S>
 where
@@ -279,12 +299,6 @@ where
 
 impl<T: WeakKey, S: BuildHasher> Eq for WeakHashSet<T, S> where T::Key: Eq {}
 
-impl<T: WeakKey, S: BuildHasher + Default> Default for WeakHashSet<T, S> {
-    fn default() -> Self {
-        WeakHashSet(base::WeakKeyHashMap::<T, (), S>::default())
-    }
-}
-
 impl<T, S> FromIterator<T::Strong> for WeakHashSet<T, S>
 where
     T: WeakKey,
@@ -297,22 +311,32 @@ where
     }
 }
 
+impl<T: WeakKey, const N: usize> From<[T::Strong; N]> for WeakHashSet<T, RandomState> {
+    /// Converts an array of elements into a set.
+    ///
+    /// If any entries in the array are equal,
+    /// all but one of the corresponding values will be dropped.
+    fn from(value: [T::Strong; N]) -> Self {
+        Self::from_iter(value)
+    }
+}
+
 impl<T: WeakKey, S: BuildHasher> Extend<T::Strong> for WeakHashSet<T, S> {
     fn extend<I: IntoIterator<Item = T::Strong>>(&mut self, iter: I) {
         self.0.extend(iter.into_iter().map(|k| (k, ())));
     }
 }
 
-impl<T: WeakKey, S> Debug for WeakHashSet<T, S>
+impl<T: WeakElement, S> Debug for WeakHashSet<T, S>
 where
     T::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        f.debug_set().entries(self.0.iter()).finish()
     }
 }
 
-impl<T: WeakKey, S> IntoIterator for WeakHashSet<T, S> {
+impl<T: WeakElement, S> IntoIterator for WeakHashSet<T, S> {
     type Item = T::Strong;
     type IntoIter = IntoIter<T>;
 
@@ -324,7 +348,7 @@ impl<T: WeakKey, S> IntoIterator for WeakHashSet<T, S> {
     }
 }
 
-impl<'a, T: WeakKey, S> IntoIterator for &'a WeakHashSet<T, S> {
+impl<'a, T: WeakElement, S> IntoIterator for &'a WeakHashSet<T, S> {
     type Item = T::Strong;
     type IntoIter = Iter<'a, T>;
 
@@ -336,10 +360,26 @@ impl<'a, T: WeakKey, S> IntoIterator for &'a WeakHashSet<T, S> {
     }
 }
 
+/// Helper: Given two references to sets, return them in ascending order of
+/// len().
+fn sort_by_size<'a, T: WeakKey, S: BuildHasher>(
+    a: &'a WeakHashSet<T, S>,
+    b: &'a WeakHashSet<T, S>,
+) -> (&'a WeakHashSet<T, S>, &'a WeakHashSet<T, S>) {
+    if a.len() < b.len() {
+        (a, b)
+    } else {
+        (b, a)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::compat::rc::{Rc, Weak};
+
+    crate::tests::common::empty_constructor_tests! {WeakHashSet<Weak<u8>>}
+    crate::tests::set_operations::set_operation_tests! {WeakHashSet, 0}
 
     // Regression check for https://github.com/tov/weak-table-rs/issues/22
     #[test]
@@ -370,5 +410,20 @@ mod test {
 
             assert_eq!(retain_called_on, vec![rc_n]);
         }
+    }
+
+    #[test]
+    fn test_take() {
+        let s = [Rc::new(1), Rc::new(2), Rc::new(3)];
+        let mut set: WeakHashSet<Weak<u32>> = s.clone().into();
+        assert_eq!(set.iter().count(), 3);
+
+        let v = set.take(&2);
+        assert_eq!(v, Some(Rc::new(2)));
+        assert_eq!(set.iter().count(), 2);
+        assert!(Rc::ptr_eq(&v.expect("absent suddenly!"), &s[1]));
+
+        let v = set.take(&2);
+        assert!(v.is_none());
     }
 }

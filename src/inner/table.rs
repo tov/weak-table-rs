@@ -127,6 +127,22 @@ impl<K, V, S> Table<K, V, S> {
         self.table.len()
     }
 
+    /// Return an over-approximation of the fraction of buckets in the table
+    /// that are in use.
+    ///
+    /// This is an over-approximation since it includes expired entries that
+    /// have not been removed.
+    ///
+    /// If the table's capacity is 0, this function (arbitrarily) returns 0.0
+    pub(crate) fn load_factor(&self) -> f32 {
+        let n_buckets = self.table.num_buckets();
+        if n_buckets == 0 {
+            0.0
+        } else {
+            self.len() as f32 / n_buckets as f32
+        }
+    }
+
     /// Remove all entries from this table.
     ///
     /// Does not reallocate.
@@ -135,7 +151,7 @@ impl<K, V, S> Table<K, V, S> {
     }
 }
 
-impl<K: Key, V: Element, S> Table<K, V, S> {
+impl<K: Element, V: Element, S> Table<K, V, S> {
     /// Remove all expired entries from this table.
     ///
     /// This is an internal helper and does not reallocate.
@@ -169,10 +185,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     ///
     /// See caveats on [`Self::capacity`].
     #[inline]
-    pub(crate) fn try_reserve(
-        &mut self,
-        additional: usize,
-    ) -> Result<(), hashbrown::TryReserveError> {
+    pub(crate) fn try_reserve(&mut self, additional: usize) -> Result<(), crate::TryReserveError> {
         // Check whether our existing capacity can handle this insertion.
         if self.table.len().saturating_add(additional) <= self.table.capacity() {
             return Ok(());
@@ -185,7 +198,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     /// necessary to ensure that we have enough room to expand _comfortably_ to
     /// hold `additional` elements.
     #[cold]
-    fn gc_and_try_grow(&mut self, additional: usize) -> Result<(), hashbrown::TryReserveError> {
+    fn gc_and_try_grow(&mut self, additional: usize) -> Result<(), crate::TryReserveError> {
         // Note that removing expired entries can lower the capacity of the
         // table.  See notes on `capacity()` above.
 
@@ -195,7 +208,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         let new_len = self.len();
         let expected_len = new_len
             .checked_add(additional)
-            .ok_or(hashbrown::TryReserveError::CapacityOverflow)?;
+            .ok_or(crate::TryReserveError::CapacityOverflow)?;
 
         let desired_capacity = desired_capacity_for(expected_len);
 
@@ -213,8 +226,8 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         let growth = desired_capacity - new_len;
 
         self.table
-            .try_reserve(growth, Self::make_hasher(&self.hash_builder))?;
-        Ok(())
+            .try_reserve(growth, Self::make_hasher(&self.hash_builder))
+            .map_err(crate::TryReserveError::from_hashbrown)
     }
 
     /// Remove expired entries from this table, and reallocate it if appropriate
@@ -225,6 +238,29 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         // It seems to violate the contract of `shrink_to_fit` though.
         self.table
             .shrink_to_fit(Self::make_hasher(&self.hash_builder));
+    }
+
+    /// Shrink the storage used for the table, but not below `min_capacity`.
+    ///
+    /// Does nothing if the table is already "small enough".
+    /// Otherwise, removes expired entries and tries to shrink the table.
+    pub(crate) fn shrink_to(&mut self, min_capacity: usize) {
+        if self.capacity() <= min_capacity {
+            // The table is already small enough.
+            return;
+        }
+
+        self.remove_expired_inner();
+        // We have to check this again because remove_expired_inner can _lower_
+        // the capacity by adding "deleted" markers to the hashtable.
+        // We can't call shrink_to() unconditionally because we don't want it to
+        // panic.
+        if self.capacity() > min_capacity {
+            // TODO: Should we allow some additional space, as `weak-table` did?
+            // It seems to violate the contract of `shrink_to_fit` though.
+            self.table
+                .shrink_to(min_capacity, Self::make_hasher(&self.hash_builder));
+        }
     }
 
     /// Return an [`Entry`] corresponding to the occupied or unoccupied slot
@@ -304,16 +340,12 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
         match self.table.find_entry(hash, |(k, _)| k.eq_borrow(key)) {
             Ok(occupied_entry) => {
                 let (k, v) = occupied_entry.get();
-                if let (Some(k_handle), Some(v_handle)) = (k.handle(), v.handle()) {
-                    Some(OccupiedEntry {
-                        inner: occupied_entry,
-                        k_handle,
-                        v_handle,
-                    })
-                } else {
-                    // Key or value has expired.
-                    None
-                }
+                let (k_handle, v_handle) = (k.handle()?, v.handle()?);
+                Some(OccupiedEntry {
+                    inner: occupied_entry,
+                    k_handle,
+                    v_handle,
+                })
             }
             Err(_absent_entry) => {
                 // No entry present.
@@ -330,11 +362,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     {
         let hash = hash_one(&self.hash_builder, key);
         let (k, v) = self.table.find(hash, |(k, _)| k.eq_borrow(key))?;
-        if let (Some(k_ref), Some(v_ref)) = (k.as_ref(), v.as_ref()) {
-            Some((k_ref, v_ref))
-        } else {
-            None
-        }
+        Some((k.as_ref()?, v.as_ref()?))
     }
 
     // TODO: We can probably save 3-4% on insert() if we don't use entry() to
@@ -363,7 +391,7 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     */
 }
 
-impl<K: Element, V: Element, S> Table<K, V, S> {
+impl<K, V, S> Table<K, V, S> {
     /// Return an iterator over the non-expired entries in this Table, in an arbitrary order.
     pub(crate) fn iter(&self) -> Iter<'_, K, V> {
         Iter(self.table.iter())
@@ -397,15 +425,39 @@ impl<K: Key, T, S: BuildHasher> Table<K, super::Owned<T>, S> {
     {
         let hash = hash_one(&self.hash_builder, key);
         let (k, v) = self.table.find_mut(hash, |(k, _)| k.eq_borrow(key))?;
-        if let Some(k_ref) = k.as_ref() {
-            Some((k_ref, &mut v.val))
-        } else {
-            None
-        }
+        Some((k.as_ref()?, &mut v.val))
+    }
+
+    /// For each provided key, return a reference to the key, and a mutable
+    /// reference to the value, of the corresponding entry in the table.
+    ///
+    /// Only implemented for owned values.
+    ///
+    /// An entry will be None if it exists but is expired.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the keys correspond to  overlapping entries.
+    pub(crate) fn get_disjoint_mut<Q, const N: usize>(
+        &mut self,
+        ks: [&Q; N],
+    ) -> [Option<(K::Ref<'_>, &mut T)>; N]
+    where
+        Q: Hash + Eq + ?Sized,
+        K::Key: Borrow<Q>,
+    {
+        let hashes: [u64; N] = ks.map(|query| hash_one(&self.hash_builder, query));
+
+        self.table
+            .get_disjoint_mut(hashes, |idx, (k, _)| k.eq_borrow(ks[idx]))
+            .map(|ent| {
+                let (k, v) = ent?;
+                Some((k.as_ref()?, &mut v.val))
+            })
     }
 }
 
-impl<K: Element, T, S> Table<K, super::Owned<T>, S> {
+impl<K, T, S> Table<K, super::Owned<T>, S> {
     /*
       See "TODO retain" note above.
 
@@ -471,7 +523,7 @@ impl<'a, K: Element, V: Element<CachedHash = ()>> OccupiedEntry<'a, K, V> {
     }
 }
 
-impl<'a, K: Key, T> OccupiedEntry<'a, K, super::Owned<T>> {
+impl<'a, K: Element, T> OccupiedEntry<'a, K, super::Owned<T>> {
     /* TODO get_mut:
 
        Because of lifetime issues, this implementation isn't viable.
@@ -615,6 +667,49 @@ impl<'a, K: Element, V: Element> Iterator for Drain<'a, K, V> {
         // true lower bound: entries in the table may expire while we are
         // iterating over it.
         (0, self.0.size_hint().1)
+    }
+}
+
+impl<K: Element, V: Element, S> Table<K, V, S> {
+    /// Return an iterator that removes and returns elements if they match a predicate.
+    ///
+    /// All elements matching the predicate will be removed,
+    /// but elements will only be returned if they have not expired.
+    ///
+    /// If the iterator is dropped before it completes, then unvisited elements
+    /// will not be removed.
+    pub(crate) fn extract_if<'a, F>(&'a mut self, f: F) -> ExtractIf<'a, K, V>
+    where
+        F: FnMut(&mut (K, V)) -> bool + 'a,
+    {
+        let iter = Box::new(
+            self.table
+                .extract_if(f)
+                .filter_map(|(k, v)| Some((k.into_owned()?, v.into_owned()?))),
+        );
+
+        ExtractIf { iter }
+    }
+}
+
+/// An iterator that extracts elements if they match a predicate.
+pub(crate) struct ExtractIf<'a, K: Element, V: Element> {
+    /// An underlying iterator.
+    ///
+    /// This is a [`raw::ExtractIf`]`<'a, K, V, F>`, where `F``
+    /// is an unnameable type.
+    iter: Box<dyn Iterator<Item = (K::Owned, V::Owned)> + 'a>,
+}
+
+impl<'a, K: Element, V: Element> Iterator for ExtractIf<'a, K, V> {
+    type Item = (K::Owned, V::Owned);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, self.iter.size_hint().1)
     }
 }
 
@@ -917,6 +1012,50 @@ mod test {
     }
 
     #[test]
+    fn disjoint_mut() {
+        let mut tab = WkKeyMap::new(0, RandomState::default());
+        let mut persist_keys = vec![];
+        for n in 0..=15 {
+            let k = Rc::new(n);
+            tab.entry(k.clone()).unwrap_vacant().insert(0);
+            persist_keys.push(k);
+        }
+
+        let [three, seven, ten, fifty_five] = tab.get_disjoint_mut([&3, &7, &10, &55]);
+        *three.unwrap().1 = 3;
+        *seven.unwrap().1 = 7;
+        *ten.unwrap().1 = 10;
+        assert!(fifty_five.is_none());
+
+        assert_eq!(tab.find(&3).unwrap().1, &3);
+        assert_eq!(tab.find(&7).unwrap().1, &7);
+        assert_eq!(tab.find(&10).unwrap().1, &10);
+
+        // we never set this one.
+        assert_eq!(tab.find(&12).unwrap().1, &0);
+
+        // Drop 15, make sure that we no longer get an answer for it.
+        assert_eq!(persist_keys.pop(), Some(Rc::new(15)));
+        let [x, y] = tab.get_disjoint_mut([&1, &15]);
+        assert!(x.is_some());
+        assert!(y.is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn disjoint_mut_panic() {
+        let mut tab = WkKeyMap::new(0, RandomState::default());
+        let mut persist_keys = vec![];
+        for n in 0..=15 {
+            let k = Rc::new(n);
+            tab.entry(k.clone()).unwrap_vacant().insert(0);
+            persist_keys.push(k);
+        }
+
+        let _only_one_present = tab.get_disjoint_mut([&5, &5, &5, &5]);
+    }
+
+    #[test]
     fn iters_simple() {
         let mut tab = WkKeyMap::new(0, RandomState::default());
         let mut persist_keys = vec![];
@@ -967,7 +1106,7 @@ mod test {
     }
 
     #[test]
-    fn drain() {
+    fn drain_and_drop() {
         let mut tab = WkKeyMap::new(0, RandomState::default());
         let mut persist_keys = vec![];
         for n in 0..100 {
@@ -978,7 +1117,7 @@ mod test {
         let buckets = tab.table.num_buckets();
         assert_eq!(tab.len(), 100);
 
-        // Check a few as we drrain them, then drop the Drain iterator.
+        // Check a few as we drain them, then drop the Drain iterator.
         let drain = tab.drain();
         check_size_hint_ok(100, drain.size_hint());
         for (k, v) in drain.take(7) {
@@ -988,6 +1127,22 @@ mod test {
         assert_eq!(tab.len(), 0);
         // drain does not release storage.
         assert_eq!(tab.table.num_buckets(), buckets);
+    }
+
+    #[test]
+    fn drain_completely() {
+        let mut persist_keys: Vec<_> = (0..=20).map(Rc::new).collect();
+        let mut tab = WkKeyMap::new(0, RandomState::default());
+        for n in &persist_keys {
+            tab.entry(n.clone()).unwrap_vacant().insert(**n);
+        }
+
+        persist_keys.truncate(10);
+
+        let mut drained: Vec<_> = tab.drain().map(|(k, _)| k).collect();
+        assert_eq!(drained.len(), 10);
+        drained.sort();
+        assert_eq!(drained, persist_keys);
     }
 
     #[test]
@@ -1113,5 +1268,78 @@ mod test {
             assert!(cap > len);
             assert!((len as f64) < (cap as f64) * 0.75);
         }
+    }
+
+    #[test]
+    fn extract_if() {
+        let numbers: Vec<Rc<u8>> = (0..50).map(Rc::new).collect();
+        let mut tab: WkKeyMap = WkKeyMap::new(0, RandomState::default());
+        for n in numbers.iter() {
+            tab.entry(n.clone()).unwrap_vacant().insert(**n);
+        }
+
+        let div3: Vec<(Rc<u8>, u8)> = tab
+            .extract_if(|(k, v)| {
+                if k.as_ref().unwrap().as_ref() % 3 == 0 {
+                    true
+                } else {
+                    v.val *= 2;
+                    false
+                }
+            })
+            .collect();
+
+        assert_eq!(div3.len() + tab.iter().count(), numbers.len());
+        assert!(div3.iter().all(|(_k, v)| v % 3 == 0));
+        assert!(tab.iter().all(|(k, v)| *k % 3 != 0 && *v == *k * 2));
+    }
+
+    #[test]
+    fn shrink_to() {
+        let numbers: Vec<Rc<u8>> = (0..50).map(Rc::new).collect();
+        let mut tab: WkKeyMap = WkKeyMap::new(1000, RandomState::default());
+        for n in numbers.iter() {
+            tab.entry(n.clone()).unwrap_vacant().insert(**n);
+        }
+        let cap_orig = tab.capacity();
+        assert!(cap_orig >= 1000);
+
+        for n in 0..200 {
+            let mut t2 = tab.clone();
+            t2.shrink_to(n);
+            assert!(t2.capacity() >= n);
+            assert_eq!(t2.iter().count(), 50);
+            assert!(t2.capacity() < cap_orig);
+        }
+
+        for n in (cap_orig - 10)..(cap_orig + 10) {
+            let mut t2 = tab.clone();
+            t2.shrink_to(n);
+            assert_eq!(t2.iter().count(), 50);
+        }
+
+        tab.shrink_to(9999);
+        assert_eq!(tab.capacity(), cap_orig);
+    }
+
+    #[test]
+    fn try_reserve_error_conversion() {
+        let e = hashbrown::TryReserveError::CapacityOverflow;
+        let e = crate::TryReserveError::from_hashbrown(e);
+        assert!(matches!(e, crate::TryReserveError::CapacityOverflow));
+        assert_eq!(
+            e.to_string(),
+            "Allocation failed: arithmetic overflow in capacity calculation"
+        );
+
+        let e = hashbrown::TryReserveError::AllocError {
+            layout: Layout::from_size_align(16, 16).expect("Bad layout"),
+        };
+        let e = crate::TryReserveError::from_hashbrown(e);
+        assert!(matches!(e, crate::TryReserveError::AllocError { .. }));
+        assert_eq!(
+            e.to_string(),
+            "Allocation failed: memory allocator returned an error"
+        );
     }
 }

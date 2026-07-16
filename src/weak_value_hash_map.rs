@@ -1,6 +1,7 @@
 //! A hash map where the values are held by weak pointers.
 
-use super::size_policy::*;
+use crate::common::*;
+
 use super::traits::*;
 use super::*;
 
@@ -107,51 +108,12 @@ impl<K, V: WeakElement> Iterator for IntoIter<K, V> {
     }
 }
 
-impl<K: Eq + Hash, V: WeakElement> WeakValueHashMap<K, V, RandomState> {
-    /// Creates an empty `WeakValueHashMap`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        Self::with_capacity(DEFAULT_INITIAL_CAPACITY)
-    }
-
-    /// Creates an empty `WeakValueHashMap` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_and_hasher(capacity, Default::default())
-    }
+into_kv_types!(K, V::Strong where {V: WeakElement});
+universal_hashless_members! {
+    WeakValueHashMap ("`WeakValueHashMap`", a "map") inner::Table::new {K,V}
 }
 
 impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S> {
-    /// Creates an empty `WeakValueHashMap` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        Self::with_capacity_and_hasher(DEFAULT_INITIAL_CAPACITY, hash_builder)
-    }
-
-    /// Creates an empty `WeakValueHashMap` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        WeakValueHashMap(inner::Table::new(capacity, hash_builder))
-    }
-
-    /// Returns a reference to the map's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the map can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
     /// Removes all mappings whose keys have expired.
     ///
     /// *O*(*n*) time
@@ -166,9 +128,21 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S> {
     ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
-        self.0
-            .try_reserve(additional_capacity)
-            .expect("try_reserve failed");
+        self.try_reserve(additional_capacity)
+            .expect("Unable to reserve additional capacity");
+    }
+
+    /// Tries to reserve room for additional elements.
+    ///
+    /// If this method succeeds, then at least `additional_capacity` insertions
+    /// may be performed without reallocating further.
+    ///
+    /// *O*(*n*) time
+    pub fn try_reserve(
+        &mut self,
+        additional_capacity: usize,
+    ) -> Result<(), crate::TryReserveError> {
+        self.0.try_reserve(additional_capacity)
     }
 
     /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
@@ -178,33 +152,14 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S> {
         self.0.shrink_to_fit();
     }
 
-    /// Returns an over-approximation of the number of elements.
+    /// Shrinks capacity to hold no fewer than `min_capacity` elements.
     ///
-    /// (This is an over-approximation because it includes expired elements.)
+    /// May remove expired items if necessary.
+    /// Does nothing if the current capacity is already at `min_capacity` or below.
     ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Is the map empty?
-    ///
-    /// Note that this may return false even if all keys in the map have
-    /// expired, if they haven't been collected yet.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired keys.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        (self.len() as f32 + 1.0) / self.capacity() as f32
+    /// *O*(*n*) time
+    pub fn shrink_to(&mut self, min_capacity: usize) {
+        self.0.shrink_to(min_capacity);
     }
 
     /// Gets the requested entry.
@@ -215,13 +170,6 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S> {
             inner::Entry::Occupied(occupied) => Entry::Occupied(OccupiedEntry(occupied)),
             inner::Entry::Vacant(vacant) => Entry::Vacant(VacantEntry(vacant)),
         }
-    }
-
-    /// Removes all associations from the map.
-    ///
-    /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -272,6 +220,18 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S> {
         K: Borrow<Q>,
     {
         self.0.find_entry(key).map(|occupied| occupied.remove().1)
+    }
+
+    /// Removes the entry with the given key, if it exists, and returns both the
+    /// key and value.
+    ///
+    /// expected *O*(1) time; worst-case *O*(*p*) time
+    pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V::Strong)>
+    where
+        Q: ?Sized + Hash + Eq,
+        K: Borrow<Q>,
+    {
+        Some(self.0.find_entry(key)?.remove())
     }
 
     /// Removes all mappings not satisfying the given predicate.
@@ -372,12 +332,6 @@ impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> Eq for WeakValueHashMap<K, V,
 {
 }
 
-impl<K: Eq + Hash, V: WeakElement, S: BuildHasher + Default> Default for WeakValueHashMap<K, V, S> {
-    fn default() -> Self {
-        WeakValueHashMap::with_hasher(Default::default())
-    }
-}
-
 impl<K, V, S> iter::FromIterator<(K, V::Strong)> for WeakValueHashMap<K, V, S>
 where
     K: Eq + Hash,
@@ -390,6 +344,18 @@ where
         let mut result = WeakValueHashMap::with_capacity_and_hasher(min_size, Default::default());
         result.extend(iter);
         result
+    }
+}
+
+impl<K: Eq + Hash, V: WeakElement, const N: usize> From<[(K, V::Strong); N]>
+    for WeakValueHashMap<K, V, RandomState>
+{
+    /// Converts an array of key-value pairs into a map.
+    ///
+    /// If any entries in the array have equal keys,
+    /// all but one of the corresponding values will be dropped.
+    fn from(value: [(K, V::Strong); N]) -> Self {
+        Self::from_iter(value)
     }
 }
 
@@ -438,13 +404,30 @@ impl<'a, K, V: WeakElement> Entry<'a, K, V> {
     }
 
     /// Ensures a value is in the entry by inserting the result of the
-    /// default function if empty.
+    /// `default` function if empty, and returns a strong reference to
+    /// the value in the entry.
     ///
     /// *O*(1) time
     pub fn or_insert_with<F: FnOnce() -> V::Strong>(self, default: F) -> V::Strong {
         match self {
             Entry::Occupied(occupied) => occupied.get_strong(),
             Entry::Vacant(vacant) => vacant.insert(default()),
+        }
+    }
+
+    /// Ensures that a value is in the entry by inserting the result of calling the
+    /// `default` function on this entry's key if the function is empty, and
+    /// returns a strong reference to the value in the entry.
+    pub fn or_insert_with_key<F>(self, default: F) -> V::Strong
+    where
+        F: FnOnce(&K) -> V::Strong,
+    {
+        match self {
+            Entry::Occupied(occupied) => occupied.get_strong(),
+            Entry::Vacant(vacant) => {
+                let value = default(vacant.key());
+                vacant.insert(value)
+            }
         }
     }
 
@@ -455,6 +438,19 @@ impl<'a, K, V: WeakElement> Entry<'a, K, V> {
         match *self {
             Entry::Occupied(ref occupied) => occupied.key(),
             Entry::Vacant(ref vacant) => vacant.key(),
+        }
+    }
+
+    /// Inserts a value into this entry, and returns an [`OccupiedEntry`].
+    ///
+    /// *O*(1) time
+    pub fn insert_entry(self, value: V::Strong) -> OccupiedEntry<'a, K, V> {
+        match self {
+            Entry::Occupied(mut occupied) => {
+                occupied.insert(value);
+                occupied
+            }
+            Entry::Vacant(vacant) => vacant.insert_entry(value),
         }
     }
 }
@@ -525,6 +521,13 @@ impl<'a, K, V: WeakElement> VacantEntry<'a, K, V> {
     pub fn insert(self, value: V::Strong) -> V::Strong {
         let occ = self.0.insert(value);
         V::clone(occ.get().1)
+    }
+
+    /// Inserts the key and value into the map, returning an `OccupiedEntry`.
+    ///
+    /// *O*(1) time
+    pub fn insert_entry(self, value: V::Strong) -> OccupiedEntry<'a, K, V> {
+        OccupiedEntry(self.0.insert(value))
     }
 }
 
@@ -619,4 +622,58 @@ impl<K, V: WeakElement, S> WeakValueHashMap<K, V, S> {
     pub fn drain(&mut self) -> Drain<'_, K, V> {
         Drain(self.0.drain())
     }
+
+    into_kv_methods! {}
+
+    /// Gets an iterator that removes and returns elements matching a given predicate.
+    ///
+    /// Expired elements are also removed.
+    ///
+    /// If this iterator is dropped before it is completed, then no further
+    /// elements are removed.
+    /// (This is in contrast to the behavior of [`drain`](Self::drain)).
+    ///
+    /// *O*(1) time
+    pub fn extract_if<'a, F>(&'a mut self, mut f: F) -> ExtractIf<'a, K, V, F>
+    where
+        F: FnMut(&K, V::Strong) -> bool + 'a,
+    {
+        ExtractIf {
+            inner: self.0.extract_if(move |e| {
+                if let Some(v) = e.1.val.view() {
+                    f(&e.0.val, v)
+                } else {
+                    true
+                }
+            }),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+/// An iterator that removes members that match a given predicate.
+pub struct ExtractIf<'a, K, V: WeakElement, F> {
+    /// The underlying iterator.
+    inner: inner::ExtractIf<'a, inner::Owned<K>, inner::WeakV<V>>,
+    /// A marker so that F does not appear unused.
+    _phantom: PhantomData<F>,
+}
+
+impl<'a, K, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
+    type Item = (K, V::Strong);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::WeakValueHashMap;
+    use crate::compat::rc::Weak;
+
+    crate::tests::common::empty_constructor_tests! {WeakValueHashMap<u32, Weak<u32>>}
 }

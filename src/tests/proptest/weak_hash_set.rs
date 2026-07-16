@@ -135,7 +135,7 @@ where
             InsertStrategy::ViaEntry | InsertStrategy::ViaInsert => {
                 let _ = self.weak.insert(key_ptr.clone());
             }
-            InsertStrategy::ViaExtend => {
+            InsertStrategy::ViaExtend | InsertStrategy::ViaExtendRef => {
                 let lst = [key_ptr.clone()];
                 self.weak.extend(lst);
             }
@@ -161,7 +161,9 @@ where
 
     fn remove_other(&mut self, strategy: RemoveStrategy, key: &K) {
         let old_w = match strategy {
-            RemoveStrategy::ViaRemove | RemoveStrategy::ViaEntry => self.weak.remove(key),
+            RemoveStrategy::ViaRemove
+            | RemoveStrategy::ViaRemoveEntry
+            | RemoveStrategy::ViaEntry => self.weak.remove(key),
             RemoveStrategy::ViaRetain => {
                 let mut removed: bool = false;
                 self.weak.retain(|k| {
@@ -174,6 +176,11 @@ where
                 });
                 removed
             }
+            RemoveStrategy::ViaExtractIf => {
+                let removed: Vec<_> = self.weak.extract_if(|k| k.as_ref() == key).collect();
+                assert!(removed.len() <= 1);
+                !removed.is_empty()
+            }
         };
         let old_s = self.strong.remove(key);
         assert_eq!(old_s, old_w);
@@ -185,13 +192,21 @@ where
         }
     }
 
-    fn reserve(&mut self, n: usize) {
-        self.weak.reserve(n);
+    fn reserve(&mut self, n: usize, try_reserve: bool) {
+        if try_reserve {
+            self.weak.try_reserve(n).expect("failed");
+        } else {
+            self.weak.reserve(n);
+        }
     }
 
-    fn shrink_to_fit(&mut self) {
-        self.weak.shrink_to_fit();
+    fn shrink(&mut self, min_capacity: Option<usize>) {
+        match min_capacity {
+            Some(n) => self.weak.shrink_to(n),
+            None => self.weak.shrink_to_fit(),
+        }
     }
+
     fn clear(&mut self) {
         self.weak.clear();
         self.strong.clear();

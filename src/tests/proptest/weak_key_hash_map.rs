@@ -9,7 +9,9 @@ use quickcheck::quickcheck;
 use weak_table::weak_key_hash_map::Entry;
 use weak_table::WeakKeyHashMap;
 
-use super::{ExecuteMapCmd, ForgetStrategy, InsertStrategy, MapScript, RemoveStrategy};
+use super::{
+    ExecuteMapCmd, ForgetStrategy, InsertStrategy, MapScript, ModifyStrategy, RemoveStrategy,
+};
 
 fn test_script<K, V>(script: &MapScript<K, V>) -> bool
 where
@@ -96,6 +98,10 @@ where
             for (k, v) in self.strong.iter() {
                 assert_eq!(self.weak.get(k.as_ref()), Some(v));
                 assert_eq!(self.weak.get_both(k.as_ref()), Some((k.clone(), v)));
+                assert!(Rc::ptr_eq(
+                    &self.weak.get_key(k.as_ref()).expect("Key suddenly absent"),
+                    k
+                ));
                 assert!(self.weak.contains_key(k.as_ref()));
             }
             let mut weak2: WeakKeyHashMap<Weak<K>, V> = self.weak.clone();
@@ -135,6 +141,21 @@ where
 
             let mut v1: Vec<V> = self.weak.values().cloned().collect();
             let mut v2: Vec<V> = self.strong.values().cloned().collect();
+            v1.sort();
+            v2.sort();
+            assert_eq!(v1, v2);
+        }
+
+        // Check into_keys and into_values iterators; make sure they match.
+        {
+            let mut k1: Vec<_> = self.weak.clone().into_keys().collect();
+            let mut k2: Vec<_> = self.strong.clone().into_keys().collect();
+            k1.sort();
+            k2.sort();
+            assert_eq!(k1, k2);
+
+            let mut v1: Vec<_> = self.weak.clone().into_values().collect();
+            let mut v2: Vec<_> = self.strong.clone().into_values().collect();
             v1.sort();
             v2.sort();
             assert_eq!(v1, v2);
@@ -225,6 +246,10 @@ where
                 let lst = [(key_ptr.clone(), value.clone())];
                 self.weak.extend(lst);
             }
+            InsertStrategy::ViaExtendRef => {
+                let lst = [(&key_ptr, value)];
+                self.weak.extend(lst);
+            }
         }
         self.strong.remove(key);
         self.strong.insert(key_ptr, value.clone());
@@ -256,6 +281,10 @@ where
                 }
             }
             RemoveStrategy::ViaRemove => self.weak.remove(key),
+            RemoveStrategy::ViaRemoveEntry => self.weak.remove_entry(key).map(|(k, v)| {
+                assert_eq!(k.as_ref(), key);
+                v
+            }),
             RemoveStrategy::ViaRetain => {
                 let mut removed: Option<V> = None;
                 self.weak.retain(|k, v| {
@@ -268,9 +297,82 @@ where
                 });
                 removed
             }
+            RemoveStrategy::ViaExtractIf => {
+                let removed: Vec<_> = self.weak.extract_if(|k, _| k.as_ref() == key).collect();
+                assert!(removed.len() <= 1);
+                removed.get(0).map(|(_, v)| v.clone())
+            }
         };
         let old_s = self.strong.remove(key);
         assert_eq!(old_s, old_w);
+    }
+
+    fn modify_inserted(&mut self, strategy: ModifyStrategy, index: usize, value: &V) {
+        if let Some(key) = self.nth_key_mod_len(index) {
+            let key_ptr = match self.strong.get_key_value(&key) {
+                Some((k, _)) => k.clone(),
+                None => Rc::new(key.clone()),
+            };
+            let old_val_w = match strategy {
+                ModifyStrategy::Reinsert => self.weak.insert(key_ptr.clone(), value.clone()),
+                ModifyStrategy::Entry => match self.weak.entry(key_ptr.clone()) {
+                    Entry::Occupied(mut occupied) => Some(occupied.insert(value.clone())),
+                    Entry::Vacant(vacant_entry) => {
+                        let _ignore = vacant_entry.insert_entry(value.clone());
+                        None
+                    }
+                },
+                ModifyStrategy::EntryAndModify => {
+                    let mut prev = None;
+                    let newval = self
+                        .weak
+                        .entry(key_ptr.clone())
+                        .and_modify(|vp| {
+                            let mut v = value.clone();
+                            mem::swap(&mut v, vp);
+                            prev = Some(v);
+                        })
+                        .or_insert(value.clone());
+                    assert_eq!(newval, value);
+
+                    prev
+                }
+                ModifyStrategy::GetDisjointMut => {
+                    if let [Some(p)] = self.weak.get_disjoint_mut([&key]) {
+                        let mut v = value.clone();
+                        mem::swap(p, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key_ptr.clone(), value.clone());
+                        None
+                    }
+                }
+                ModifyStrategy::GetBothDisjointMut => {
+                    if let [Some((kp, vp))] = self.weak.get_both_disjoint_mut([&key]) {
+                        assert_eq!(kp.as_ref(), &key);
+                        let mut v = value.clone();
+                        mem::swap(vp, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key_ptr.clone(), value.clone());
+                        None
+                    }
+                }
+                ModifyStrategy::GetMut => {
+                    if let Some(p) = self.weak.get_mut(&key) {
+                        let mut v = value.clone();
+                        mem::swap(p, &mut v);
+                        Some(v)
+                    } else {
+                        self.weak.insert(key_ptr.clone(), value.clone());
+                        None
+                    }
+                }
+            };
+
+            let old_val_s = self.strong.insert(key_ptr.clone(), value.clone());
+            assert_eq!(old_val_s, old_val_w);
+        }
     }
 
     fn forget_inserted(&mut self, _: ForgetStrategy, index: usize) {
@@ -279,13 +381,21 @@ where
         }
     }
 
-    fn reserve(&mut self, n: usize) {
-        self.weak.reserve(n);
+    fn reserve(&mut self, n: usize, try_reserve: bool) {
+        if try_reserve {
+            self.weak.try_reserve(n).expect("failed");
+        } else {
+            self.weak.reserve(n);
+        }
     }
 
-    fn shrink_to_fit(&mut self) {
-        self.weak.shrink_to_fit();
+    fn shrink(&mut self, min_capacity: Option<usize>) {
+        match min_capacity {
+            Some(n) => self.weak.shrink_to(n),
+            None => self.weak.shrink_to_fit(),
+        }
     }
+
     fn clear(&mut self) {
         self.weak.clear();
         self.strong.clear();

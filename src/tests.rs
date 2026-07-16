@@ -8,6 +8,9 @@
 #![allow(clippy::print_stderr)]
 #![allow(unreachable_pub)]
 #![allow(clippy::enum_variant_names)]
+#![allow(clippy::get_first)]
 
+pub(crate) mod common;
 mod proptest;
+pub(crate) mod set_operations;
 mod symbols;

@@ -1,5 +1,6 @@
 //! A hash map where the keys are held by weak pointers and compared by pointer.
 
+use crate::common::*;
 use crate::compat::*;
 
 use super::by_ptr::*;
@@ -7,64 +8,21 @@ use super::traits::*;
 use super::weak_key_hash_map as base;
 
 pub use super::weak_key_hash_map::{
-    Drain, Entry, IntoIter, Iter, IterMut, Keys, Values, ValuesMut,
+    Drain, Entry, ExtractIf, IntoIter, IntoKeys, IntoValues, Iter, IterMut, Keys, Values, ValuesMut,
 };
 pub use super::PtrWeakKeyHashMap;
 
-impl<K: WeakElement, V> PtrWeakKeyHashMap<K, V, RandomState>
-where
-    K::Strong: Deref,
-{
-    /// Creates an empty `PtrWeakKeyHashMap`.
-    ///
-    /// *O*(1) time
-    pub fn new() -> Self {
-        PtrWeakKeyHashMap(base::WeakKeyHashMap::new())
-    }
-
-    /// Creates an empty `PtrWeakKeyHashMap` with the given capacity.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity(capacity: usize) -> Self {
-        PtrWeakKeyHashMap(base::WeakKeyHashMap::with_capacity(capacity))
-    }
+universal_hashless_members! {
+    PtrWeakKeyHashMap
+    ("`PtrWeakKeyHashMap", a "map")
+    crate::WeakKeyHashMap::with_capacity_and_hasher
+    {K, V}
 }
 
 impl<K: WeakElement, V, S: BuildHasher> PtrWeakKeyHashMap<K, V, S>
 where
     K::Strong: Deref,
 {
-    /// Creates an empty `PtrWeakKeyHashMap` with the given hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_hasher(hash_builder: S) -> Self {
-        PtrWeakKeyHashMap(base::WeakKeyHashMap::with_hasher(hash_builder))
-    }
-
-    /// Creates an empty `PtrWeakKeyHashMap` with the given capacity and hasher.
-    ///
-    /// *O*(*n*) time
-    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        PtrWeakKeyHashMap(base::WeakKeyHashMap::with_capacity_and_hasher(
-            capacity,
-            hash_builder,
-        ))
-    }
-
-    /// Returns a reference to the map's `BuildHasher`.
-    ///
-    /// *O*(1) time
-    pub fn hasher(&self) -> &S {
-        self.0.hasher()
-    }
-
-    /// Returns the number of elements the map can hold without reallocating.
-    ///
-    /// *O*(1) time
-    pub fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-
     /// Removes all mappings whose keys have expired.
     ///
     /// *O*(*n*) time
@@ -82,6 +40,19 @@ where
         self.0.reserve(additional_capacity);
     }
 
+    /// Tries to reserve room for additional elements.
+    ///
+    /// If this method succeeds, then at least `additional_capacity` insertions
+    /// may be performed without reallocating further.
+    ///
+    /// *O*(*n*) time
+    pub fn try_reserve(
+        &mut self,
+        additional_capacity: usize,
+    ) -> Result<(), crate::TryReserveError> {
+        self.0.try_reserve(additional_capacity)
+    }
+
     /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
     ///
     /// *O*(*n*) time
@@ -89,47 +60,22 @@ where
         self.0.shrink_to_fit();
     }
 
-    /// Returns an over-approximation of the number of elements.
+    /// Shrinks capacity to hold no fewer than `min_capacity` elements.
     ///
-    /// (This is an over-approximation because it includes expired elements.)
+    /// May remove expired items if necessary.
+    /// Does nothing if the current capacity is already at `min_capacity` or below.
     ///
-    /// (This is an over-approximation because it includes expired elements.)
-    ///    /// *O*(1) time
-    pub fn len(&self) -> usize {
-        self.0.len()
+    /// *O*(*n*) time
+    pub fn shrink_to(&mut self, min_capacity: usize) {
+        self.0.shrink_to(min_capacity);
     }
 
-    /// Is the map known to be empty?
-    ///
-    /// This could answer `false` for an empty map whose keys have
-    /// expired but have yet to be collected.
-    ///
-    /// *O*(1) time
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// The proportion of buckets that are used.
-    ///
-    /// This is an over-approximation because of expired keys.
-    ///
-    /// *O*(1) time
-    pub fn load_factor(&self) -> f32 {
-        self.0.load_factor()
-    }
-
+    /// The proportion of buckets that
     /// Gets the requested entry.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn entry(&mut self, key: K::Strong) -> Entry<'_, ByPtr<K>, V> {
         self.0.entry(key)
-    }
-
-    /// Removes all associations from the map.
-    ///
-    /// *O*(*n*) time
-    pub fn clear(&mut self) {
-        self.0.clear();
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -154,7 +100,35 @@ where
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn get_mut(&mut self, key: &K::Strong) -> Option<&mut V> {
-        self.0.get_mut(&(key.deref() as *const _))
+        let p = key.deref() as *const _;
+        self.0.get_mut(&p)
+    }
+
+    /// Looks up mutable references to the values corresponding to several keys
+    /// at a time.
+    ///
+    /// (Because of borrowing rules, Rust doesn't allow you to call `get_mut()` again
+    /// while the result of a previous `get_mut()` is still live.  This method exists
+    /// to work around that limitation.)
+    ///
+    /// Only one mutable reference can exist to any given value at a time.
+    /// Therefore, all keys must refer to different values, or this
+    /// method will panic.
+    ///
+    /// expected *O*(1 `N^2`) time; worst-case *O*(*p* `N^2`) time,
+    /// where N is the length of the array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any keys refer to the same value.
+    pub fn get_disjoint_mut<const N: usize>(&mut self, ks: [&K::Strong; N]) -> [Option<&mut V>; N] {
+        let ks: [*const <K::Strong as Deref>::Target; N] = ks.map(|k| (*k).deref() as *const _);
+        let ks_refs = crate::util::each_ref(&ks);
+
+        self.0
+             .0
+            .get_disjoint_mut(ks_refs)
+            .map(|ent| ent.map(|(_k, v)| v))
     }
 
     /// Unconditionally inserts the value, returning the old value if already present. Does not
@@ -230,10 +204,7 @@ where
     }
 }
 
-impl<K: WeakElement, V, S> PtrWeakKeyHashMap<K, V, S>
-where
-    K::Strong: Deref,
-{
+impl<K: WeakElement, V, S> PtrWeakKeyHashMap<K, V, S> {
     /// Gets an iterator over the keys and values.
     ///
     /// *O*(1) time
@@ -275,6 +246,24 @@ where
     pub fn drain(&mut self) -> Drain<'_, ByPtr<K>, V> {
         self.0.drain()
     }
+
+    ptr_into_kv_methods! {}
+
+    /// Gets an iterator that removes and returns elements matching a given predicate.
+    ///
+    /// Expired elements are also removed.
+    ///
+    /// If this iterator is dropped before it is completed, then no further
+    /// elements are removed.
+    /// (This is in contrast to the behavior of [`drain`](Self::drain)).
+    ///
+    /// *O*(1) time
+    pub fn extract_if<'a, F>(&'a mut self, f: F) -> ExtractIf<'a, ByPtr<K>, V, F>
+    where
+        F: FnMut(K::Strong, &mut V) -> bool + 'a,
+    {
+        self.0.extract_if(f)
+    }
 }
 
 impl<K, V, V1, S, S1> PartialEq<PtrWeakKeyHashMap<K, V1, S1>> for PtrWeakKeyHashMap<K, V, S>
@@ -291,15 +280,6 @@ where
 }
 
 impl<K: WeakElement, V: Eq, S: BuildHasher> Eq for PtrWeakKeyHashMap<K, V, S> where K::Strong: Deref {}
-
-impl<K: WeakElement, V, S: BuildHasher + Default> Default for PtrWeakKeyHashMap<K, V, S>
-where
-    K::Strong: Deref,
-{
-    fn default() -> Self {
-        PtrWeakKeyHashMap(base::WeakKeyHashMap::<ByPtr<K>, V, S>::default())
-    }
-}
 
 impl<'a, K, V, S> Index<&'a K::Strong> for PtrWeakKeyHashMap<K, V, S>
 where
@@ -333,6 +313,20 @@ where
 {
     fn from_iter<T: IntoIterator<Item = (K::Strong, V)>>(iter: T) -> Self {
         PtrWeakKeyHashMap(base::WeakKeyHashMap::<ByPtr<K>, V, S>::from_iter(iter))
+    }
+}
+
+impl<K, V, const N: usize> From<[(K::Strong, V); N]> for PtrWeakKeyHashMap<K, V, RandomState>
+where
+    K: WeakElement,
+    K::Strong: Deref,
+{
+    /// Converts an array of key-value pairs into a map.
+    ///
+    /// If any entries in the array have equal keys,
+    /// all but one of the corresponding values will be dropped.
+    fn from(value: [(K::Strong, V); N]) -> Self {
+        Self::from_iter(value)
     }
 }
 
@@ -415,6 +409,8 @@ mod test {
         rc::{Rc, Weak},
         Vec,
     };
+
+    crate::tests::common::empty_constructor_tests! {PtrWeakKeyHashMap<Weak<u32>, u32>}
 
     //    fn show_me(weakmap: &PtrWeakKeyHashMap<Weak<u32>, f32>) {
     //        for (key, _) in weakmap {
