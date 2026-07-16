@@ -24,7 +24,7 @@ jobs:
             features: --no-default-features --features=alloc,ahash
             experimental: true
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -62,7 +62,7 @@ jobs:
             features: --no-default-features --features=alloc,ahash
             experimental: true
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -92,7 +92,7 @@ jobs:
           - rust: nightly
             experimental: true
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
