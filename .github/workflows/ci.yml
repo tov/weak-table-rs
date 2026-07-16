@@ -28,6 +28,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
       - name: Cargo check
         run: cargo check --all-targets ${{ matrix.features }}
 
@@ -56,6 +57,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
       - name: Run tests
         run: cargo test ${{ matrix.features }}
 
@@ -77,5 +79,6 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
           components: clippy
+      - uses: Swatinem/rust-cache@v2
       - name: Run clippy
         run: cargo clippy --all-targets ${{ matrix.features }} -- -D warnings
