@@ -79,4 +79,4 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: clippy
       - name: Run clippy
-        run: cargo clippy ${{ matrix.features }} -- -D warnings
+        run: cargo clippy --all-targets ${{ matrix.features }} -- -D warnings
