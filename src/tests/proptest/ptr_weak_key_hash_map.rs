@@ -150,6 +150,12 @@ where
             v1.sort();
             v2.sort();
             assert_eq!(v1, v2);
+
+            let copy: HashMap<_, _> = (&self.weak)
+                .into_iter()
+                .map(|(k, v)| (KeyByPtr(k), v.clone()))
+                .collect();
+            assert_eq!(copy, self.strong);
         }
 
         // Check mutable iterators, make sure they match.

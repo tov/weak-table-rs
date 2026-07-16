@@ -195,6 +195,12 @@ where
             let copy: HashMap<_, _> = weak3.drain().collect();
             assert_eq!(copy, self.strong);
             assert!(weak3.is_empty());
+
+            let copy: HashMap<_, _> = (&self.weak)
+                .into_iter()
+                .map(|(k, v)| (k, v.clone()))
+                .collect();
+            assert_eq!(copy, self.strong);
         }
 
         // Construct version of strong table, make sure it is the same.

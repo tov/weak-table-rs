@@ -147,53 +147,7 @@ universal_hashless_members! {
 }
 
 impl<K: WeakKey, V, S: BuildHasher> WeakKeyHashMap<K, V, S> {
-    /// Removes all mappings whose keys have expired.
-    ///
-    /// *O*(*n*) time
-    pub fn remove_expired(&mut self) {
-        self.0.remove_expired();
-    }
-
-    /// Reserves room for additional elements.
-    ///
-    /// This method ensures that at least `additional_capacity` insertions
-    /// may be performed without reallocating.
-    ///
-    /// *O*(*n*) time
-    pub fn reserve(&mut self, additional_capacity: usize) {
-        self.try_reserve(additional_capacity)
-            .expect("Unable to reserve additional capacity");
-    }
-
-    /// Tries to reserve room for additional elements.
-    ///
-    /// If this method succeeds, then at least `additional_capacity` insertions
-    /// may be performed without reallocating further.
-    ///
-    /// *O*(*n*) time
-    pub fn try_reserve(
-        &mut self,
-        additional_capacity: usize,
-    ) -> Result<(), crate::TryReserveError> {
-        self.0.try_reserve(additional_capacity)
-    }
-
-    /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
-    ///
-    /// *O*(*n*) time
-    pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit();
-    }
-
-    /// Shrinks capacity to hold no fewer than `min_capacity` elements.
-    ///
-    /// May remove expired items if necessary.
-    /// Does nothing if the current capacity is already at `min_capacity` or below.
-    ///
-    /// *O*(*n*) time
-    pub fn shrink_to(&mut self, min_capacity: usize) {
-        self.0.shrink_to(min_capacity);
-    }
+    universal_key_independent_members! {"mappings"}
 
     /// Gets the requested entry.
     ///
@@ -715,34 +669,10 @@ where
     }
 }
 
-impl<'a, K: WeakKey, V: Debug> Debug for OccupiedEntry<'a, K, V>
-where
+debug_for_entry! {where {
+    K: WeakKey,
     K::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<'a, K: WeakKey, V> Debug for VacantEntry<'a, K, V>
-where
-    K::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<'a, K: WeakKey, V: Debug> Debug for Entry<'a, K, V>
-where
-    K::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Entry::Occupied(occupied_entry) => occupied_entry.fmt(f),
-            Entry::Vacant(vacant_entry) => vacant_entry.fmt(f),
-        }
-    }
+    V: Debug}
 }
 
 impl<K: WeakElement, V, S> IntoIterator for WeakKeyHashMap<K, V, S> {
@@ -878,10 +808,11 @@ mod test {
     use super::{Entry, WeakKeyHashMap};
     use crate::{
         compat::{
-            eprintln,
+            eprintln, format,
             rc::{Rc, Weak},
             RandomState, String, ToString as _, Vec,
         },
+        tests::util::VecDebugAsMap,
         util,
     };
 
@@ -971,6 +902,16 @@ mod test {
         *ptr = 21;
 
         assert_eq!(weakmap.get(&7), Some(&21));
+
+        let twelve = Rc::new(12);
+        let e = weakmap.entry(twelve.clone());
+        if let Entry::Vacant(v) = e {
+            let t2 = v.into_key();
+            assert_eq!(*t2, 12);
+        } else {
+            panic!();
+        }
+        assert!(!weakmap.contains_key(&12));
     }
 
     #[test]
@@ -1124,5 +1065,27 @@ mod test {
         // This one will cause an integer overflow in hashbrown.
         let e = map.try_reserve(usize::MAX / 4);
         assert!(matches!(e, Err(crate::TryReserveError::CapacityOverflow)));
+    }
+
+    #[test]
+    fn debug_map() {
+        let rcs: Vec<Rc<u32>> = (0..20).map(Rc::new).collect();
+        let map: WeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().map(|n| (n.clone(), **n * 7)).collect();
+        let vec: VecDebugAsMap<_, _> = map.iter().collect();
+        assert_eq!(format!("{map:?}"), format!("{vec:?}"));
+    }
+
+    #[test]
+    fn debug_entry() {
+        let three = Rc::new(3);
+        let mut map = WeakKeyHashMap::<Weak<u32>, u32>::new();
+        map.insert(three.clone(), 9);
+        let e1 = map.entry(three.clone());
+        assert_eq!(format!("{e1:?}"), "OccupiedEntry { key: 3, val: 9 }");
+
+        let four = Rc::new(4);
+        let e2 = map.entry(four.clone());
+        assert_eq!(format!("{e2:?}"), "VacantEntry { key: 4 }");
     }
 }

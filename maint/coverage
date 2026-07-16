@@ -25,6 +25,7 @@ grcov "$META" \
         -t html \
 	--branch \
 	--ignore-not-existing \
+	--excl-line 'COVERAGE: UNREACHABLE' \
 	--excl-start '^(pub(\((crate|super)\))? )?mod test' \
 	--excl-stop '^}' \
 	--ignore="*/tests/*" \

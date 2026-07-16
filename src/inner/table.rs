@@ -137,7 +137,14 @@ impl<K, V, S> Table<K, V, S> {
     pub(crate) fn load_factor(&self) -> f32 {
         let n_buckets = self.table.num_buckets();
         if n_buckets == 0 {
-            0.0
+            // We can't actually reach this with the current HashTable
+            // implementation (hashbrown 0.16.1), since HashTable always has at
+            // least a single virtual bucket even when it hasn't allocated.
+            //
+            // But we keep this heck anyway, since HashTable doesn't guarantee
+            // this behavior, and since the user the user probably did not
+            // expect a load factor of NaN.
+            0.0 // COVERAGE: UNREACHABLE
         } else {
             self.len() as f32 / n_buckets as f32
         }

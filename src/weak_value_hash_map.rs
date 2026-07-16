@@ -114,53 +114,7 @@ universal_hashless_members! {
 }
 
 impl<K: Eq + Hash, V: WeakElement, S: BuildHasher> WeakValueHashMap<K, V, S> {
-    /// Removes all mappings whose keys have expired.
-    ///
-    /// *O*(*n*) time
-    pub fn remove_expired(&mut self) {
-        self.0.remove_expired();
-    }
-
-    /// Reserves room for additional elements.
-    ///
-    /// This method ensures that at least `additional_capacity` insertions
-    /// may be performed without reallocating.
-    ///
-    /// *O*(*n*) time
-    pub fn reserve(&mut self, additional_capacity: usize) {
-        self.try_reserve(additional_capacity)
-            .expect("Unable to reserve additional capacity");
-    }
-
-    /// Tries to reserve room for additional elements.
-    ///
-    /// If this method succeeds, then at least `additional_capacity` insertions
-    /// may be performed without reallocating further.
-    ///
-    /// *O*(*n*) time
-    pub fn try_reserve(
-        &mut self,
-        additional_capacity: usize,
-    ) -> Result<(), crate::TryReserveError> {
-        self.0.try_reserve(additional_capacity)
-    }
-
-    /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
-    ///
-    /// *O*(*n*) time
-    pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit();
-    }
-
-    /// Shrinks capacity to hold no fewer than `min_capacity` elements.
-    ///
-    /// May remove expired items if necessary.
-    /// Does nothing if the current capacity is already at `min_capacity` or below.
-    ///
-    /// *O*(*n*) time
-    pub fn shrink_to(&mut self, min_capacity: usize) {
-        self.0.shrink_to(min_capacity);
-    }
+    universal_key_independent_members! {"mappings"}
 
     /// Gets the requested entry.
     ///
@@ -540,35 +494,11 @@ where
     }
 }
 
-impl<'a, K: Debug, V: WeakElement> Debug for Entry<'a, K, V>
-where
-    V::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match *self {
-            Entry::Occupied(ref e) => e.fmt(f),
-            Entry::Vacant(ref e) => e.fmt(f),
-        }
-    }
-}
-
-impl<'a, K: Debug, V: WeakElement> Debug for OccupiedEntry<'a, K, V>
-where
-    V::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<'a, K: Debug, V: WeakElement> Debug for VacantEntry<'a, K, V>
-where
-    V::Strong: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
+debug_for_entry! {where {
+    K: Debug,
+    V: WeakElement,
+    V::Strong: Debug
+}}
 
 impl<K, V: WeakElement, S> IntoIterator for WeakValueHashMap<K, V, S> {
     type Item = (K, V::Strong);
@@ -673,7 +603,23 @@ impl<'a, K, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
 #[cfg(test)]
 mod test {
     use super::WeakValueHashMap;
-    use crate::compat::rc::Weak;
+    use crate::{
+        compat::{
+            format,
+            rc::{Rc, Weak},
+            Vec,
+        },
+        tests::util::VecDebugAsMap,
+    };
 
     crate::tests::common::empty_constructor_tests! {WeakValueHashMap<u32, Weak<u32>>}
+
+    #[test]
+    fn debug_map() {
+        let rcs: Vec<Rc<u32>> = (0..20).map(Rc::new).collect();
+        let map: WeakValueHashMap<u32, Weak<u32>> =
+            rcs.iter().map(|n| (**n * 7, n.clone())).collect();
+        let vec: VecDebugAsMap<_, _> = map.iter().collect();
+        assert_eq!(format!("{map:?}"), format!("{vec:?}"));
+    }
 }

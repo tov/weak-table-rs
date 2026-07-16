@@ -21,52 +21,7 @@ impl<T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
 where
     T::Strong: Deref,
 {
-    /// Removes all expired elements.
-    ///
-    /// *O*(*n*) time
-    pub fn remove_expired(&mut self) {
-        self.0.remove_expired();
-    }
-
-    /// Reserves room for additional elements.
-    ///
-    /// This method ensures that at least `additional_capacity` insertions
-    /// may be performed without reallocating.
-    ///
-    /// *O*(*n*) time
-    pub fn reserve(&mut self, additional_capacity: usize) {
-        self.0.reserve(additional_capacity);
-    }
-
-    /// Tries to reserve room for additional elements.
-    ///
-    /// If this method succeeds, then at least `additional_capacity` insertions
-    /// may be performed without reallocating further.
-    ///
-    /// *O*(*n*) time
-    pub fn try_reserve(
-        &mut self,
-        additional_capacity: usize,
-    ) -> Result<(), crate::TryReserveError> {
-        self.0.try_reserve(additional_capacity)
-    }
-
-    /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
-    ///
-    /// *O*(*n*) time
-    pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit();
-    }
-
-    /// Shrinks capacity to hold no fewer than `min_capacity` elements.
-    ///
-    /// May remove expired items if necessary.
-    /// Does nothing if the current capacity is already at `min_capacity` or below.
-    ///
-    /// *O*(*n*) time
-    pub fn shrink_to(&mut self, min_capacity: usize) {
-        self.0.shrink_to(min_capacity);
-    }
+    universal_key_independent_members! {"elements"}
 
     /// Returns true if the set contains the specified key.
     ///
@@ -300,7 +255,7 @@ where
     T::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_set().entries(self.0.iter()).finish()
+        f.debug_set().entries(self.iter()).finish()
     }
 }
 
@@ -350,8 +305,22 @@ where
 #[cfg(test)]
 mod test {
     use super::PtrWeakHashSet;
-    use crate::compat::rc::{Rc, Weak};
+    use crate::{
+        compat::{
+            format,
+            rc::{Rc, Weak},
+        },
+        tests::util::VecDebugAsSet,
+    };
 
     crate::tests::common::empty_constructor_tests! {PtrWeakHashSet<Weak<u8>>}
     crate::tests::set_operations::set_operation_tests! {PtrWeakHashSet, 1}
+
+    #[test]
+    fn test_debug() {
+        let s = [Rc::new(1), Rc::new(2)];
+        let set: PtrWeakHashSet<Weak<u32>> = s.clone().into();
+        let v: VecDebugAsSet<_> = set.iter().collect();
+        assert_eq!(format!("{v:?}"), format!("{set:?}"));
+    }
 }
