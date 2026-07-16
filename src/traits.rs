@@ -44,7 +44,8 @@ pub trait WeakElement {
     ///
     /// The default implementation uses `new` and `view`; you should override it.
     fn clone(view: &Self::Strong) -> Self::Strong
-        where Self: Sized
+    where
+        Self: Sized,
     {
         Self::new(view).view().expect("WeakElement::clone")
     }
@@ -55,7 +56,7 @@ pub trait WeakElement {
 /// To use an element as a weak hash map key or weak hash set element), the hash table
 /// needs to be able to view the actual key values to hash and compare them. This trait
 /// provides the necessary mechanism.
-pub trait WeakKey : WeakElement {
+pub trait WeakKey: WeakElement {
     /// The underlying key type.
     ///
     /// For example, for `std::rc::Weak<T>`, this will be `T`.
@@ -68,17 +69,21 @@ pub trait WeakKey : WeakElement {
     /// necessary to get the lifetimes right in cases where the key is not actually store in the
     /// strong pointer.
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
-        where F: FnOnce(&Self::Key) -> R;
+    where
+        F: FnOnce(&Self::Key) -> R;
 
     /// Hashes the key `view` into the given `Hasher`.
+    #[inline]
     fn hash<H: Hasher>(view: &Self::Strong, h: &mut H) {
         Self::with_key(view, |k| k.hash(h));
     }
 
     /// Returns whether the key `view` equals the given `key`.
+    #[inline]
     fn equals<Q>(view: &Self::Strong, key: &Q) -> bool
-        where Q: ?Sized + Eq,
-              Self::Key: Borrow<Q>
+    where
+        Q: ?Sized + Eq,
+        Self::Key: Borrow<Q>,
     {
         Self::with_key(view, |k| k.borrow() == key)
     }
@@ -103,8 +108,10 @@ impl<T: ?Sized> WeakElement for rc::Weak<T> {
 impl<T: ?Sized + Eq + Hash> WeakKey for rc::Weak<T> {
     type Key = T;
 
+    #[inline]
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
-        where F: FnOnce(&Self::Key) -> R
+    where
+        F: FnOnce(&Self::Key) -> R,
     {
         f(view)
     }
@@ -126,14 +133,14 @@ impl<T: ?Sized> WeakElement for sync::Weak<T> {
     }
 }
 
-impl<T: ?Sized + Eq + Hash> WeakKey for sync::Weak<T>
-{
+impl<T: ?Sized + Eq + Hash> WeakKey for sync::Weak<T> {
     type Key = T;
 
+    #[inline]
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
-        where F: FnOnce(&Self::Key) -> R
+    where
+        F: FnOnce(&Self::Key) -> R,
     {
         f(view)
     }
 }
-

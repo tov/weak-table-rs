@@ -2,14 +2,15 @@
 
 use crate::compat::*;
 
-use super::traits::*;
-use super::ptr_weak_key_hash_map as base;
 use super::by_ptr::ByPtr;
+use super::ptr_weak_key_hash_map as base;
+use super::traits::*;
 
 pub use super::PtrWeakHashSet;
 
-impl <T: WeakElement> PtrWeakHashSet<T, RandomState>
-    where T::Strong: Deref
+impl<T: WeakElement> PtrWeakHashSet<T, RandomState>
+where
+    T::Strong: Deref,
 {
     /// Creates an empty `PtrWeakHashSet`.
     ///
@@ -26,10 +27,11 @@ impl <T: WeakElement> PtrWeakHashSet<T, RandomState>
     }
 }
 
-impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
-    where T::Strong: Deref
+impl<T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
+where
+    T::Strong: Deref,
 {
-    /// Creates an empty `PtrWeakHashSet` with the given capacity and hasher.
+    /// Creates an empty `PtrWeakHashSet` with the given hasher.
     ///
     /// *O*(*n*) time
     pub fn with_hasher(hash_builder: S) -> Self {
@@ -40,7 +42,10 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
     ///
     /// *O*(*n*) time
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_capacity_and_hasher(capacity, hash_builder))
+        PtrWeakHashSet(base::PtrWeakKeyHashMap::with_capacity_and_hasher(
+            capacity,
+            hash_builder,
+        ))
     }
 
     /// Returns a reference to the map's `BuildHasher`.
@@ -61,26 +66,32 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
     ///
     /// *O*(*n*) time
     pub fn remove_expired(&mut self) {
-        self.0.remove_expired()
+        self.0.remove_expired();
     }
 
     /// Reserves room for additional elements.
     ///
+    /// This method ensures that at least `additional_capacity` insertions
+    /// may be performed without reallocating.
+    ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
-        self.0.reserve(additional_capacity)
+        self.0.reserve(additional_capacity);
     }
 
     /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
     ///
     /// *O*(*n*) time
     pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit()
+        self.0.shrink_to_fit();
     }
 
     /// Returns an over-approximation of the number of elements.
     ///
-    /// *O*(1) time
+    /// (This is an over-approximation because it includes expired elements.)
+    ///
+    /// (This is an over-approximation because it includes expired elements.)
+    ///    /// *O*(1) time
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -95,7 +106,6 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
         self.len() == 0
     }
 
-
     /// The proportion of buckets that are used.
     ///
     /// This is an over-approximation because of expired elements.
@@ -109,7 +119,7 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
     ///
     /// *O*(*n*) time
     pub fn clear(&mut self) {
-        self.0.clear()
+        self.0.clear();
     }
 
     /// Returns true if the map contains the specified key.
@@ -127,7 +137,9 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
         self.0.insert(key, ()).is_some()
     }
 
-    /// Removes the entry with the given key, if it exists, and returns the value.
+    /// Removes the entry with the given key, if it exists.
+    ///
+    /// Returns true if an entry was removed.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn remove(&mut self, key: &T::Strong) -> bool {
@@ -140,9 +152,10 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
     ///
     /// *O*(*n*) time
     pub fn retain<F>(&mut self, mut f: F)
-        where F: FnMut(T::Strong) -> bool
+    where
+        F: FnMut(T::Strong) -> bool,
     {
-        self.0.retain(|k, _| f(k))
+        self.0.retain(|k, _| f(k));
     }
 
     /// Is self a subset of other?
@@ -151,7 +164,8 @@ impl <T: WeakElement, S: BuildHasher> PtrWeakHashSet<T, S>
     /// `self.capacity()` and *q* is the length of the probe sequences
     /// in `other`)
     pub fn is_subset<S1>(&self, other: &PtrWeakHashSet<T, S1>) -> bool
-        where S1: BuildHasher
+    where
+        S1: BuildHasher,
     {
         self.0.domain_is_subset(&other.0)
     }
@@ -188,6 +202,9 @@ impl<T: WeakElement> Iterator for IntoIter<T> {
 }
 
 /// A draining iterator over the elements of a set.
+///
+/// Once this iterator is dropped, all elements are removed from the set,
+/// whether the iterator itself was drained or not.
 pub struct Drain<'a, T: 'a>(base::Drain<'a, ByPtr<T>, ()>);
 
 impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
@@ -203,40 +220,41 @@ impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
 }
 
 impl<T: WeakElement, S> PtrWeakHashSet<T, S>
-    where T::Strong: Deref
+where
+    T::Strong: Deref,
 {
     /// Gets an iterator over the keys and values.
     ///
     /// *O*(1) time
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter(self.0.keys())
     }
 
     /// Gets a draining iterator, which removes all the values but retains the storage.
     ///
     /// *O*(1) time (and *O*(*n*) time to dispose of the result)
-    pub fn drain(&mut self) -> Drain<T> {
+    pub fn drain(&mut self) -> Drain<'_, T> {
         Drain(self.0.drain())
     }
 }
 
 impl<T, S, S1> PartialEq<PtrWeakHashSet<T, S1>> for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Deref,
-          S: BuildHasher,
-          S1: BuildHasher
+where
+    T: WeakElement,
+    T::Strong: Deref,
+    S: BuildHasher,
+    S1: BuildHasher,
 {
     fn eq(&self, other: &PtrWeakHashSet<T, S1>) -> bool {
         self.0 == other.0
     }
 }
 
-impl<T: WeakElement, S: BuildHasher> Eq for PtrWeakHashSet<T, S>
-    where T::Strong: Deref
-{ }
+impl<T: WeakElement, S: BuildHasher> Eq for PtrWeakHashSet<T, S> where T::Strong: Deref {}
 
 impl<T: WeakElement, S: BuildHasher + Default> Default for PtrWeakHashSet<T, S>
-    where T::Strong: Deref
+where
+    T::Strong: Deref,
 {
     fn default() -> Self {
         PtrWeakHashSet(base::PtrWeakKeyHashMap::<T, (), S>::default())
@@ -244,29 +262,33 @@ impl<T: WeakElement, S: BuildHasher + Default> Default for PtrWeakHashSet<T, S>
 }
 
 impl<T, S> FromIterator<T::Strong> for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Deref,
-          S: BuildHasher + Default
+where
+    T: WeakElement,
+    T::Strong: Deref,
+    S: BuildHasher + Default,
 {
-    fn from_iter<I: IntoIterator<Item=T::Strong>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = T::Strong>>(iter: I) -> Self {
         PtrWeakHashSet(base::PtrWeakKeyHashMap::<T, (), S>::from_iter(
-            iter.into_iter().map(|k| (k, ()))))
+            iter.into_iter().map(|k| (k, ())),
+        ))
     }
 }
 
 impl<T, S> Extend<T::Strong> for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Deref,
-          S: BuildHasher
+where
+    T: WeakElement,
+    T::Strong: Deref,
+    S: BuildHasher,
 {
-    fn extend<I: IntoIterator<Item=T::Strong>>(&mut self, iter: I) {
-        self.0.extend(iter.into_iter().map(|k| (k, ())))
+    fn extend<I: IntoIterator<Item = T::Strong>>(&mut self, iter: I) {
+        self.0.extend(iter.into_iter().map(|k| (k, ())));
     }
 }
 
 impl<T, S> Debug for PtrWeakHashSet<T, S>
-    where T: WeakElement,
-          T::Strong: Debug
+where
+    T: WeakElement,
+    T::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
@@ -286,7 +308,8 @@ impl<T: WeakElement, S> IntoIterator for PtrWeakHashSet<T, S> {
 }
 
 impl<'a, T: WeakElement, S> IntoIterator for &'a PtrWeakHashSet<T, S>
-    where T::Strong: Deref
+where
+    T::Strong: Deref,
 {
     type Item = T::Strong;
     type IntoIter = Iter<'a, T>;
@@ -298,4 +321,3 @@ impl<'a, T: WeakElement, S> IntoIterator for &'a PtrWeakHashSet<T, S>
         Iter(self.0.keys())
     }
 }
-

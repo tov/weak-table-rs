@@ -1,9 +1,12 @@
+//! Internal utility functions.
+
 use crate::compat::*;
 
-pub fn new_boxed_option_slice<T>(size: usize) -> Box<[Option<T>]> {
-    let mut vector = Vec::with_capacity(size);
-    for _ in 0 .. size {
-        vector.push(None)
-    }
-    vector.into_boxed_slice()
+/// Use `hash_builder` to compute the hash of `value`.
+///
+/// (We provide this because [`BuildHasher::hash_one`] is not available at our MSRV.)
+pub(crate) fn hash_one<H: Hash + ?Sized, S: BuildHasher>(hash_builder: &S, value: &H) -> u64 {
+    let mut hasher = hash_builder.build_hasher();
+    value.hash(&mut hasher);
+    hasher.finish()
 }

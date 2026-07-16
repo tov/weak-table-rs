@@ -1,8 +1,11 @@
-extern crate weak_table;
+#![allow(missing_docs)]
+use crate as weak_table;
 
+use crate::compat::{
+    rc::{Rc, Weak},
+    *,
+};
 use weak_table::WeakHashSet;
-use std::ops::Deref;
-use std::rc::{Rc, Weak};
 
 #[derive(Clone, Debug)]
 pub struct Symbol(Rc<str>);
@@ -47,7 +50,7 @@ fn interning() {
 
     let a0 = tab.intern("a");
     let a1 = tab.intern("a");
-    let b  = tab.intern("b");
+    let b = tab.intern("b");
 
     assert_eq!(a0, a1);
     assert_ne!(a0, b);

@@ -1,3 +1,5 @@
+//! Define wrappers for implementing pointer-equality checking.
+
 use crate::compat::*;
 
 use super::traits::*;
@@ -20,14 +22,16 @@ impl<K: WeakElement> WeakElement for ByPtr<K> {
 }
 
 impl<K: WeakElement> WeakKey for ByPtr<K>
-    where K::Strong: Deref
+where
+    K::Strong: Deref,
 {
     type Key = *const <K::Strong as Deref>::Target;
 
+    #[inline]
     fn with_key<F, R>(view: &Self::Strong, f: F) -> R
-        where F: FnOnce(&Self::Key) -> R
+    where
+        F: FnOnce(&Self::Key) -> R,
     {
         f(&(view.deref() as *const _))
     }
 }
-

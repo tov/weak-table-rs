@@ -1,0 +1,29 @@
+[package]
+name = "bench-weak-table"
+version = "0.1.0"
+authors = ["Nick Mathewson <nickm@torproject.org>"]
+description = "Benchmarks for weak-table(2)"
+repository = "https://gitlab.torproject.org/nickm/weak-table2"
+readme = "README.md"
+license = "MIT"
+keywords = ["containers", "Rc", "Arc", "weak", "no_std"]
+categories = ["data-structures"]
+edition = "2021"
+rust-version = "1.65.0"
+
+publish = false
+
+[lib]
+bench = false
+
+[features]
+
+[dependencies]
+weak-table = { path = ".." }
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "bench"
+harness = false

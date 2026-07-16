@@ -1,20 +1,18 @@
 [package]
 name = "weak-table"
-version = "0.3.2"
-authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
+version = "0.4.0-pre1"
+authors = ["Jesse A. Tov <jesse.tov@gmail.com>", "Nick Mathewson <nickm@torproject.org>"]
 description = "Weak hash maps and sets"
 repository = "https://github.com/tov/weak-table-rs"
 readme = "README.md"
 license = "MIT"
 keywords = ["containers", "Rc", "Arc", "weak", "no_std"]
-edition = "2018"
+categories = ["data-structures"]
+edition = "2021"
+rust-version = "1.65.0"
 
-[dependencies]
-ahash = { version = "0.7.6", optional = true, features = [] }
-
-[dev-dependencies]
-quickcheck = "1"
-rand = "0.8.4"
+[lib]
+bench = false
 
 [features]
 default = ["std"]
@@ -22,3 +20,50 @@ std = []
 
 # This feature doesn’t actually do anything. TODO: remove in v0.4.
 alloc = []
+
+[dependencies]
+ahash = { version = "0.7.6", optional = true, features = [] }
+hashbrown = { version = "0.16.1", default-features = false, features = ["inline-more"] }
+
+[dev-dependencies]
+quickcheck = "1"
+rand = "0.8.4"
+
+[lints.rust]
+unsafe_code = "warn"
+missing_docs = "warn"
+noop_method_call = "warn"
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = "warn"
+cargo_common_metadata = "warn"
+cast_lossless  = "warn"
+checked_conversions = "warn"
+cognitive_complexity = "warn"
+debug_assert_with_mut_call = "warn"
+exhaustive_enums = "warn"
+exhaustive_structs = "warn"
+expl_impl_clone_on_copy = "warn"
+fallible_impl_from = "warn"
+implicit_clone = "warn"
+large_stack_arrays = "warn"
+manual_ok_or = "warn"
+missing_docs_in_private_items = "warn"
+needless_borrow = "warn"
+needless_pass_by_value = "warn"
+option_option = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+rc_buffer = "warn"
+ref_option_ref = "warn"
+semicolon_if_nothing_returned = "warn"
+trait_duplication_in_bounds = "warn"
+unchecked_time_subtraction = "warn"
+unnecessary_wraps = "warn"
+unseparated_literal_suffix = "warn"
+unwrap_used = "warn"
+mod_module_files = "warn"
+
+[workspace]
+members = ["bench-weak-table"]

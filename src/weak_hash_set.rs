@@ -7,7 +7,7 @@ use super::weak_key_hash_map as base;
 
 pub use super::WeakHashSet;
 
-impl <T: WeakKey> WeakHashSet<T, RandomState> {
+impl<T: WeakKey> WeakHashSet<T, RandomState> {
     /// Creates an empty `WeakHashSet`.
     ///
     /// *O*(1) time
@@ -23,8 +23,8 @@ impl <T: WeakKey> WeakHashSet<T, RandomState> {
     }
 }
 
-impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
-    /// Creates an empty `WeakHashSet` with the given capacity and hasher.
+impl<T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
+    /// Creates an empty `WeakHashSet` with the given hasher.
     ///
     /// *O*(*n*) time
     pub fn with_hasher(hash_builder: S) -> Self {
@@ -35,7 +35,10 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// *O*(*n*) time
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
-        WeakHashSet(base::WeakKeyHashMap::with_capacity_and_hasher(capacity, hash_builder))
+        WeakHashSet(base::WeakKeyHashMap::with_capacity_and_hasher(
+            capacity,
+            hash_builder,
+        ))
     }
 
     /// Returns a reference to the map's `BuildHasher`.
@@ -56,26 +59,32 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// *O*(*n*) time
     pub fn remove_expired(&mut self) {
-        self.0.remove_expired()
+        self.0.remove_expired();
     }
 
     /// Reserves room for additional elements.
     ///
+    /// This method ensures that at least `additional_capacity` insertions
+    /// may be performed without reallocating.
+    ///
     /// *O*(*n*) time
     pub fn reserve(&mut self, additional_capacity: usize) {
-        self.0.reserve(additional_capacity)
+        self.0.reserve(additional_capacity);
     }
 
     /// Shrinks the capacity to the minimum allowed to hold the current number of elements.
     ///
     /// *O*(*n*) time
     pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit()
+        self.0.shrink_to_fit();
     }
 
     /// Returns an over-approximation of the number of elements.
     ///
-    /// *O*(1) time
+    /// (This is an over-approximation because it includes expired elements.)
+    ///
+    /// (This is an over-approximation because it includes expired elements.)
+    ///    /// *O*(1) time
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -103,7 +112,7 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// *O*(*n*) time
     pub fn clear(&mut self) {
-        self.0.clear()
+        self.0.clear();
     }
 
     // Non-ptr WeakHashSet should probably have `get` method.
@@ -112,8 +121,9 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn contains<Q>(&self, key: &Q) -> bool
-        where Q: ?Sized + Eq + Hash,
-              T::Key: Borrow<Q>
+    where
+        Q: ?Sized + Eq + Hash,
+        T::Key: Borrow<Q>,
     {
         self.0.contains_key(key)
     }
@@ -139,8 +149,9 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn get<Q>(&self, key: &Q) -> Option<T::Strong>
-        where Q: ?Sized + Eq + Hash,
-              T::Key: Borrow<Q>
+    where
+        Q: ?Sized + Eq + Hash,
+        T::Key: Borrow<Q>,
     {
         self.0.get_key(key)
     }
@@ -153,12 +164,15 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
         self.0.insert(key, ()).is_some()
     }
 
-    /// Removes the entry with the given key, if it exists, and returns the value.
+    /// Removes the entry with the given key, if it exists.
+    ///
+    /// Returns true if an entry was removed.
     ///
     /// expected *O*(1) time; worst-case *O*(*p*) time
     pub fn remove<Q>(&mut self, key: &Q) -> bool
-        where Q: ?Sized + Eq + Hash,
-              T::Key: Borrow<Q>
+    where
+        Q: ?Sized + Eq + Hash,
+        T::Key: Borrow<Q>,
     {
         self.0.remove(key).is_some()
     }
@@ -169,9 +183,10 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     ///
     /// *O*(*n*) time
     pub fn retain<F>(&mut self, mut f: F)
-        where F: FnMut(T::Strong) -> bool
+    where
+        F: FnMut(T::Strong) -> bool,
     {
-        self.0.retain(|k, _| f(k))
+        self.0.retain(|k, _| f(k));
     }
 
     /// Is self a subset of other?
@@ -180,7 +195,8 @@ impl <T: WeakKey, S: BuildHasher> WeakHashSet<T, S> {
     /// `self.capacity()` and *q* is the length of the probe sequences
     /// in `other`)
     pub fn is_subset<S1>(&self, other: &WeakHashSet<T, S1>) -> bool
-        where S1: BuildHasher
+    where
+        S1: BuildHasher,
     {
         self.0.domain_is_subset(&other.0)
     }
@@ -201,7 +217,7 @@ impl<'a, T: WeakElement> Iterator for Iter<'a, T> {
     }
 }
 
-/// An iterator over the elements of a set.
+/// A consuming iterator over the elements of a set.
 pub struct IntoIter<T>(base::IntoIter<T, ()>);
 
 impl<T: WeakElement> Iterator for IntoIter<T> {
@@ -217,6 +233,9 @@ impl<T: WeakElement> Iterator for IntoIter<T> {
 }
 
 /// A draining iterator over the elements of a set.
+///
+/// Once this iterator is dropped, all elements are removed from the set,
+/// whether the iterator itself was drained or not.
 pub struct Drain<'a, T: 'a>(base::Drain<'a, T, ()>);
 
 impl<'a, T: WeakElement> Iterator for Drain<'a, T> {
@@ -235,31 +254,30 @@ impl<T: WeakKey, S> WeakHashSet<T, S> {
     /// Gets an iterator over the keys and values.
     ///
     /// *O*(1) time
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter(self.0.keys())
     }
 
     /// Gets a draining iterator, which removes all the values but retains the storage.
     ///
     /// *O*(1) time (and *O*(*n*) time to dispose of the result)
-    pub fn drain(&mut self) -> Drain<T> {
+    pub fn drain(&mut self) -> Drain<'_, T> {
         Drain(self.0.drain())
     }
 }
 
 impl<T, S, S1> PartialEq<WeakHashSet<T, S1>> for WeakHashSet<T, S>
-    where T: WeakKey,
-          S: BuildHasher,
-          S1: BuildHasher
+where
+    T: WeakKey,
+    S: BuildHasher,
+    S1: BuildHasher,
 {
     fn eq(&self, other: &WeakHashSet<T, S1>) -> bool {
         self.0 == other.0
     }
 }
 
-impl<T: WeakKey, S: BuildHasher> Eq for WeakHashSet<T, S>
-    where T::Key: Eq
-{ }
+impl<T: WeakKey, S: BuildHasher> Eq for WeakHashSet<T, S> where T::Key: Eq {}
 
 impl<T: WeakKey, S: BuildHasher + Default> Default for WeakHashSet<T, S> {
     fn default() -> Self {
@@ -268,23 +286,26 @@ impl<T: WeakKey, S: BuildHasher + Default> Default for WeakHashSet<T, S> {
 }
 
 impl<T, S> FromIterator<T::Strong> for WeakHashSet<T, S>
-    where T: WeakKey,
-          S: BuildHasher + Default
+where
+    T: WeakKey,
+    S: BuildHasher + Default,
 {
-    fn from_iter<I: IntoIterator<Item=T::Strong>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = T::Strong>>(iter: I) -> Self {
         WeakHashSet(base::WeakKeyHashMap::<T, (), S>::from_iter(
-            iter.into_iter().map(|k| (k, ()))))
+            iter.into_iter().map(|k| (k, ())),
+        ))
     }
 }
 
 impl<T: WeakKey, S: BuildHasher> Extend<T::Strong> for WeakHashSet<T, S> {
-    fn extend<I: IntoIterator<Item=T::Strong>>(&mut self, iter: I) {
-        self.0.extend(iter.into_iter().map(|k| (k, ())))
+    fn extend<I: IntoIterator<Item = T::Strong>>(&mut self, iter: I) {
+        self.0.extend(iter.into_iter().map(|k| (k, ())));
     }
 }
 
 impl<T: WeakKey, S> Debug for WeakHashSet<T, S>
-    where T::Strong: Debug
+where
+    T::Strong: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
@@ -312,5 +333,42 @@ impl<'a, T: WeakKey, S> IntoIterator for &'a WeakHashSet<T, S> {
     /// *O*(1) time
     fn into_iter(self) -> Self::IntoIter {
         Iter(self.0.keys())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::compat::rc::{Rc, Weak};
+
+    // Regression check for https://github.com/tov/weak-table-rs/issues/22
+    #[test]
+    fn test_retain_regresion() {
+        // Run multiple iterations, since this was a heisenbug.
+        for _ in 0..20 {
+            let mut set: WeakHashSet<Weak<u8>> = WeakHashSet::default();
+            let mut preserve_vals = Vec::new();
+
+            const N: u8 = 50;
+
+            for i in 0..N {
+                let rc = Rc::new(i);
+                preserve_vals.push(rc.clone());
+                set.insert(rc);
+            }
+
+            let rc_n = Rc::new(N);
+            set.insert(rc_n.clone());
+
+            drop(preserve_vals);
+
+            let mut retain_called_on = Vec::new();
+            set.retain(|val| {
+                retain_called_on.push(val);
+                false
+            });
+
+            assert_eq!(retain_called_on, vec![rc_n]);
+        }
     }
 }
