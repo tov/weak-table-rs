@@ -67,7 +67,6 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.65.0
         experimental: [false]
         include:
           - rust: nightly
