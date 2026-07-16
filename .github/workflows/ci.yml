@@ -30,6 +30,12 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
+      # Workaround for rust 1.65
+      - if: ${{ matrix.rust == '1.65.0' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p log --precise 0.4.28
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -62,6 +68,11 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
+      - if: ${{ matrix.rust == '1.65.0' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p log --precise 0.4.28
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -88,6 +99,11 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
       - run: rustup component add clippy
+      - if: ${{ matrix.rust == '1.65.0' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p log --precise 0.4.28
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
