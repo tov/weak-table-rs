@@ -624,6 +624,28 @@ mod test {
     }
 
     #[test]
+    fn is_submap() {
+        let mut rcs: Vec<Rc<u32>> = (0..50).map(Rc::new).collect();
+        let weakmap: WeakValueHashMap<u32, Weak<u32>> =
+            rcs.iter().take(25).map(|n| (**n, n.clone())).collect();
+        let mut weakmap2 = weakmap.clone();
+
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(weakmap2.is_submap(&weakmap));
+
+        weakmap2.extend(rcs.iter().skip(25).map(|n| (**n, n.clone())));
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+
+        weakmap2.insert(0, rcs[12].clone());
+        assert!(!weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+
+        let _ = rcs.remove(0);
+        assert!(weakmap.is_submap(&weakmap2));
+    }
+
+    #[test]
     fn entry_methods() {
         let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
         let mut weakmap: WeakValueHashMap<u32, Weak<u32>> =

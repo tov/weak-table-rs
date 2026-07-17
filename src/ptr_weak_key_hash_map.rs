@@ -415,4 +415,30 @@ mod test {
         let vec: VecDebugAsMap<_, _> = map.iter().collect();
         assert_eq!(format!("{map:?}"), format!("{vec:?}"));
     }
+
+    #[test]
+    fn is_submap() {
+        let mut rcs: Vec<Rc<u32>> = (0..50).map(|_| Rc::new(0)).collect();
+        let weakmap: PtrWeakKeyHashMap<Weak<u32>, u32> =
+            rcs.iter().take(25).map(|n| (n.clone(), **n)).collect();
+        let mut weakmap2 = weakmap.clone();
+
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(weakmap2.is_submap(&weakmap));
+
+        weakmap2.extend(rcs.iter().skip(25).map(|n| (n.clone(), **n)));
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+        assert!(weakmap.domain_is_subset(&weakmap2));
+        assert!(!weakmap2.domain_is_subset(&weakmap));
+
+        weakmap2.insert(rcs[0].clone(), 12);
+        assert!(!weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+        assert!(weakmap.submap_with(&weakmap2, |_v1, _v2| true));
+        assert!(!weakmap2.submap_with(&weakmap, |_v1, _v2| true));
+
+        let _ = rcs.remove(0);
+        assert!(weakmap.is_submap(&weakmap2));
+    }
 }
