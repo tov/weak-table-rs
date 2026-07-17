@@ -842,6 +842,30 @@ mod test {
     }
 
     #[test]
+    fn simple_arc() {
+        use crate::compat::sync::{Arc, Weak};
+        let mut map: WeakKeyHashMap<Weak<str>, usize> = WeakKeyHashMap::new();
+        assert_eq!(map.len(), 0);
+        assert!(!map.contains_key("five"));
+
+        let five: Arc<str> = Arc::from(String::from("five"));
+        map.insert(five.clone(), 5);
+
+        assert_eq!(map.len(), 1);
+        assert!(map.contains_key("five"));
+
+        drop(five);
+
+        assert_eq!(map.len(), 1);
+        assert!(!map.contains_key("five"));
+
+        map.remove_expired();
+
+        assert_eq!(map.len(), 0);
+        assert!(!map.contains_key("five"));
+    }
+
+    #[test]
     fn access_hasher() {
         let bh = RandomState::new();
 

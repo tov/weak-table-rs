@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog] and this project adheres to
 ### Added
 
 - High-coverage unit tests for the hash table backend.
+- High-coverage unit tests for all frontends.
 - Property tests for all of the exposed map and set types.
 - Benchmarks based on `criterion`.
 
