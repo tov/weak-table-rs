@@ -79,6 +79,7 @@ The format is based on [Keep a Changelog] and this project adheres to
   share code.
 - A great deal of common code has been extracted into macros,
   to avoid the risk of copy-and-paste errors.
+- When ahash is enabled, we now use version 0.8.12 or later.
 
 ### Fixed
 

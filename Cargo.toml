@@ -22,7 +22,7 @@ std = []
 alloc = []
 
 [dependencies]
-ahash = { version = "0.7.6", optional = true, features = [] }
+ahash = { version = "0.8.12", optional = true, default-features = false, features = ["runtime-rng"] }
 hashbrown = { version = "0.16.1", default-features = false, features = ["inline-more"] }
 
 [dev-dependencies]
