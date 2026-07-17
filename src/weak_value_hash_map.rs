@@ -622,4 +622,88 @@ mod test {
         let vec: VecDebugAsMap<_, _> = map.iter().collect();
         assert_eq!(format!("{map:?}"), format!("{vec:?}"));
     }
+
+    #[test]
+    fn entry_methods() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakValueHashMap<u32, Weak<u32>> =
+            rcs.iter().map(|n| (**n, n.clone())).collect();
+
+        let fourteen = Rc::new(14);
+
+        let ptr = weakmap.entry(7).or_insert(fourteen.clone());
+        assert_eq!(*ptr, 14);
+
+        assert_eq!(weakmap.get(&7), Some(fourteen.clone()));
+
+        let e = weakmap.entry(12);
+        if let super::Entry::Vacant(v) = e {
+            let t2 = v.into_key();
+            assert_eq!(t2, 12);
+        } else {
+            panic!();
+        }
+        assert!(!weakmap.contains_key(&12));
+    }
+
+    #[test]
+    fn or_insert_with() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakValueHashMap<u32, Weak<u32>> =
+            rcs.iter().map(|n| (**n, n.clone())).collect();
+        let fourteen = Rc::new(14);
+        let sixteen = Rc::new(16);
+
+        // Absent key case:
+        let ptr: Rc<u32> = weakmap.entry(7).or_insert_with(|| fourteen.clone());
+        assert_eq!(*ptr, 14);
+        let ptr: Rc<u32> = weakmap.entry(8).or_insert_with_key(|k| {
+            assert_eq!(*k, 8);
+            sixteen.clone()
+        });
+        assert_eq!(*ptr, 16);
+
+        // Present key case:
+        let ptr: Rc<u32> = weakmap.entry(1).or_insert_with(|| fourteen.clone());
+        assert_eq!(*ptr, 1);
+        let ptr: Rc<u32> = weakmap.entry(1).or_insert_with_key(|k| {
+            assert_eq!(*k, 1);
+            sixteen.clone()
+        });
+        assert_eq!(*ptr, 1);
+    }
+
+    #[test]
+    fn entry_insert_entry() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakValueHashMap<u32, Weak<u32>> =
+            rcs.iter().map(|n| (**n, n.clone())).collect();
+        let n1001 = Rc::new(1001);
+        let n1010 = Rc::new(1010);
+
+        let e1: super::OccupiedEntry<'_, u32, Weak<u32>> =
+            weakmap.entry(1).insert_entry(n1001.clone());
+        assert_eq!(e1.key(), &1);
+        assert_eq!(e1.get(), &n1001);
+
+        let e2: super::OccupiedEntry<'_, u32, Weak<u32>> =
+            weakmap.entry(10).insert_entry(n1010.clone());
+        assert_eq!(e2.key(), &10);
+        assert_eq!(e2.get(), &n1010);
+
+        assert_eq!(weakmap.get(&1), Some(n1001));
+        assert_eq!(weakmap.get(&10), Some(n1010));
+    }
+
+    #[test]
+    fn vacant_insert_entry() {
+        let mut weakmap: WeakValueHashMap<u32, Weak<u32>> = Default::default();
+        let n500 = Rc::new(500);
+
+        let super::Entry::Vacant(e) = weakmap.entry(5) else {
+            panic!("Not vacant");
+        };
+        let e: super::OccupiedEntry<'_, u32, Weak<u32>> = e.insert_entry(n500.clone());
+        assert_eq!(e.get(), &n500);
+    }
 }
