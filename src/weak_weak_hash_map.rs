@@ -628,4 +628,124 @@ mod test {
         let vec: VecDebugAsMap<_, _> = map.iter().collect();
         assert_eq!(format!("{map:?}"), format!("{vec:?}"));
     }
+
+    #[test]
+    fn is_submap() {
+        let mut rcs: Vec<Rc<u32>> = (0..50).map(Rc::new).collect();
+        let weakmap: WeakWeakHashMap<Weak<u32>, Weak<u32>> = rcs
+            .iter()
+            .take(25)
+            .map(|n| (n.clone(), n.clone()))
+            .collect();
+        let mut weakmap2 = weakmap.clone();
+
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(weakmap2.is_submap(&weakmap));
+
+        weakmap2.extend(rcs.iter().skip(25).map(|n| (n.clone(), n.clone())));
+        assert!(weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+
+        weakmap2.insert(rcs[0].clone(), rcs[12].clone());
+        assert!(!weakmap.is_submap(&weakmap2));
+        assert!(!weakmap2.is_submap(&weakmap));
+
+        let _ = rcs.remove(0);
+        assert!(weakmap.is_submap(&weakmap2));
+    }
+
+    #[test]
+    fn entry_methods() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakWeakHashMap<Weak<u32>, Weak<u32>> =
+            rcs.iter().map(|n| (n.clone(), n.clone())).collect();
+
+        let seven = Rc::new(7);
+        let fourteen = Rc::new(14);
+        let ptr = weakmap.entry(seven.clone()).or_insert(fourteen.clone());
+        assert_eq!(*ptr, 14);
+
+        let twelve = Rc::new(12);
+        let e = weakmap.entry(twelve.clone());
+        if let super::Entry::Vacant(v) = e {
+            let t2 = v.into_key();
+            assert_eq!(*t2, 12);
+        } else {
+            panic!();
+        }
+        assert!(!weakmap.contains_key(&12));
+    }
+
+    #[test]
+    fn or_insert_with() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakWeakHashMap<Weak<u32>, Weak<u32>> =
+            rcs.iter().map(|n| (n.clone(), n.clone())).collect();
+        let seven = Rc::new(7);
+        let eight = Rc::new(8);
+        let fourteen = Rc::new(14);
+        let sixteen = Rc::new(16);
+
+        // Absent key case:
+        let ptr: Rc<u32> = weakmap
+            .entry(seven.clone())
+            .or_insert_with(|| fourteen.clone());
+        assert_eq!(*ptr, 14);
+        let ptr: Rc<u32> = weakmap.entry(eight.clone()).or_insert_with_key(|k| {
+            assert_eq!(**k, 8);
+            sixteen.clone()
+        });
+        assert_eq!(*ptr, 16);
+
+        // Present key case:
+        let one = Rc::new(1);
+        let ptr: Rc<u32> = weakmap
+            .entry(one.clone())
+            .or_insert_with(|| fourteen.clone());
+
+        assert_eq!(*ptr, 1);
+        let ptr: Rc<u32> = weakmap.entry(one.clone()).or_insert_with_key(|k| {
+            assert_eq!(**k, 8);
+            sixteen.clone()
+        });
+        assert_eq!(*ptr, 1);
+    }
+
+    #[test]
+    fn entry_insert_entry() {
+        let rcs: Vec<Rc<u32>> = (0..5).map(Rc::new).collect();
+        let mut weakmap: WeakWeakHashMap<Weak<u32>, Weak<u32>> =
+            rcs.iter().map(|n| (n.clone(), n.clone())).collect();
+
+        let one = Rc::new(1);
+        let ten = Rc::new(10);
+        let n1001 = Rc::new(1001);
+        let n1010 = Rc::new(1010);
+
+        let e1: super::OccupiedEntry<'_, Weak<u32>, Weak<u32>> =
+            weakmap.entry(one.clone()).insert_entry(n1001.clone());
+        assert_eq!(e1.key(), &one);
+        assert_eq!(e1.get(), &n1001);
+
+        let e2: super::OccupiedEntry<'_, Weak<u32>, Weak<u32>> =
+            weakmap.entry(ten.clone()).insert_entry(n1010.clone());
+        assert_eq!(e2.key(), &ten);
+        assert_eq!(e2.get(), &n1010);
+
+        assert_eq!(weakmap.get(&1), Some(n1001));
+        assert_eq!(weakmap.get(&10), Some(n1010));
+    }
+
+    #[test]
+    fn vacant_insert_entry() {
+        let mut weakmap: WeakWeakHashMap<Weak<u32>, Weak<u32>> = Default::default();
+        let five = Rc::new(5);
+        let n500 = Rc::new(500);
+
+        let super::Entry::Vacant(e) = weakmap.entry(five.clone()) else {
+            panic!("Not vacant");
+        };
+        let e: super::OccupiedEntry<'_, Weak<u32>, Weak<u32>> = e.insert_entry(n500.clone());
+        assert_eq!(e.get(), &n500);
+    }
 }
