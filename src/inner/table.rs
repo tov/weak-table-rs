@@ -194,7 +194,13 @@ impl<K: Key, V: Element, S: BuildHasher> Table<K, V, S> {
     #[inline]
     pub(crate) fn try_reserve(&mut self, additional: usize) -> Result<(), crate::TryReserveError> {
         // Check whether our existing capacity can handle this insertion.
-        if self.table.len().saturating_add(additional) <= self.table.capacity() {
+        if self
+            .table
+            .len()
+            .checked_add(additional)
+            .ok_or(crate::TryReserveError::CapacityOverflow)?
+            <= self.table.capacity()
+        {
             return Ok(());
         }
 
@@ -750,7 +756,7 @@ where
 ///
 /// The returned value is always greater than `len`.
 fn desired_capacity_for(len: usize) -> usize {
-    div_ceil(len, 3) * 4 + 1
+    div_ceil(len, 3).saturating_mul(4).saturating_add(1)
 }
 
 /// Return CEIL(a / b).

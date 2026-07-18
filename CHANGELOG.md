@@ -90,6 +90,8 @@ The format is based on [Keep a Changelog] and this project adheres to
   `inf` for a zero-capacity table.
 - Changed the output of Debug for WeakHashSet and PtrWeakHashSet
   to display them as sets, not as maps to ().
+- Eliminated some possible integer overflows when trying to reserve
+  very high capacities.
 
 ### Documentation
   - Cleaned up documentation that referred to sets as maps,
