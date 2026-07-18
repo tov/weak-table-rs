@@ -597,9 +597,7 @@ impl<'a, K: WeakKey, V> OccupiedEntry<'a, K, V> {
     ///
     /// *O*(1) time
     pub fn get_mut(&mut self) -> &mut V {
-        // TODO: It would be better to use a get_mut method on inner::OccupiedEntry, but I've
-        // run into lifetime issues there. See "TODO get_mut" in inner/table.rs
-        &mut self.0.inner.get_mut().1.val
+        self.0.get_mut().1
     }
 
     /// Turns the entry into a mutable reference to the value borrowed from the map.
