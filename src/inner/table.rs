@@ -531,16 +531,13 @@ impl<'a, K: Element, V: Element<CachedHash = ()>> OccupiedEntry<'a, K, V> {
 }
 
 impl<'a, K: Element, T> OccupiedEntry<'a, K, super::Owned<T>> {
-    /* TODO get_mut:
-
-       Because of lifetime issues, this implementation isn't viable.
-       It would be nice to fix this, so we can make OccupiedEntry completely opaque.
-
-    pub(crate) fn get_mut(&'a mut self) -> (&'a K::Owned, &'a mut T) {
+    /// Return a reference to the the owned key and to the value of this entry.
+    ///
+    /// Only implemented for Owned values.
+    pub(crate) fn get_mut(&mut self) -> (&K::Owned, &mut T) {
         let (k, v) = self.inner.get_mut();
         (K::owned_ref_from_handle(k, &self.k_handle), &mut v.val)
     }
-    */
 
     /// Consume this `OccupiedEntry` returning a mutable pointer to its value.
     ///
