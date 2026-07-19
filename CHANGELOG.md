@@ -68,6 +68,7 @@ The format is based on [Keep a Changelog] and this project adheres to
   Instead, use the constructors that allow you to specify
   a `BuildHasher` manually.
 - Constructors are now `#[must_use]`.
+- ExtractIf iterators are now `#[must_use]`.
 
 ### Changed (internal)
 

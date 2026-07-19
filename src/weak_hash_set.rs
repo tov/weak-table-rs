@@ -219,6 +219,8 @@ impl<T: WeakElement, S> WeakHashSet<T, S> {
 }
 
 /// An iterator that removes members that match a given predicate.
+#[must_use = "iterators do nothing unless consumed; \
+    consider using `retain` instead"]
 pub struct ExtractIf<'a, T: WeakElement, F> {
     /// The underlying iterator.
     inner: inner::ExtractIf<'a, inner::WeakK<T>, inner::Owned<()>>,
