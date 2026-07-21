@@ -59,7 +59,10 @@ jobs:
       - name: Cargo check
         run: cargo check --all-targets ${{ matrix.features }}
       - name: Run tests
-        run: cargo test ${{ matrix.features }}
+        run: cargo test ${{ matrix.features }} --tests --examples
+      - name: Run doctests
+        if: ${{ ! contains(matrix.features, '--no-default-features') }}
+        run: cargo test ${{ matrix.features }} --doc
 
   clippy:
     name: Clippy

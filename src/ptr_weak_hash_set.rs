@@ -224,6 +224,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "std", feature = "ahash"))]
 impl<T, const N: usize> From<[T::Strong; N]> for PtrWeakHashSet<T, RandomState>
 where
     T: WeakElement,

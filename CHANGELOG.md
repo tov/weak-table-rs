@@ -48,6 +48,10 @@ The format is based on [Keep a Changelog] and this project adheres to
   - `From<[T;N]>`
   - `Sub`
 
+- It is now possible to build as `no_std` without ahash support.
+  If you do, there will be no default `BuildHasher`,
+  and the `new()` and `with_capacity()` methods will be absent.
+
 ### Changed (visible)
 
 - All hash-tables now use a new backend based on [`hashbrown`]

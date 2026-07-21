@@ -1,17 +1,18 @@
 //! `no_std` compatibility
 
-// If we depend on `ahash`, use its hasher.
-#[cfg(feature = "ahash")]
-pub(crate) use ahash::RandomState;
-
-// Use the `std` hasher if we don’t depend on `ahash` but do depend on
-// `std`.
-#[cfg(all(not(feature = "ahash"), feature = "std"))]
-pub(crate) use std::collections::hash_map::RandomState;
-
-// If we depend on neither `ahash` nor `std` then it’s an error.
-#[cfg(not(any(feature = "ahash", feature = "std")))]
-compile_error!("weak-table: no_std requires that you enable the `ahash` feature.");
+cfg_if::cfg_if! {
+    // If we depend on `ahash`, use its hasher.
+    if #[cfg(feature = "ahash")] {
+        pub(crate) use ahash::RandomState;
+    } else if #[cfg(feature = "std")] {
+        // Use the `std` hasher if we don’t depend on `ahash` but do depend on
+        // `std`.
+        pub(crate) use std::collections::hash_map::RandomState;
+    } else if #[cfg(test)] {
+        // If we're testing with no_std, we use ahash.
+        pub(crate) use ahash::RandomState;
+    }
+}
 
 /// If we depend on `std`, we alias `lib` to `std`.
 #[cfg(feature = "std")]

@@ -12,6 +12,7 @@ pub(crate) use set::*;
 /// the members of the container.
 macro_rules! universal_hashless_members {
     ($container:ident ($cname:expr, a $shortname:expr) $constructor:path { $($params:ident),* } ) => {
+        #[cfg(any(test, feature = "std", feature = "ahash"))]
         impl<$($params),*> $container<$($params),* , RandomState> {
             #[doc=concat!("Creates an empty ", $cname, ".")]
             ///

@@ -41,9 +41,6 @@ Optionally, the following dependency may be enabled:
     (This feature may be disabled in the future for
     [security reasons][ahash-issue].)
 
-If the `std` feature is disabled (for no_std)
-then the `ahash` dependency **must** be enabled.
-
 
 ### Asymptotic complexity
 

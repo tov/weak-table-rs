@@ -266,6 +266,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "std", feature = "ahash"))]
 impl<T: WeakKey, const N: usize> From<[T::Strong; N]> for WeakHashSet<T, RandomState> {
     /// Converts an array of elements into a set.
     ///

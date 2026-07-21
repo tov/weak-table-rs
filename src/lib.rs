@@ -22,11 +22,44 @@ mod inner;
 mod size_policy;
 mod util;
 
+/// Declare a structure with a default BuildHasher.
+#[cfg(any(test, feature = "std", feature = "ahash"))]
+macro_rules! declare_structs {
+    {
+        $(
+        $(#[$meta:meta])*
+        pub struct $name:ident < $($param:ident),* ,?S > ( $($members:tt)+ );
+        )*
+    } => {
+        $(
+        $(#[$meta])*
+        pub struct $name < $($param),* , S = RandomState > ( $($members)+ );
+        )*
+    }
+}
+
+/// Declare a structure _wihtout_ a default BuildHasher
+#[cfg(not(any(test, feature = "std", feature = "ahash")))]
+macro_rules! declare_structs {
+    {
+        $(
+        $(#[$meta:meta])*
+        pub struct $name:ident < $($param:ident),* ,?S > ( $($members:tt)+ );
+        )*
+    } => {
+        $(
+        $(#[$meta])*
+        pub struct $name < $($param),* , S > ( $($members)+ );
+        )*
+    }
+}
+
+declare_structs! {
 /// A hash map with weak keys, hashed on key value.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakKeyHashMap<K, V, S = RandomState>(inner::Table<inner::WeakK<K>, inner::Owned<V>, S>);
+pub struct WeakKeyHashMap<K, V, ?S>(inner::Table<inner::WeakK<K>, inner::Owned<V>, S>);
 
 /// A hash map with weak keys, hashed on key pointer.
 ///
@@ -55,13 +88,13 @@ pub struct WeakKeyHashMap<K, V, S = RandomState>(inner::Table<inner::WeakK<K>, i
 /// assert_eq!( map.get(&b), Some(&7) );
 /// ```
 #[derive(Clone)]
-pub struct PtrWeakKeyHashMap<K, V, S = RandomState>(WeakKeyHashMap<by_ptr::ByPtr<K>, V, S>);
+pub struct PtrWeakKeyHashMap<K, V,?S>(WeakKeyHashMap<by_ptr::ByPtr<K>, V, S>);
 
 /// A hash map with weak values.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakValueHashMap<K, V, S = RandomState>(
+pub struct WeakValueHashMap<K, V, ?S>(
     inner::Table<inner::Owned<K>, inner::WeakV<V>, S>,
 );
 
@@ -69,7 +102,7 @@ pub struct WeakValueHashMap<K, V, S = RandomState>(
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakWeakHashMap<K, V, S = RandomState>(
+pub struct WeakWeakHashMap<K, V, ?S>(
     inner::Table<inner::WeakK<K>, inner::WeakV<V>, S>,
 );
 
@@ -77,19 +110,20 @@ pub struct WeakWeakHashMap<K, V, S = RandomState>(
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct PtrWeakWeakHashMap<K, V, S = RandomState>(WeakWeakHashMap<by_ptr::ByPtr<K>, V, S>);
+pub struct PtrWeakWeakHashMap<K, V, ?S>(WeakWeakHashMap<by_ptr::ByPtr<K>, V, S>);
 
 /// A hash set with weak elements, hashed on element value.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct WeakHashSet<T, S = RandomState>(WeakKeyHashMap<T, (), S>);
+pub struct WeakHashSet<T, ?S>(WeakKeyHashMap<T, (), S>);
 
 /// A hash set with weak elements, hashed on element pointer.
 ///
 /// When a weak pointer expires, its mapping is lazily removed.
 #[derive(Clone)]
-pub struct PtrWeakHashSet<T, S = RandomState>(PtrWeakKeyHashMap<T, (), S>);
+pub struct PtrWeakHashSet<T, ?S>(PtrWeakKeyHashMap<T, (), S>);
+}
 
 /// An error that can occur during a `try_reserve` method.
 #[derive(Clone, Debug)]

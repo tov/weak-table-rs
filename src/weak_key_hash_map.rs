@@ -450,6 +450,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "std", feature = "ahash"))]
 impl<K: WeakKey, V, const N: usize> From<[(K::Strong, V); N]>
     for WeakKeyHashMap<K, V, RandomState>
 {
