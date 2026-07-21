@@ -9,6 +9,8 @@
 #![allow(unreachable_pub)]
 #![allow(clippy::enum_variant_names)]
 #![allow(clippy::get_first)]
+// TODO 050: remove.
+#![cfg_attr(feature = "ahash", allow(deprecated))]
 
 pub(crate) mod common;
 mod proptest;

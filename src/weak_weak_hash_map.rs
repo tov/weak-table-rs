@@ -609,6 +609,9 @@ impl<'a, K: WeakElement, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> 
 
 #[cfg(test)]
 mod test {
+    // TODO 050: remove.
+    #![cfg_attr(feature = "ahash", allow(deprecated))]
+
     use super::WeakWeakHashMap;
     use crate::{
         compat::{

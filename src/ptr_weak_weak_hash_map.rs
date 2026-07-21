@@ -278,6 +278,8 @@ impl<'a, K: WeakElement, V: WeakElement, S> IntoIterator for &'a PtrWeakWeakHash
 #[cfg(test)]
 mod test {
     #![allow(clippy::print_stderr)]
+    // TODO 050: remove.
+    #![cfg_attr(feature = "ahash", allow(deprecated))]
 
     use super::{Entry, PtrWeakWeakHashMap};
     use crate::{

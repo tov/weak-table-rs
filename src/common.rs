@@ -17,13 +17,24 @@ macro_rules! universal_hashless_members {
             #[doc=concat!("Creates an empty ", $cname, ".")]
             ///
             /// *O*(1) time
+            #[cfg_attr(feature = "ahash",
+                deprecated(since = "0.4.0", note =
+                    "The `ahash` feature in weak_table is deprecated. Instead, use \
+                    with_hasher to manually specify a BuildHasher instance. \
+                    See https://github.com/tov/weak-table-rs/issues/34 for more info."))]
             pub fn new() -> Self {
+                #[allow(deprecated)]
                 Self::with_capacity(crate::size_policy::DEFAULT_INITIAL_CAPACITY)
             }
 
             #[doc=concat!("Creates an empty ", $cname, " with the given capacity.")]
             ///
             /// *O*(*n*) time
+            #[cfg_attr(feature = "ahash",
+                deprecated(since = "0.4.0", note =
+                    "The `ahash` feature in weak_table is deprecated. Instead, use \
+                    with_capacity_and_hasher to manually specify a BuildHasher instance. \
+                    See https://github.com/tov/weak-table-rs/issues/34 for more info."))]
             pub fn with_capacity(capacity: usize) -> Self {
                 Self::with_capacity_and_hasher(capacity, Default::default())
             }

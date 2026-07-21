@@ -64,7 +64,9 @@ The format is based on [Keep a Changelog] and this project adheres to
   actual load factor.
 - Methods that do not require the element type to be WeakKey or
   WeakElement no longer constrain their parameters in this way.
-
+- The `ahash` feature is now deprecated for [security reasons](github#23).
+  Instead, use the constructors that allow you to specify
+  a `BuildHasher` manually.
 
 ### Changed (internal)
 
@@ -188,3 +190,4 @@ Initial release.
 [`weak-table`]: <https://crates.io/crates/weak-table>
 [`hashbrown`]: <https://docs.rs/hashbrown/latest/hashbrown/struct.HashTable.html>
 [github#22]: <https://github.com/tov/weak-table-rs/issues/22>
+[github#23]: <https://github.com/tov/weak-table-rs/issues/23>

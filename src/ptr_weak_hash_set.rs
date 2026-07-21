@@ -305,6 +305,9 @@ where
 
 #[cfg(test)]
 mod test {
+    // TODO 050: remove.
+    #![cfg_attr(feature = "ahash", allow(deprecated))]
+
     use super::PtrWeakHashSet;
     use crate::{
         compat::{

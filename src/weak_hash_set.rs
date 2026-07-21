@@ -331,6 +331,9 @@ fn sort_by_size<'a, T: WeakKey, S: BuildHasher>(
 
 #[cfg(test)]
 mod test {
+    // TODO 050: remove.
+    #![cfg_attr(feature = "ahash", allow(deprecated))]
+
     use super::*;
     use crate::{
         compat::rc::{Rc, Weak},

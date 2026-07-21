@@ -26,6 +26,8 @@ alloc = []
 
 [dependencies]
 cfg-if = "1"
+# Note that this feature is deprecated and will be removed.
+# TODO 050: remove.
 ahash = { version = "0.8.12", optional = true, default-features = false, features = ["runtime-rng"] }
 hashbrown = { version = "0.16.1", default-features = false, features = ["inline-more"] }
 
@@ -44,7 +46,7 @@ unreachable_pub = "warn"
 [lints.clippy]
 all = "warn"
 cargo_common_metadata = "warn"
-cast_lossless  = "warn"
+cast_lossless = "warn"
 checked_conversions = "warn"
 cognitive_complexity = "warn"
 debug_assert_with_mut_call = "warn"
