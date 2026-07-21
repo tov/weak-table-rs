@@ -35,7 +35,7 @@ hashbrown = { version = "0.16.1", default-features = false, features = ["inline-
 # We use ahash for testing with nostd
 ahash = { version = "0.8.12", default-features = false, features = ["runtime-rng"] }
 quickcheck = { version = "1", default-features = false }
-rand = "0.8.4"
+rand = "0.10.2"
 
 [lints.rust]
 unsafe_code = "warn"
