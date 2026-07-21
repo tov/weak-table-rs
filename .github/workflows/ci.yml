@@ -39,16 +39,13 @@ jobs:
         rust:
           - stable
           - 1.65.0
-        features:
-          - --features=std
-          - --no-default-features --features=alloc,ahash
         experimental: [false]
         include:
           - rust: nightly
             features: --features=std
             experimental: true
           - rust: nightly
-            features: --no-default-features --features=alloc,ahash
+            features: --no-default-features
             experimental: true
     steps:
       - uses: actions/checkout@v7
@@ -59,7 +56,10 @@ jobs:
       - name: Cargo check
         run: cargo check --all-targets ${{ matrix.features }}
       - name: Run tests
-        run: cargo test ${{ matrix.features }}
+        run: cargo test ${{ matrix.features }} --tests --examples
+      - name: Run doctests
+        if: ${{ ! contains(matrix.features, '--no-default-features') }}
+        run: cargo test ${{ matrix.features }} --doc
 
   clippy:
     name: Clippy
@@ -70,6 +70,9 @@ jobs:
         rust:
           - stable
         experimental: [false]
+        features:
+          - --features=std
+          - --no-default-features
         include:
           - rust: nightly
             experimental: true

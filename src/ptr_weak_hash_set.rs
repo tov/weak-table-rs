@@ -224,6 +224,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "std", feature = "ahash"))]
 impl<T, const N: usize> From<[T::Strong; N]> for PtrWeakHashSet<T, RandomState>
 where
     T: WeakElement,
@@ -304,6 +305,9 @@ where
 
 #[cfg(test)]
 mod test {
+    // TODO 050: remove.
+    #![cfg_attr(feature = "ahash", allow(deprecated))]
+
     use super::PtrWeakHashSet;
     use crate::{
         compat::{

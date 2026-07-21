@@ -266,6 +266,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "std", feature = "ahash"))]
 impl<T: WeakKey, const N: usize> From<[T::Strong; N]> for WeakHashSet<T, RandomState> {
     /// Converts an array of elements into a set.
     ///
@@ -330,6 +331,9 @@ fn sort_by_size<'a, T: WeakKey, S: BuildHasher>(
 
 #[cfg(test)]
 mod test {
+    // TODO 050: remove.
+    #![cfg_attr(feature = "ahash", allow(deprecated))]
+
     use super::*;
     use crate::{
         compat::rc::{Rc, Weak},

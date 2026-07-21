@@ -301,6 +301,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "std", feature = "ahash"))]
 impl<K: Eq + Hash, V: WeakElement, const N: usize> From<[(K, V::Strong); N]>
     for WeakValueHashMap<K, V, RandomState>
 {
@@ -602,6 +603,9 @@ impl<'a, K, V: WeakElement, F> Iterator for ExtractIf<'a, K, V, F> {
 
 #[cfg(test)]
 mod test {
+    // TODO 050: remove.
+    #![cfg_attr(feature = "ahash", allow(deprecated))]
+
     use super::WeakValueHashMap;
     use crate::{
         compat::{

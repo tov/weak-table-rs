@@ -38,11 +38,8 @@ functionality dependent on the `std` library, enabled by default.
 Optionally, the following dependency may be enabled:
 
   - `ahash`: use `ahash`’s hasher **by default** rather than the `std` hasher.
-    (This feature may be disabled in the future for
-    [security reasons][ahash-issue].)
-
-If the `std` feature is disabled (for no_std)
-then the `ahash` dependency **must** be enabled.
+    (This feature is deprecated for
+    [security reasons][ahash-issue], and will be disabled in the future.)
 
 
 ### Asymptotic complexity
