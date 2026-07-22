@@ -22,6 +22,7 @@ macro_rules! universal_hashless_members {
                     "The `ahash` feature in weak_table is deprecated. Instead, use \
                     with_hasher to manually specify a BuildHasher instance. \
                     See https://github.com/tov/weak-table-rs/issues/34 for more info."))]
+             #[must_use]
             pub fn new() -> Self {
                 #[allow(deprecated)]
                 Self::with_capacity(crate::size_policy::DEFAULT_INITIAL_CAPACITY)
@@ -35,6 +36,7 @@ macro_rules! universal_hashless_members {
                     "The `ahash` feature in weak_table is deprecated. Instead, use \
                     with_capacity_and_hasher to manually specify a BuildHasher instance. \
                     See https://github.com/tov/weak-table-rs/issues/34 for more info."))]
+            #[must_use]
             pub fn with_capacity(capacity: usize) -> Self {
                 Self::with_capacity_and_hasher(capacity, Default::default())
             }
@@ -44,6 +46,7 @@ macro_rules! universal_hashless_members {
             #[doc=concat!("Creates an empty ", $cname, " with the given hasher.")]
             ///
             /// *O*(*n*) time
+            #[must_use]
             pub fn with_hasher(hash_builder: S) -> Self {
                 Self::with_capacity_and_hasher(crate::size_policy::DEFAULT_INITIAL_CAPACITY, hash_builder)
             }
@@ -51,6 +54,7 @@ macro_rules! universal_hashless_members {
             #[doc=concat!("Creates an empty ", $cname, " with the given capacity and hasher.")]
             ///
             /// *O*(*n*) time
+            #[must_use]
             pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> Self {
                 Self($constructor(capacity, hash_builder))
             }

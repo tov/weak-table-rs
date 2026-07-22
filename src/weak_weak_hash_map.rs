@@ -589,6 +589,8 @@ impl<K: WeakElement, V: WeakElement, S> WeakWeakHashMap<K, V, S> {
 }
 
 /// An iterator that removes members that match a given predicate.
+#[must_use = "iterators do nothing unless consumed; \
+    consider using `retain` instead"]
 pub struct ExtractIf<'a, K: WeakElement, V: WeakElement, F> {
     /// The underlying iterator.
     inner: inner::ExtractIf<'a, inner::WeakK<K>, inner::WeakV<V>>,
