@@ -26,7 +26,7 @@ std = []
 # TODO 050: remove.
 ahash = { version = "0.8.12", optional = true, default-features = false, features = ["runtime-rng"] }
 cfg-if = "1"
-hashbrown = { version = "0.16.1", default-features = false, features = ["inline-more"] }
+hashbrown = { version = "0.17.1", default-features = false, features = ["inline-more"] }
 
 [dev-dependencies]
 # We use ahash for testing with nostd
